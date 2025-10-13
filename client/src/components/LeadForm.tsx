@@ -291,11 +291,11 @@ export function LeadForm() {
 
         <p className="text-xs text-center text-muted-foreground">
           Ao preencher o formulário, você concorda com nossos{" "}
-          <a href="#" className="text-primary hover:underline">
+          <a href="/termos" className="text-primary hover:underline">
             Termos de Uso
           </a>{" "}
           e{" "}
-          <a href="#" className="text-primary hover:underline">
+          <a href="/privacidade" className="text-primary hover:underline">
             Política de Privacidade
           </a>
           .

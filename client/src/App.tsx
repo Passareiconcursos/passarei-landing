@@ -5,6 +5,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Landing from "@/pages/landing";
 import Obrigado from "@/pages/obrigado";
+import Termos from "@/pages/termos";
+import Privacidade from "@/pages/privacidade";
+import Cookies from "@/pages/cookies";
+import Reembolso from "@/pages/reembolso";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -12,6 +16,10 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/obrigado" component={Obrigado} />
+      <Route path="/termos" component={Termos} />
+      <Route path="/privacidade" component={Privacidade} />
+      <Route path="/cookies" component={Cookies} />
+      <Route path="/reembolso" component={Reembolso} />
       <Route component={NotFound} />
     </Switch>
   );
