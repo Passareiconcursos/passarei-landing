@@ -2,7 +2,7 @@ import { LeadForm } from "@/components/LeadForm";
 
 export function CTAFinal() {
   return (
-    <section className="py-16 md:py-24 bg-gradient-to-br from-green-500 to-blue-600 text-white">
+    <section className="py-16 md:py-24 bg-gradient-to-br from-[#18cb96] to-blue-600 text-white">
       <div className="max-w-7xl mx-auto px-4 md:px-6">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-5xl font-bold mb-6">

@@ -52,7 +52,7 @@ export function ComoFunciona() {
               data-testid={`step-como-funciona-${index}`}
             >
               <div className="flex-shrink-0">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-3xl">
+                <div className="w-16 h-16 bg-[#18cb96] rounded-full flex items-center justify-center text-3xl">
                   {step.number}
                 </div>
               </div>
@@ -78,7 +78,7 @@ export function ComoFunciona() {
           <Button
             size="lg"
             onClick={scrollToForm}
-            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+            className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
             data-testid="button-como-funciona-cta"
           >
             🚀 Começar Minha Preparação Agora

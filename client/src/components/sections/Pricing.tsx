@@ -132,7 +132,7 @@ export function Pricing() {
             </ul>
 
             <Button
-              className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
+              className="w-full bg-[#18cb96] hover:bg-[#14b584] text-white"
               onClick={scrollToForm}
               data-testid="button-plano-calouro"
             >
@@ -225,7 +225,7 @@ export function Pricing() {
           <Button
             size="lg"
             onClick={scrollToForm}
-            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+            className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
             data-testid="button-pricing-cta"
           >
             <span className="text-2xl mr-2">💚</span>

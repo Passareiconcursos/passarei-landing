@@ -11,7 +11,7 @@ export function Depoimentos() {
       stars: 5,
       name: "Carlos Mendes",
       age: 29,
-      status: "✅ Aprovado PM-SP 2024 - Soldado",
+      status: "✅ Aprovado PM-SP 2025 - Soldado",
       location: "📍 São Paulo, SP",
       text: "Passei em 4º lugar geral na PM-SP depois de 2 anos tentando sem sucesso. O diferencial foi a repetição espaçada — nunca mais esqueci o que estudei. Recomendo demais!",
       initials: "CM",
@@ -31,7 +31,7 @@ export function Depoimentos() {
       stars: 5,
       name: "Roberto Silva",
       age: 31,
-      status: "✅ Aprovado PRF 2024 - Agente",
+      status: "✅ Aprovado PRF 2025 - Agente",
       location: "📍 Brasília, DF",
       text: "Gastei R$ 5 mil em cursinhos sem resultado. Aqui por R$ 30/mês aprendi mais em 3 meses e fui aprovado na PRF. Melhor investimento que já fiz!",
       initials: "RS",
@@ -101,7 +101,7 @@ export function Depoimentos() {
             </div>
             <div>
               <p className="text-3xl font-bold text-primary mb-2">154</p>
-              <p className="text-sm text-muted-foreground">aprovações em 2024</p>
+              <p className="text-sm text-muted-foreground">aprovações em 2025</p>
             </div>
             <div>
               <p className="text-3xl font-bold text-primary mb-2">4.9/5</p>
@@ -118,7 +118,7 @@ export function Depoimentos() {
           <Button
             size="lg"
             onClick={scrollToForm}
-            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+            className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
             data-testid="button-depoimentos-cta"
           >
             🎯 Eu Também Quero Passar

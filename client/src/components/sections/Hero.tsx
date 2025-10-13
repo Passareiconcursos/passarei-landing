@@ -36,7 +36,7 @@ export function Hero() {
               <Button
                 size="lg"
                 onClick={scrollToForm}
-                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+                className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
                 data-testid="button-hero-cta-primary"
               >
                 <span className="text-2xl mr-2">💚</span>
@@ -62,7 +62,7 @@ export function Hero() {
                   <div className="text-yellow-500 text-xl mb-1">⭐⭐⭐⭐⭐</div>
                   <p className="text-sm text-muted-foreground">4.9/5 - Avaliação de +1.200 alunos</p>
                   <p className="text-sm text-muted-foreground">✅ +2.847 candidatos estudando agora</p>
-                  <p className="text-sm text-primary font-semibold">🏆 154 aprovações confirmadas em 2024</p>
+                  <p className="text-sm text-primary font-semibold">🏆 154 aprovações confirmadas em 2025</p>
                 </div>
               </div>
             </div>
