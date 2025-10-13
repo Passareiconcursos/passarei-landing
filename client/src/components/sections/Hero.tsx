@@ -11,15 +11,8 @@ export function Hero() {
   };
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-white to-green-50 pt-20 pb-16 md:pt-28 md:pb-24">
+    <section className="relative overflow-hidden bg-gradient-to-b from-white to-green-50 pt-12 pb-16 md:pt-16 md:pb-24">
       <div className="max-w-7xl mx-auto px-4 md:px-6">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground flex items-center justify-center gap-2">
-            PASSAREI
-            <TrendingUp className="w-8 h-8 text-primary" />
-          </h2>
-        </div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Column - Content */}

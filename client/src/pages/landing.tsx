@@ -1,3 +1,4 @@
+import { Header } from "@/components/Header";
 import { Hero } from "@/components/sections/Hero";
 import { SocialProof } from "@/components/sections/SocialProof";
 import { ParaQuemE } from "@/components/sections/ParaQuemE";
@@ -13,6 +14,7 @@ import { Footer } from "@/components/sections/Footer";
 export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       <Hero />
       <div id="social-proof">
         <SocialProof />
