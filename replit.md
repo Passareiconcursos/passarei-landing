@@ -31,9 +31,10 @@ Preferred communication style: Simple, everyday language.
 
 **Design System**
 - Color palette defined in CSS variables (HSL format)
-- Conversion-first design with primary brand green (162 84% 51%) and trust blue (221 83% 40%)
+- Updated brand colors: Primary green #18cb96 (HSL: 160° 80% 45%), Secondary blue #1E40AF (HSL: 221° 83% 40%)
 - Spacing based on Tailwind's 8px grid system
 - Responsive breakpoints following mobile-first approach
+- Consistent button styling with gradient effects and hover animations
 
 ### Backend Architecture
 
@@ -99,8 +100,10 @@ Preferred communication style: Simple, everyday language.
 
 **Third-Party Integrations**
 - Google Fonts CDN for Inter font family
+- Google Analytics for conversion tracking (via VITE_GA_MEASUREMENT_ID env var)
+- Meta Pixel for Facebook/Instagram ads tracking (via VITE_META_PIXEL_ID env var)
 - WhatsApp (mentioned in design but not directly integrated in codebase)
-- Future: Supabase mentioned in setup docs but not currently implemented
+- Supabase integration configured for future use
 
 ### File Structure
 
@@ -152,3 +155,64 @@ Preferred communication style: Simple, everyday language.
 - Form-first design with lead capture as primary goal
 - Social proof elements (approval badges, testimonials)
 - Mobile-responsive with WhatsApp-centric UX patterns
+
+## Recent Changes (October 2025)
+
+### Brand Update
+- **Primary Color**: Updated from #10B981 to #18cb96 across entire application
+- All color tokens, buttons, focus states, and interactive elements now use new green
+- Maintained consistency with hover/active states using darker shade #14b584
+
+### Navigation & Header
+- **Fixed Header**: Created responsive header component with:
+  - Logo and brand name aligned left
+  - Desktop navigation menu (Como Funciona, Depoimentos, Planos, FAQ) with smooth scroll
+  - CTA buttons (Entrar, Cadastrar) aligned right
+  - Mobile hamburger menu with dropdown navigation drawer
+  - Sticky positioning with backdrop blur
+
+### Form Improvements
+- **Enhanced Contrast**: Updated all form inputs with dark text on light backgrounds
+- Fixed placeholder colors from gray-400 to gray-500 for better readability
+- Added green accent color (#18cb96) to focus rings and submit button
+- Custom dropdown styling with visible dark text for better UX
+
+### Legal Infrastructure
+- **4 Legal Pages Created**:
+  - `/termos` - Termos de Uso
+  - `/privacidade` - Política de Privacidade (LGPD compliant)
+  - `/cookies` - Política de Cookies
+  - `/reembolso` - Política de Reembolso (7-day guarantee)
+- Dynamic year calculation for copyright and last updated dates
+- Updated Footer with working links to legal pages
+- Added legal disclaimers to LeadForm component
+
+### Analytics Integration
+- **Google Analytics**: Integrated with VITE_GA_MEASUREMENT_ID environment variable
+- **Meta Pixel**: Facebook/Instagram conversion tracking via VITE_META_PIXEL_ID
+- Automatic page view tracking on route changes
+- Form submission tracking with exam_type and state data
+- Helper functions: trackGoogleEvent, trackMetaEvent, trackButtonClick, trackConversion
+- Analytics component loads scripts and initializes tracking
+
+### Content Updates
+- Updated all dates from 2024 to 2025
+- Hero section: "154 aprovações em 2025"
+- Testimonials: Updated approval dates to 2025
+- Footer: Dynamic year using new Date().getFullYear()
+
+### Testing
+- **E2E Tests Passed**: Comprehensive test coverage including:
+  - Form submission and database persistence
+  - Header navigation (desktop & mobile)
+  - Legal page routing
+  - Mobile responsive menu
+  - Lead capture flow from form to /obrigado redirect
+
+## Environment Variables
+
+Required for production:
+- `DATABASE_URL` - PostgreSQL connection string (Neon)
+- `SESSION_SECRET` - Express session secret
+- `VITE_GA_MEASUREMENT_ID` - Google Analytics tracking ID (optional)
+- `VITE_META_PIXEL_ID` - Meta Pixel tracking ID (optional)
