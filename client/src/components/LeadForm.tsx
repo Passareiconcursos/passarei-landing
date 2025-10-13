@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
+import { trackFormSubmit } from "@/components/Analytics";
 
 const estados = [
   { value: 'AC', label: 'Acre' },
@@ -118,6 +119,12 @@ export function LeadForm() {
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Erro ao processar cadastro');
       }
+
+      // Track successful form submission
+      trackFormSubmit('lead_form', {
+        exam_type: formData.examType,
+        state: formData.state,
+      });
 
       // Sucesso - redirecionar
       setLocation('/obrigado');
