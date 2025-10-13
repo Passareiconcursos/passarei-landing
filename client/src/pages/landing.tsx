@@ -14,14 +14,30 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       <Hero />
-      <SocialProof />
-      <ParaQuemE />
-      <Beneficios />
-      <ComoFunciona />
-      <Comparativo />
-      <Pricing />
-      <Depoimentos />
-      <FAQ />
+      <div id="social-proof">
+        <SocialProof />
+      </div>
+      <div id="para-quem-e">
+        <ParaQuemE />
+      </div>
+      <div id="beneficios">
+        <Beneficios />
+      </div>
+      <div id="como-funciona">
+        <ComoFunciona />
+      </div>
+      <div id="comparativo">
+        <Comparativo />
+      </div>
+      <div id="planos">
+        <Pricing />
+      </div>
+      <div id="depoimentos">
+        <Depoimentos />
+      </div>
+      <div id="faq">
+        <FAQ />
+      </div>
       <CTAFinal />
       <Footer />
     </div>
