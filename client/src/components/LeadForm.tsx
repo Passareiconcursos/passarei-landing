@@ -142,7 +142,7 @@ export function LeadForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Nome */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             Nome Completo *
           </label>
           <input
@@ -151,7 +151,7 @@ export function LeadForm() {
             value={formData.name}
             onChange={handleChange}
             placeholder="João Silva"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#18cb96] focus:border-transparent text-base"
             required
             data-testid="input-name"
           />
@@ -159,7 +159,7 @@ export function LeadForm() {
 
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             Email *
           </label>
           <input
@@ -168,7 +168,7 @@ export function LeadForm() {
             value={formData.email}
             onChange={handleChange}
             placeholder="joao@email.com"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#18cb96] focus:border-transparent text-base"
             required
             data-testid="input-email"
           />
@@ -176,7 +176,7 @@ export function LeadForm() {
 
         {/* WhatsApp */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             WhatsApp *
           </label>
           <input
@@ -186,7 +186,7 @@ export function LeadForm() {
             onChange={handleChange}
             placeholder="(11) 99999-9999"
             maxLength={15}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#18cb96] focus:border-transparent text-base"
             required
             data-testid="input-phone"
           />
@@ -194,42 +194,56 @@ export function LeadForm() {
 
         {/* Concurso */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             Tipo de Concurso *
           </label>
-          <select
-            name="examType"
-            value={formData.examType}
-            onChange={handleChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-            required
-            data-testid="select-exam-type"
-          >
-            <option value="">Selecione o concurso</option>
-            {concursos.map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              name="examType"
+              value={formData.examType}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#18cb96] focus:border-transparent text-base appearance-none cursor-pointer"
+              required
+              data-testid="select-exam-type"
+            >
+              <option value="" className="text-gray-900">Selecione o concurso</option>
+              {concursos.map(c => (
+                <option key={c.value} value={c.value} className="text-gray-900">{c.label}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </div>
+          </div>
         </div>
 
         {/* Estado */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             Estado *
           </label>
-          <select
-            name="state"
-            value={formData.state}
-            onChange={handleChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-            required
-            data-testid="select-state"
-          >
-            <option value="">Selecione seu estado</option>
-            {estados.map(estado => (
-              <option key={estado.value} value={estado.value}>{estado.label}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              name="state"
+              value={formData.state}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#18cb96] focus:border-transparent text-base appearance-none cursor-pointer"
+              required
+              data-testid="select-state"
+            >
+              <option value="" className="text-gray-900">Selecione seu estado</option>
+              {estados.map(estado => (
+                <option key={estado.value} value={estado.value} className="text-gray-900">{estado.label}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </div>
+          </div>
         </div>
 
         {/* Checkbox */}
@@ -239,11 +253,11 @@ export function LeadForm() {
             name="acceptedWhatsApp"
             checked={formData.acceptedWhatsApp}
             onChange={handleChange}
-            className="mt-1 w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+            className="mt-1 w-5 h-5 text-[#18cb96] border-gray-300 rounded focus:ring-[#18cb96]"
             required
             data-testid="checkbox-accept-whatsapp"
           />
-          <label className="text-sm text-foreground">
+          <label className="text-sm text-gray-900">
             Aceito receber conteúdo educacional via WhatsApp *
           </label>
         </div>
@@ -259,7 +273,7 @@ export function LeadForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-4 rounded-lg font-semibold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-[#18cb96] text-white px-8 py-4 rounded-lg font-semibold text-lg shadow-lg hover:shadow-2xl hover:bg-[#14b584] hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="button-submit-form"
         >
           {loading ? (
