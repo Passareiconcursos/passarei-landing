@@ -77,7 +77,7 @@ export default function Obrigado() {
         </div>
 
         <p className="mt-8 text-sm text-gray-500">
-          Tem dúvidas? Entre em contato: <a href="mailto:contato@passarei.com.br" className="text-green-600 hover:underline font-medium">contato@passarei.com.br</a>
+          Tem dúvidas? Entre em contato: <a href="mailto:suporte@passarei.com.br" className="text-green-600 hover:underline font-medium">suporte@passarei.com.br</a>
         </p>
       </div>
     </div>

@@ -94,7 +94,7 @@ export default function Termos() {
               Para dúvidas sobre estes Termos, entre em contato:
             </p>
             <ul className="list-none text-foreground mb-4">
-              <li>Email: contato@passarei.com.br</li>
+              <li>Email: suporte@passarei.com.br</li>
               <li>WhatsApp: (11) 99999-9999</li>
             </ul>
           </section>

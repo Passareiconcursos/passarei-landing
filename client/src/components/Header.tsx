@@ -38,6 +38,7 @@ export function Header() {
                 src="/logo.png" 
                 alt="Passarei - Concursos Policiais" 
                 className="h-8 md:h-10 w-auto"
+                loading="lazy"
                 onError={(e) => {
                   console.error('Logo não carregou');
                   e.currentTarget.style.display = 'none';
@@ -63,6 +64,7 @@ export function Header() {
               <Button
                 onClick={() => scrollToSection("lead-form")}
                 className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-3 rounded-lg font-semibold text-base hover:scale-105 transition-all shadow-md hover:shadow-lg"
+                aria-label="Ir para formulário de cadastro"
               >
                 Cadastrar
               </Button>
@@ -72,7 +74,8 @@ export function Header() {
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              aria-label="Menu"
+              aria-label={mobileMenuOpen ? "Fechar menu" : "Abrir menu de navegação"}
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? (
                 <X className="w-6 h-6" />

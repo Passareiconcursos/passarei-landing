@@ -40,7 +40,7 @@ export function FAQ() {
     {
       number: 6,
       question: "Como funciona a garantia de 7 dias?",
-      answer: "Simples e transparente:\n\n1. Assine qualquer plano pago (Calouro ou Veterano)\n2. Use por até 7 dias\n3. Se não gostar por QUALQUER motivo, envie email para: contato@passarei.com.br\n4. Devolvemos 100% do seu dinheiro\n\nSem perguntas incômodas.\nSem \"mas por quê?\".\nSem burocracia.\n\nAcreditamos tanto no Passarei que assumimos TODO o risco."
+      answer: "Simples e transparente:\n\n1. Assine qualquer plano pago (Calouro ou Veterano)\n2. Use por até 7 dias\n3. Se não gostar por QUALQUER motivo, envie email para: suporte@passarei.com.br\n4. Devolvemos 100% do seu dinheiro\n\nSem perguntas incômodas.\nSem \"mas por quê?\".\nSem burocracia.\n\nAcreditamos tanto no Passarei que assumimos TODO o risco."
     },
     {
       number: 7,
@@ -86,14 +86,15 @@ export function FAQ() {
           ))}
         </Accordion>
 
-        <div className="text-center">
+        <div className="text-center mt-16">
           <div className="w-full px-4 md:px-0">
             <a 
               href="https://wa.me/5527999999999?text=Olá,%20tenho%20dúvidas"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 w-full md:w-auto px-8 py-3 border-2 border-[#18cb96] text-[#18cb96] rounded-lg font-semibold text-base hover:bg-[#18cb96] hover:text-white transition-all"
+              className="inline-flex items-center justify-center gap-2 w-full md:w-auto px-8 py-4 border-2 border-[#18cb96] text-[#18cb96] rounded-lg font-semibold text-lg hover:bg-[#18cb96] hover:text-white transition-all shadow-md hover:shadow-lg"
               data-testid="button-faq-cta"
+              aria-label="Entrar em contato via WhatsApp"
             >
               💬 Dúvidas? Chama a gente
             </a>

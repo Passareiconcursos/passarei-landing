@@ -151,7 +151,7 @@ export default function Reembolso() {
             </p>
             <ul className="list-none text-foreground mb-4">
               <li><strong>Email:</strong> reembolso@passarei.com.br</li>
-              <li><strong>Suporte:</strong> contato@passarei.com.br</li>
+              <li><strong>Suporte:</strong> suporte@passarei.com.br</li>
               <li><strong>WhatsApp:</strong> (11) 99999-9999</li>
             </ul>
             <p className="text-foreground mb-4">
