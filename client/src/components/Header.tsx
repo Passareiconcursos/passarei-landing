@@ -26,7 +26,7 @@ export function Header() {
   return (
     <>
       <header className="fixed top-0 w-full bg-white shadow-sm z-50">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             
             {/* Logo - Esquerda - CLICÁVEL */}
@@ -36,8 +36,12 @@ export function Header() {
             >
               <img 
                 src="/logo.png" 
-                alt="Passarei" 
+                alt="Passarei - Concursos Policiais" 
                 className="h-8 md:h-10 w-auto"
+                onError={(e) => {
+                  console.error('Logo não carregou');
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             </a>
             

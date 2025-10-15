@@ -15,8 +15,12 @@ export function Footer() {
             >
               <img 
                 src="/logo.png" 
-                alt="Passarei" 
+                alt="Passarei - Concursos Policiais" 
                 className="h-8 w-auto brightness-0 invert"
+                onError={(e) => {
+                  console.error('Logo Footer não carregou');
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             </a>
             <p className="text-gray-400 text-sm">
