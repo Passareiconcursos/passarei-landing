@@ -209,6 +209,35 @@ Preferred communication style: Simple, everyday language.
   - Mobile responsive menu
   - Lead capture flow from form to /obrigado redirect
 
+### SEO & Performance Optimization (January 2025)
+- **Comprehensive Meta Tags**: Added full SEO suite in index.html
+  - Open Graph tags for social media sharing (og:title, og:description, og:image, og:locale)
+  - Twitter Card metadata for Twitter/X sharing
+  - Keywords meta tag for search engines
+  - Robots and Googlebot directives
+  - Geo-location tags for Brazil/Vitória targeting
+- **Structured Data**: JSON-LD schema for EducationalOrganization with:
+  - Company information and logo
+  - Social media profiles (5 platforms)
+  - Contact details (email, phone, address)
+  - Portuguese language specification
+- **Sitemap & Robots**: Created sitemap.xml and robots.txt in /client/public/
+  - Sitemap includes all pages with priorities and update frequencies
+  - Robots.txt allows all crawlers and references sitemap
+- **Image Optimization**: Added lazy loading to logo and footer images
+- **Accessibility Improvements**: Enhanced ARIA attributes in Header
+  - Mobile menu toggle has descriptive aria-label (changes based on state)
+  - Added aria-expanded attribute to hamburger button
+  - CTA button has aria-label for screen readers
+
+### UX & Contact Updates (January 2025)
+- **FAQ CTA Spacing**: Increased top margin on "Dúvidas?" button (mt-16) for better visual hierarchy
+- **Social Media Expansion**: Footer now includes 5 platforms:
+  - Instagram, Facebook, TikTok, YouTube, LinkedIn
+  - All with correct aria-labels and external links
+- **Contact Email Update**: Changed from contato@ to suporte@passarei.com.br
+  - Updated across all pages: Footer, FAQ, legal pages, success page
+
 ## Environment Variables
 
 Required for production:
