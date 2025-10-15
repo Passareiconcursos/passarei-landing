@@ -61,14 +61,20 @@ export function Beneficios() {
           {benefits.map((benefit, index) => (
             <div 
               key={index}
-              className="bg-white rounded-2xl p-8 shadow-md hover:shadow-xl transition-all border border-gray-100 hover-elevate"
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all"
               data-testid={`card-beneficio-${index}`}
             >
-              <div className="text-5xl mb-4">{benefit.emoji}</div>
-              <h3 className="text-xl font-semibold text-foreground mb-3">
+              {/* Ícone - Centralizado e com tamanho fixo */}
+              <div className="flex items-center justify-center w-12 h-12 bg-[#18cb96] bg-opacity-10 rounded-full mb-4">
+                <svg className="w-6 h-6 text-[#18cb96]" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+              
+              <h3 className="text-xl font-bold text-gray-900 mb-3">
                 {benefit.title}
               </h3>
-              <p className="text-muted-foreground leading-relaxed">
+              <p className="text-gray-600 leading-relaxed">
                 {benefit.description}
               </p>
             </div>

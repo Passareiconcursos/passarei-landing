@@ -1,19 +1,25 @@
 import { useState } from "react";
-import { TrendingUp, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const scrollToSection = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-    setMobileMenuOpen(false);
+    // Check if we're on the landing page
+    if (window.location.pathname === '/') {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+      setMobileMenuOpen(false);
+    } else {
+      // Navigate to home page with hash
+      window.location.href = `/#${id}`;
+    }
   };
 
   const menuItems = [
     { label: "Como Funciona", id: "como-funciona" },
     { label: "Depoimentos", id: "depoimentos" },
-    { label: "Planos e Preços", id: "planos" },
+    { label: "Planos", id: "planos" },
     { label: "FAQ", id: "faq" },
   ];
 
@@ -23,14 +29,17 @@ export function Header() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             
-            {/* Logo - Esquerda */}
-            <button 
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            {/* Logo - Esquerda - CLICÁVEL */}
+            <a 
+              href="/" 
+              className="flex items-center hover:opacity-80 transition-opacity"
             >
-              <TrendingUp className="w-8 h-8 text-primary" />
-              <span className="text-xl font-bold text-gray-900">PASSAREI</span>
-            </button>
+              <img 
+                src="/logo.png" 
+                alt="Passarei" 
+                className="h-8 md:h-10 w-auto"
+              />
+            </a>
             
             {/* Menu Desktop - Centro */}
             <nav className="hidden md:flex items-center gap-8">
@@ -45,17 +54,11 @@ export function Header() {
               ))}
             </nav>
             
-            {/* CTAs Desktop - Direita */}
-            <div className="hidden md:flex items-center gap-4">
-              <button
-                onClick={() => scrollToSection("lead-form")}
-                className="text-gray-700 hover:text-[#18cb96] transition-colors font-medium"
-              >
-                Entrar
-              </button>
+            {/* CTA Desktop - Direita - APENAS "Cadastrar" */}
+            <div className="hidden md:flex">
               <Button
                 onClick={() => scrollToSection("lead-form")}
-                className="bg-[#18cb96] hover:bg-[#14b584] text-white px-6 py-2.5 rounded-lg font-semibold hover:scale-105 transition-all"
+                className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-3 rounded-lg font-semibold text-base hover:scale-105 transition-all shadow-md hover:shadow-lg"
               >
                 Cadastrar
               </Button>
@@ -90,17 +93,11 @@ export function Header() {
                 </button>
               ))}
               <div className="border-t border-gray-200 my-2"></div>
-              <button
-                onClick={() => scrollToSection("lead-form")}
-                className="text-left px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-[#18cb96] rounded-lg transition-colors font-medium"
-              >
-                Entrar
-              </button>
               <Button
                 onClick={() => scrollToSection("lead-form")}
                 className="bg-[#18cb96] hover:bg-[#14b584] text-white w-full py-3 rounded-lg font-semibold"
               >
-                Cadastrar Grátis
+                Cadastrar
               </Button>
             </nav>
           </div>

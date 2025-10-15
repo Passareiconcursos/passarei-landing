@@ -1,5 +1,6 @@
 import { TrendingUp, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WhatsAppCarousel } from "@/components/WhatsAppCarousel";
 
 export function Hero() {
   const scrollToForm = () => {
@@ -17,18 +18,12 @@ export function Hero() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Column - Content */}
           <div className="text-center lg:text-left">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-6">
-              Você Vai Passar no Concurso Policial
-              <br />
-              <span className="text-muted-foreground">(e a gente mostra como)</span>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
+              Seu preparador pessoal para concursos policiais.
             </h1>
 
-            <p className="text-lg md:text-xl text-muted-foreground mb-4 leading-relaxed">
-              Sistema de estudos inteligente via WhatsApp que se adapta ao seu ritmo e ao seu edital. Conteúdo personalizado, questões reais e repetição científica — tudo no seu celular.
-            </p>
-
-            <p className="text-lg md:text-xl text-foreground font-semibold mb-8">
-              Apenas 15 minutos por dia. Sem aulas longas. Sem enrolação.
+            <p className="text-xl md:text-2xl text-gray-600 mb-8">
+              IA que envia o conteúdo certo, na hora certa — direto no WhatsApp
             </p>
 
             {/* CTAs */}
@@ -68,20 +63,20 @@ export function Hero() {
             </div>
           </div>
 
-          {/* Right Column - WhatsApp Mockup */}
+          {/* Right Column - WhatsApp Mockup (Desktop) */}
           <div className="hidden lg:block">
             <div className="relative max-w-sm mx-auto">
               {/* Phone frame */}
               <div className="bg-white rounded-3xl shadow-2xl p-4 border-8 border-gray-800">
                 {/* WhatsApp header */}
-                <div className="bg-green-600 text-white rounded-t-2xl p-4 mb-4">
+                <div className="bg-[#18cb96] text-white rounded-t-2xl p-4 mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-                      <span className="text-green-600 font-bold">P</span>
+                      <span className="text-[#18cb96] font-bold">P</span>
                     </div>
                     <div>
                       <p className="font-semibold">PASSAREI</p>
-                      <p className="text-xs text-green-100">Online</p>
+                      <p className="text-xs opacity-90">online agora</p>
                     </div>
                   </div>
                 </div>
@@ -100,7 +95,7 @@ export function Hero() {
                   <div className="bg-white rounded-lg p-3 shadow-sm max-w-[85%]">
                     <p className="text-sm mb-2">Entendeu?</p>
                     <div className="flex gap-2">
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">👍 Sim</span>
+                      <span className="text-xs bg-[#18cb96] bg-opacity-20 text-[#18cb96] px-2 py-1 rounded">👍 Sim</span>
                       <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">❓ Dúvida</span>
                     </div>
                   </div>
@@ -111,16 +106,16 @@ export function Hero() {
                     <div className="text-xs space-y-1">
                       <p>A) O administrador...</p>
                       <p>B) O particular...</p>
-                      <p className="font-semibold text-primary">C) A legalidade...</p>
+                      <p className="font-semibold text-[#18cb96]">C) A legalidade...</p>
                     </div>
                   </div>
 
-                  <div className="bg-green-100 rounded-lg p-3 shadow-sm max-w-[85%] ml-auto">
+                  <div className="bg-[#DCF8C6] rounded-lg p-3 shadow-sm max-w-[85%] ml-auto">
                     <p className="text-sm">C</p>
                   </div>
 
                   <div className="bg-white rounded-lg p-3 shadow-sm max-w-[85%]">
-                    <p className="text-sm font-semibold text-green-600 mb-1">✅ CORRETO! +10 pontos</p>
+                    <p className="text-sm font-semibold text-[#18cb96] mb-1">✅ CORRETO! +10 pontos</p>
                     <p className="text-xs text-muted-foreground">Perfeito! A alternativa C está correta porque...</p>
                   </div>
                 </div>
@@ -128,6 +123,9 @@ export function Hero() {
             </div>
           </div>
         </div>
+
+        {/* WhatsApp Carousel (Mobile) */}
+        <WhatsAppCarousel />
       </div>
     </section>
   );

@@ -75,14 +75,16 @@ export function ComoFunciona() {
         </div>
 
         <div className="text-center bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-8">
-          <Button
-            size="lg"
-            onClick={scrollToForm}
-            className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
-            data-testid="button-como-funciona-cta"
-          >
-            🚀 Começar Minha Preparação Agora
-          </Button>
+          <div className="w-full px-4 md:px-0">
+            <Button
+              size="lg"
+              onClick={scrollToForm}
+              className="w-full md:w-auto bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+              data-testid="button-como-funciona-cta"
+            >
+              Iniciar Preparação Agora
+            </Button>
+          </div>
           <p className="text-sm text-muted-foreground mt-4">
             Grátis para sempre - Sem cartão de crédito
           </p>
