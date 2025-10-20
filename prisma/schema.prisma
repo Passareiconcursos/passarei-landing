@@ -1,0 +1,135 @@
+// SCHEMA PRISMA - PASSAREI (FASE 1)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== LEADS ====================
+
+model Lead {
+  id        String   @id @default(cuid())
+  
+  // Dados Pessoais
+  name      String
+  email     String   @unique
+  phone     String   @unique
+  
+  // Dados do Concurso
+  examType  ExamType
+  state     String?
+  position  String?
+  
+  // Plano de Interesse
+  interestedPlan PlanType @default(GRATUITO)
+  
+  // Marketing (UTMs)
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  utmContent    String?
+  utmTerm       String?
+  
+  // Origem
+  referrer      String?
+  landingPage   String?
+  deviceInfo    Json?
+  
+  // Status
+  status        LeadStatus @default(NOVO)
+  
+  // Opt-ins
+  acceptedWhatsApp Boolean @default(false)
+  acceptedEmail    Boolean @default(false)
+  
+  // Controle
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  notes     String?  @db.Text
+
+  @@index([email])
+  @@index([phone])
+  @@index([status])
+  @@index([examType])
+  @@index([createdAt])
+}
+
+enum ExamType {
+  PM
+  PC
+  PRF
+  PF
+  OUTRO
+}
+
+enum PlanType {
+  GRATUITO
+  CALOURO
+  VETERANO
+}
+
+enum LeadStatus {
+  NOVO
+  CONTATADO
+  ENGAJADO
+  QUALIFICADO
+  CONVERTIDO
+  PERDIDO
+  INVALIDO
+}
+
+// ==================== WAITLIST ====================
+
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  position  Int      @default(autoincrement())
+  notified  Boolean  @default(false)
+  examType  ExamType?
+  createdAt DateTime @default(now())
+  
+  @@index([email])
+  @@index([position])
+}
+
+// ==================== ANALYTICS ====================
+
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  sessionId String
+  ipAddress String?
+  userAgent String?  @db.Text
+  device    String?
+  browser   String?
+  os        String?
+  referrer  String?  @db.Text
+  utmSource String?
+  utmMedium String?
+  utmCampaign String?
+  timeSpent Int?
+  createdAt DateTime @default(now())
+  
+  @@index([sessionId])
+  @@index([path])
+  @@index([createdAt])
+}
+
+model FormSubmission {
+  id        String   @id @default(cuid())
+  formData  Json
+  success   Boolean
+  error     String?  @db.Text
+  leadId    String?
+  ipAddress String?
+  userAgent String?  @db.Text
+  createdAt DateTime @default(now())
+  
+  @@index([success])
+  @@index([createdAt])
+}
