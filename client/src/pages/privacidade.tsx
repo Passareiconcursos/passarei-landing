@@ -21,7 +21,7 @@ export default function Privacidade() {
             </p>
             <p className="text-foreground mb-4">
               Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos suas informações 
-              pessoais em conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018)</strong> 
+              pessoais em conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD - Lei 13.709/2018)</strong> 
               e demais legislações aplicáveis.
             </p>
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
