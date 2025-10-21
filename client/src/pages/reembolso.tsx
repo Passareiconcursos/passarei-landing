@@ -15,160 +15,340 @@ export default function Reembolso() {
 
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-foreground mb-4">1. Garantia de 7 Dias</h2>
+            <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-4">
+              <p className="text-green-900 font-medium">
+                <strong>Garantia Incondicional:</strong> Oferecemos <strong>7 dias de garantia incondicional</strong> para todos 
+                os planos pagos (Calouro e Veterano).
+              </p>
+            </div>
             <p className="text-foreground mb-4">
-              Oferecemos uma <strong>garantia incondicional de 7 dias</strong> para todos os nossos planos pagos (Calouro e Veterano).
+              Se você não estiver satisfeito com o Passarei por <strong>qualquer motivo</strong>, pode solicitar 
+              reembolso total dentro de 7 dias corridos da data da compra.
             </p>
-            <p className="text-foreground mb-4">
-              Se você não estiver satisfeito com o Passarei por qualquer motivo, pode solicitar reembolso total dentro de 7 dias corridos da data da compra. <strong>Sem perguntas, sem burocracia.</strong>
-            </p>
+            <ul className="list-disc pl-6 text-foreground mb-4 space-y-2">
+              <li><strong>Sem perguntas:</strong> Não pedimos justificativa (embora feedback seja bem-vindo)</li>
+              <li><strong>Sem burocracia:</strong> Processo simples e rápido</li>
+              <li><strong>100% do valor:</strong> Reembolso completo do valor pago</li>
+              <li><strong>Todos os planos pagos:</strong> Válido para Calouro (R$ 29,90) e Veterano (R$ 238,80)</li>
+            </ul>
           </section>
 
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-foreground mb-4">2. Como Solicitar Reembolso</h2>
             <p className="text-foreground mb-4">
-              Para solicitar reembolso dentro do período de garantia:
+              Para solicitar reembolso dentro do período de garantia de 7 dias:
             </p>
-            <ol className="list-decimal pl-6 text-foreground mb-4">
-              <li>Envie email para: <strong>reembolso@passarei.com.br</strong></li>
-              <li>Informe o email cadastrado e motivo (opcional)</li>
-              <li>Aguarde confirmação em até 24 horas úteis</li>
-              <li>Receba o valor em até 5-10 dias úteis no mesmo método de pagamento</li>
-            </ol>
+            
+            <div className="bg-gray-100 rounded-lg p-6 mb-4">
+              <h3 className="text-lg font-semibold text-foreground mb-3">Passo a Passo:</h3>
+              <ol className="list-decimal pl-6 text-foreground mb-4 space-y-3">
+                <li>
+                  <strong>Envie um email para:</strong> suporte@passarei.com.br
+                  <ul className="list-disc pl-6 mt-2">
+                    <li>Assunto: "Solicitação de Reembolso"</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Informe os seguintes dados:</strong>
+                  <ul className="list-disc pl-6 mt-2">
+                    <li>Nome completo cadastrado</li>
+                    <li>Email cadastrado na plataforma</li>
+                    <li>Motivo (opcional, mas nos ajuda a melhorar)</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Aguarde confirmação:</strong> Responderemos em até <strong>2 dias úteis</strong> 
+                  confirmando o processamento do reembolso
+                </li>
+                <li>
+                  <strong>Receba o valor:</strong> O reembolso será creditado em <strong>5-10 dias úteis</strong> 
+                  no mesmo método de pagamento original
+                </li>
+              </ol>
+            </div>
+
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+              <p className="text-blue-900 font-medium">
+                <strong>Importante:</strong> O prazo de 7 dias começa a contar a partir da <strong>data de confirmação do pagamento</strong>, 
+                não da data de cadastro na plataforma.
+              </p>
+            </div>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-foreground mb-4">3. Elegibilidade para Reembolso</h2>
+            
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">3.1 Situações Elegíveis</h3>
+              <ul className="list-disc pl-6 text-foreground mb-4 space-y-2">
+                <li><strong>Primeira assinatura:</strong> Primeira vez que assina um plano pago</li>
+                <li><strong>Dentro de 7 dias:</strong> Solicitação feita dentro do período de garantia</li>
+                <li><strong>Planos mensais:</strong> Assinatura do Plano Calouro (R$ 29,90/mês)</li>
+                <li><strong>Planos anuais:</strong> Assinatura do Plano Veterano (R$ 238,80/ano)</li>
+              </ul>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">3.2 Situações NÃO Elegíveis</h3>
+              <ul className="list-disc pl-6 text-foreground mb-4 space-y-2">
+                <li><strong>Renovações automáticas:</strong> Após o primeiro período, não há reembolso (apenas cancelamento)</li>
+                <li><strong>Após 7 dias:</strong> Solicitações fora do prazo de garantia (neste caso, cancele para não renovar)</li>
+                <li><strong>Violação dos Termos:</strong> Contas suspensas por descumprimento dos Termos de Uso</li>
+                <li><strong>Uso fraudulento:</strong> Atividade suspeita ou tentativa de fraude</li>
+                <li><strong>Múltiplas solicitações:</strong> Padrão de assinar, pedir reembolso e reassinar repetidamente</li>
+              </ul>
+            </div>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-foreground mb-4">4. Método de Reembolso</h2>
             <p className="text-foreground mb-4">
-              <strong>Importante:</strong> O prazo de 7 dias começa a contar a partir da data de confirmação do pagamento, não da data de cadastro.
+              O reembolso sempre será processado através do <strong>mesmo método de pagamento original</strong>:
+            </p>
+            
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">4.1 Cartão de Crédito</h3>
+              <ul className="list-disc pl-6 text-foreground mb-4">
+                <li><strong>Prazo:</strong> 5-10 dias úteis após aprovação</li>
+                <li><strong>Onde aparece:</strong> O estorno aparecerá na próxima fatura do cartão</li>
+                <li><strong>Descrição:</strong> Geralmente como "Reembolso Passarei" ou similar</li>
+                <li><strong>Variação:</strong> Algumas operadoras levam até 2 ciclos de fatura</li>
+              </ul>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">4.2 PIX</h3>
+              <ul className="list-disc pl-6 text-foreground mb-4">
+                <li><strong>Prazo:</strong> 2-5 dias úteis após aprovação</li>
+                <li><strong>Dados necessários:</strong> Confirmaremos a chave PIX cadastrada</li>
+                <li><strong>Notificação:</strong> Você receberá confirmação por email antes do depósito</li>
+              </ul>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">4.3 Boleto Bancário</h3>
+              <ul className="list-disc pl-6 text-foreground mb-4">
+                <li><strong>Prazo:</strong> 5-7 dias úteis após aprovação e confirmação de dados</li>
+                <li><strong>Dados necessários:</strong> Banco, agência, conta e CPF do titular</li>
+                <li><strong>Transferência:</strong> Via TED/DOC para a conta informada</li>
+              </ul>
+            </div>
+
+            <p className="text-foreground mb-4">
+              <em>Nota: O prazo começa a contar após a aprovação do reembolso pela nossa equipe, não da data 
+              da solicitação.</em>
             </p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-foreground mb-4">3. Cancelamento de Assinatura</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">5. Cancelamento (Sem Reembolso)</h2>
             <p className="text-foreground mb-4">
-              Você pode cancelar sua assinatura a qualquer momento através de:
+              Se você estiver <strong>fora do período de garantia de 7 dias</strong>, você pode cancelar sua 
+              assinatura a qualquer momento, mas não haverá reembolso do período já pago.
             </p>
-            <ul className="list-disc pl-6 text-foreground mb-4">
-              <li>Configurações da Conta → "Cancelar Assinatura"</li>
-              <li>Email para: cancelamento@passarei.com.br</li>
-              <li>WhatsApp: (11) 99999-9999</li>
-            </ul>
-            <p className="text-foreground mb-4">
-              <strong>Após o cancelamento:</strong>
-            </p>
-            <ul className="list-disc pl-6 text-foreground mb-4">
-              <li>Você mantém acesso até o final do período pago</li>
-              <li>Não haverá cobrança no próximo ciclo</li>
-              <li>Seus dados de progresso são mantidos por 30 dias</li>
-              <li>Pode reativar a qualquer momento sem perder histórico</li>
-            </ul>
+            
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">5.1 Como Cancelar</h3>
+              <ul className="list-disc pl-6 text-foreground mb-4">
+                <li>Através das configurações da sua conta na plataforma</li>
+                <li>Email para: suporte@passarei.com.br</li>
+                <li>Mensagem via WhatsApp</li>
+              </ul>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">5.2 O Que Acontece Após Cancelamento</h3>
+              <ul className="list-disc pl-6 text-foreground mb-4 space-y-2">
+                <li><strong>Acesso mantido:</strong> Você continua usando todos os recursos até o final do período pago</li>
+                <li><strong>Sem renovação:</strong> A assinatura não será renovada automaticamente</li>
+                <li><strong>Dados preservados:</strong> Seu progresso é mantido por 30 dias (para eventual reativação)</li>
+                <li><strong>Reativação:</strong> Pode voltar a qualquer momento sem perder histórico (se dentro dos 30 dias)</li>
+              </ul>
+            </div>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-foreground mb-4">4. Reembolso Após 7 Dias</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">6. Exceções e Casos Especiais</h2>
             <p className="text-foreground mb-4">
-              Após o período de garantia de 7 dias, <strong>não oferecemos reembolso</strong>, exceto em casos excepcionais:
+              Mesmo após o período de 7 dias, <strong>podemos considerar reembolso</strong> em situações excepcionais:
             </p>
-            <ul className="list-disc pl-6 text-foreground mb-4">
-              <li><strong>Cobrança Duplicada:</strong> Reembolso total da cobrança extra</li>
-              <li><strong>Erro Técnico:</strong> Impossibilidade de usar a plataforma por mais de 7 dias consecutivos</li>
-              <li><strong>Problemas de Saúde:</strong> Com apresentação de atestado médico</li>
-              <li><strong>Cobranças Não Autorizadas:</strong> Fraude ou uso indevido</li>
-            </ul>
-            <p className="text-foreground mb-4">
-              Estes casos serão analisados individualmente pela nossa equipe.
-            </p>
+            
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">6.1 Casos Elegíveis para Análise</h3>
+              <ul className="list-disc pl-6 text-foreground mb-4 space-y-2">
+                <li>
+                  <strong>Cobrança duplicada:</strong> Reembolso total e imediato da cobrança extra
+                </li>
+                <li>
+                  <strong>Erro técnico grave:</strong> Impossibilidade de usar a plataforma por mais de 7 dias 
+                  consecutivos devido a problemas técnicos do nosso lado
+                </li>
+                <li>
+                  <strong>Cobrança não autorizada:</strong> Fraude ou uso indevido do cartão/conta
+                </li>
+                <li>
+                  <strong>Problemas de saúde:</strong> Impedimento de uso por motivos médicos graves 
+                  (com apresentação de atestado)
+                </li>
+              </ul>
+              <p className="text-foreground mb-4">
+                <em>Estes casos serão analisados individualmente pela nossa equipe e requerem documentação comprobatória.</em>
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">6.2 NÃO Concedemos Reembolso</h3>
+              <ul className="list-disc pl-6 text-foreground mb-4 space-y-2">
+                <li><strong>Falta de engajamento pessoal:</strong> "Não tive tempo para estudar"</li>
+                <li><strong>Mudança de planos:</strong> "Desisti de prestar o concurso"</li>
+                <li><strong>Expectativas não alinhadas:</strong> "Achei que seria diferente" (use o período de 7 dias!)</li>
+                <li><strong>Violação dos Termos de Uso:</strong> Compartilhamento de conta, uso indevido, etc.</li>
+              </ul>
+            </div>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-foreground mb-4">5. Plano Gratuito</h2>
-            <p className="text-foreground mb-4">
-              O plano gratuito não envolve pagamento e, portanto, não se aplica política de reembolso. Você pode cancelar a qualquer momento sem custos.
-            </p>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">7. Planos Específicos</h2>
+            
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">7.1 Plano Gratuito</h3>
+              <p className="text-foreground mb-4">
+                O plano gratuito não envolve pagamento e, portanto, não se aplica política de reembolso. 
+                Você pode cancelar a qualquer momento sem custos.
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">7.2 Plano Calouro (Mensal - R$ 29,90/mês)</h3>
+              <ul className="list-disc pl-6 text-foreground mb-4">
+                <li><strong>Primeiros 7 dias:</strong> Reembolso total de R$ 29,90</li>
+                <li><strong>Após 7 dias:</strong> Sem reembolso, apenas cancelamento (acesso até fim do mês pago)</li>
+                <li><strong>Renovação automática:</strong> Cobrada mensalmente até cancelamento</li>
+              </ul>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">7.3 Plano Veterano (Anual - R$ 238,80/ano)</h3>
+              <ul className="list-disc pl-6 text-foreground mb-4">
+                <li><strong>Primeiros 7 dias:</strong> Reembolso total de R$ 238,80</li>
+                <li><strong>Após 7 dias:</strong> Sem reembolso, apenas cancelamento (acesso até fim dos 12 meses)</li>
+                <li><strong>Sem reembolso proporcional:</strong> Não fazemos reembolso de meses não utilizados</li>
+                <li><strong>Renovação automática:</strong> Cobrada anualmente até cancelamento</li>
+              </ul>
+              <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mt-4">
+                <p className="text-amber-900 font-medium">
+                  <strong>Dica:</strong> Teste primeiro com o Plano Calouro (mensal) antes de assinar o Plano Veterano (anual) 
+                  se ainda tiver dúvidas sobre a plataforma.
+                </p>
+              </div>
+            </div>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-foreground mb-4">6. Plano Anual (Veterano)</h2>
-            <p className="text-foreground mb-4">
-              Para o plano anual:
-            </p>
-            <ul className="list-disc pl-6 text-foreground mb-4">
-              <li><strong>Primeiros 7 dias:</strong> Reembolso total de R$ 238,80</li>
-              <li><strong>Após 7 dias:</strong> Sem reembolso, exceto casos excepcionais</li>
-              <li><strong>Cancelamento:</strong> Acesso mantido até o final dos 12 meses</li>
-            </ul>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">8. Upgrades e Downgrades</h2>
+            
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">8.1 Upgrade (Gratuito → Calouro → Veterano)</h3>
+              <ul className="list-disc pl-6 text-foreground mb-4 space-y-2">
+                <li><strong>Pagamento:</strong> Apenas da diferença proporcional ao período restante</li>
+                <li><strong>Mudança:</strong> Imediata - recursos premium disponíveis instantaneamente</li>
+                <li><strong>Garantia de 7 dias:</strong> Se aplica normalmente ao novo plano</li>
+              </ul>
+              <p className="text-foreground mb-4">
+                <em>Exemplo: Se você está no Plano Calouro há 15 dias e faz upgrade para Veterano, pagará a 
+                diferença proporcional e a garantia de 7 dias começa a contar da data do upgrade.</em>
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">8.2 Downgrade (Veterano → Calouro → Gratuito)</h3>
+              <ul className="list-disc pl-6 text-foreground mb-4 space-y-2">
+                <li><strong>Sem reembolso proporcional:</strong> Você mantém acesso ao plano atual até o fim do período pago</li>
+                <li><strong>Mudança efetiva:</strong> No próximo ciclo de cobrança</li>
+                <li><strong>Recursos premium:</strong> Permanecem disponíveis até o final do período pago</li>
+              </ul>
+              <p className="text-foreground mb-4">
+                <em>Exemplo: Se você assinou o Plano Veterano (anual) e quer fazer downgrade para Calouro (mensal), 
+                continuará com acesso total por 12 meses. Após esse período, será cobrado mensalmente no Plano Calouro.</em>
+              </p>
+            </div>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-foreground mb-4">7. Processamento de Reembolso</h2>
-            <p className="text-foreground mb-4">
-              <strong>Prazos de reembolso por método de pagamento:</strong>
-            </p>
-            <ul className="list-disc pl-6 text-foreground mb-4">
-              <li><strong>Cartão de Crédito:</strong> 5-10 dias úteis (dependendo da operadora)</li>
-              <li><strong>Pix:</strong> Até 2 dias úteis</li>
-              <li><strong>Boleto:</strong> 5-7 dias úteis após confirmação de dados bancários</li>
-            </ul>
-            <p className="text-foreground mb-4">
-              O prazo começa a contar após a aprovação do reembolso pela nossa equipe.
-            </p>
-          </section>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">9. Perguntas Frequentes</h2>
+            
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">Posso pedir reembolso se não passei no concurso?</h3>
+              <p className="text-foreground mb-4">
+                Não. O Passarei é uma ferramenta de apoio aos estudos. Não garantimos aprovação em concursos, 
+                pois o resultado depende de múltiplos fatores, incluindo dedicação individual. Use o período de 
+                garantia de 7 dias para avaliar se a plataforma atende suas necessidades.
+              </p>
+            </div>
 
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-foreground mb-4">8. Condições Especiais</h2>
-            <p className="text-foreground mb-4">
-              <strong>Não concedemos reembolso em casos de:</strong>
-            </p>
-            <ul className="list-disc pl-6 text-foreground mb-4">
-              <li>Violação dos Termos de Uso</li>
-              <li>Compartilhamento de conta com terceiros</li>
-              <li>Uso indevido da plataforma</li>
-              <li>Fraude ou tentativa de fraude</li>
-              <li>Falta de estudo/engajamento pessoal</li>
-            </ul>
-          </section>
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">Posso pedir reembolso múltiplas vezes?</h3>
+              <p className="text-foreground mb-4">
+                A garantia de 7 dias é válida para a primeira assinatura de cada plano. Padrões de 
+                assinar-reembolsar-reassinar repetidamente podem resultar na negação de futuros reembolsos 
+                e possível suspensão da conta.
+              </p>
+            </div>
 
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-foreground mb-4">9. Upgrades e Downgrades</h2>
-            <p className="text-foreground mb-4">
-              <strong>Upgrade (Gratuito → Calouro → Veterano):</strong>
-            </p>
-            <ul className="list-disc pl-6 text-foreground mb-4">
-              <li>Pagamento apenas da diferença proporcional</li>
-              <li>Mudança imediata de recursos</li>
-              <li>Garantia de 7 dias se aplica</li>
-            </ul>
-            <p className="text-foreground mb-4">
-              <strong>Downgrade (Veterano → Calouro → Gratuito):</strong>
-            </p>
-            <ul className="list-disc pl-6 text-foreground mb-4">
-              <li>Sem reembolso proporcional</li>
-              <li>Mudança efetiva no próximo ciclo de cobrança</li>
-              <li>Acesso aos recursos premium mantido até o final do período pago</li>
-            </ul>
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">E se eu esquecer de cancelar antes da renovação?</h3>
+              <p className="text-foreground mb-4">
+                Renovações automáticas não são elegíveis para reembolso. Recomendamos configurar lembretes 
+                ou cancelar com antecedência se não pretende continuar.
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-foreground mb-3">Quanto tempo demora para o dinheiro voltar?</h3>
+              <p className="text-foreground mb-4">
+                Após aprovação do reembolso: 5-10 dias úteis (cartão de crédito), 2-5 dias úteis (PIX), 
+                ou 5-7 dias úteis (boleto/transferência bancária). O prazo pode variar conforme a operadora/banco.
+              </p>
+            </div>
           </section>
 
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-foreground mb-4">10. Contato</h2>
             <p className="text-foreground mb-4">
-              Para solicitar reembolso ou tirar dúvidas:
+              Para solicitar reembolso ou tirar dúvidas sobre esta política:
             </p>
-            <ul className="list-none text-foreground mb-4">
-              <li><strong>Email:</strong> reembolso@passarei.com.br</li>
-              <li><strong>Suporte:</strong> suporte@passarei.com.br</li>
-              <li><strong>WhatsApp:</strong> (11) 99999-9999</li>
+            <ul className="list-none text-foreground mb-4 space-y-2">
+              <li><strong>Email de Suporte:</strong> suporte@passarei.com.br</li>
+              <li><strong>Assunto:</strong> "Solicitação de Reembolso" ou "Dúvida sobre Reembolso"</li>
+              <li><strong>Horário de Atendimento:</strong> Segunda a sexta, 9h às 18h (horário de Brasília)</li>
+              <li><strong>Prazo de Resposta:</strong> Até 2 dias úteis para solicitações de reembolso</li>
+              <li><strong>Prazo de Resposta:</strong> Até 5 dias úteis para dúvidas gerais</li>
             </ul>
-            <p className="text-foreground mb-4">
-              <strong>Horário de atendimento:</strong> Segunda a sexta, 9h às 18h (horário de Brasília)
-            </p>
           </section>
 
-          <section className="mb-8">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-              <p className="text-foreground font-semibold mb-2">
-                💚 Nossa Promessa
-              </p>
-              <p className="text-foreground">
-                Queremos que você tenha confiança total no Passarei. Por isso, oferecemos garantia de 7 dias sem perguntas. Se não funcionar para você, devolvemos seu dinheiro. Simples assim.
-              </p>
-            </div>
-          </section>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6 mt-8">
+            <p className="text-foreground font-semibold mb-2">
+              Nossa Promessa de Satisfação
+            </p>
+            <p className="text-foreground mb-3">
+              Queremos que você tenha <strong>confiança total</strong> ao investir no Passarei. Por isso, 
+              oferecemos 7 dias de garantia incondicional.
+            </p>
+            <p className="text-foreground">
+              Se a plataforma não atender suas expectativas, devolvemos seu dinheiro. <strong>Sem perguntas, 
+              sem burocracia.</strong> Simples assim.
+            </p>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-4">
+            <p className="text-foreground font-semibold mb-2">
+              Documentos Relacionados
+            </p>
+            <p className="text-foreground">
+              Leia também nossos <a href="/termos" className="text-primary hover:underline">Termos de Uso</a> e 
+              {" "}<a href="/privacidade" className="text-primary hover:underline">Política de Privacidade</a>.
+            </p>
+          </div>
         </div>
       </div>
       <Footer />
