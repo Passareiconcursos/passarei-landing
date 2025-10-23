@@ -59,3 +59,16 @@ Preferred communication style: Simple, everyday language.
 - **Google Fonts CDN**: For Inter font family.
 - **Google Analytics**: For conversion tracking.
 - **Meta Pixel**: For Facebook/Instagram ads tracking.
+- **Google reCAPTCHA v3**: For bot protection on admin login.
+
+## Environment Variables
+
+Required environment variables for production:
+
+- `DATABASE_URL` - PostgreSQL connection string (Neon serverless)
+- `SESSION_SECRET` - Express session secret for secure sessions
+- `RECAPTCHA_SECRET_KEY` - Google reCAPTCHA v3 secret key for admin login protection (must be rotated if previously exposed)
+- `VITE_GA_MEASUREMENT_ID` - Google Analytics tracking ID (optional)
+- `VITE_META_PIXEL_ID` - Meta Pixel tracking ID (optional)
+
+**Security Note**: The reCAPTCHA secret key must be kept secure and never committed to source control. Use Replit Secrets or your deployment platform's environment variable management.

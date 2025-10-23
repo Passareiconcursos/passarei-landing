@@ -49,7 +49,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     try {
       await fetch("/api/admin/logout", { method: "POST" });
       setAdmin(null);
-      setLocation("/admin");
+      setLocation("/educ");
     } catch (error) {
       console.error("Error logging out:", error);
     }

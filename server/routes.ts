@@ -4,7 +4,7 @@ import { db } from "../db";
 import { leads, admins, adminSessions, users, subscriptions } from "../db/schema";
 import { insertLeadSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
-import { eq, and, count, desc, asc, like, or } from "drizzle-orm";
+import { eq, and, count, desc, asc, like, or, ne } from "drizzle-orm";
 import {
   hashPassword,
   verifyPassword,
@@ -86,15 +86,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
+  // Helper function to verify reCAPTCHA token
+  async function verifyRecaptcha(token: string): Promise<boolean> {
+    if (!token) return false;
+    
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    
+    if (!secretKey) {
+      console.error("RECAPTCHA_SECRET_KEY not configured");
+      return false;
+    }
+    
+    const verifyUrl = `https://www.google.com/recaptcha/api/siteverify`;
+    
+    try {
+      const response = await fetch(verifyUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `secret=${secretKey}&response=${token}`,
+      });
+      
+      const data = await response.json();
+      return data.success && data.score >= 0.5; // Minimum score of 0.5
+    } catch (error) {
+      console.error("reCAPTCHA verification error:", error);
+      return false;
+    }
+  }
+
   // POST /api/admin/login - Admin login
   app.post("/api/admin/login", async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { email, password, recaptchaToken } = req.body;
 
       if (!email || !password) {
         return res.status(400).json({
           success: false,
           error: "Email e senha são obrigatórios.",
+        });
+      }
+
+      // Verify reCAPTCHA token (mandatory)
+      if (!recaptchaToken) {
+        return res.status(403).json({
+          success: false,
+          error: "Verificação de segurança obrigatória.",
+        });
+      }
+
+      const isHuman = await verifyRecaptcha(recaptchaToken);
+      if (!isHuman) {
+        return res.status(403).json({
+          success: false,
+          error: "Falha na verificação de segurança. Tente novamente.",
         });
       }
 
@@ -463,6 +507,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       return res.json({
         authenticated: false,
+      });
+    }
+  });
+
+  // PUT /api/admin/profile - Update admin profile
+  app.put("/api/admin/profile", requireAuth, async (req, res) => {
+    try {
+      const admin = (req as any).admin;
+      const { name, email } = req.body;
+
+      if (!name || !email) {
+        return res.status(400).json({
+          success: false,
+          error: "Nome e email são obrigatórios.",
+        });
+      }
+
+      // Check if email is already in use by another admin
+      const [existingAdmin] = await db
+        .select()
+        .from(admins)
+        .where(and(eq(admins.email, email), ne(admins.id, admin.id)))
+        .limit(1);
+
+      if (existingAdmin) {
+        return res.status(400).json({
+          success: false,
+          error: "Este email já está em uso.",
+        });
+      }
+
+      // Update profile
+      const [updatedAdmin] = await db
+        .update(admins)
+        .set({ name, email })
+        .where(eq(admins.id, admin.id))
+        .returning();
+
+      // Log audit
+      await logAuditAction(admin.id, "UPDATE", "admin", admin.id, null, req);
+
+      return res.json({
+        success: true,
+        admin: {
+          id: updatedAdmin.id,
+          email: updatedAdmin.email,
+          name: updatedAdmin.name,
+          role: updatedAdmin.role,
+        },
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erro ao atualizar perfil.",
+      });
+    }
+  });
+
+  // PUT /api/admin/password - Change admin password
+  app.put("/api/admin/password", requireAuth, async (req, res) => {
+    try {
+      const admin = (req as any).admin;
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          error: "Senha atual e nova senha são obrigatórias.",
+        });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({
+          success: false,
+          error: "A nova senha deve ter no mínimo 6 caracteres.",
+        });
+      }
+
+      // Verify current password
+      const isValid = await verifyPassword(currentPassword, admin.passwordHash);
+
+      if (!isValid) {
+        return res.status(401).json({
+          success: false,
+          error: "Senha atual incorreta.",
+        });
+      }
+
+      // Hash new password
+      const newPasswordHash = await hashPassword(newPassword);
+
+      // Update password
+      await db
+        .update(admins)
+        .set({ passwordHash: newPasswordHash })
+        .where(eq(admins.id, admin.id));
+
+      // Log audit
+      await logAuditAction(admin.id, "UPDATE", "admin", admin.id, null, req);
+
+      return res.json({
+        success: true,
+      });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erro ao alterar senha.",
+      });
+    }
+  });
+
+  // POST /api/admin/logo - Upload logo (placeholder for future implementation)
+  app.post("/api/admin/logo", requireAuth, async (req, res) => {
+    try {
+      // TODO: Implement file upload with multer or similar
+      return res.status(501).json({
+        success: false,
+        error: "Funcionalidade de upload de logo será implementada em breve.",
+      });
+    } catch (error) {
+      console.error("Error uploading logo:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erro ao fazer upload do logo.",
       });
     }
   });

@@ -15,7 +15,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      setLocation("/admin");
+      setLocation("/educ");
     }
   }, [isAuthenticated, isLoading, setLocation]);
 

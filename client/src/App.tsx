@@ -11,9 +11,14 @@ import Termos from "@/pages/termos";
 import Privacidade from "@/pages/privacidade";
 import Cookies from "@/pages/cookies";
 import Reembolso from "@/pages/reembolso";
-import AdminLogin from "@/pages/admin-login";
-import AdminDashboard from "@/pages/admin-dashboard";
-import AdminLeads from "@/pages/admin-leads";
+import EducLogin from "@/pages/educ-login";
+import EducDashboard from "@/pages/educ-dashboard";
+import EducLeads from "@/pages/educ-leads";
+import EducUsers from "@/pages/educ-users";
+import EducRevenue from "@/pages/educ-revenue";
+import EducContent from "@/pages/educ-content";
+import EducNotifications from "@/pages/educ-notifications";
+import EducSettings from "@/pages/educ-settings";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -25,9 +30,14 @@ function Router() {
       <Route path="/privacidade" component={Privacidade} />
       <Route path="/cookies" component={Cookies} />
       <Route path="/reembolso" component={Reembolso} />
-      <Route path="/admin" component={AdminLogin} />
-      <Route path="/admin/dashboard" component={AdminDashboard} />
-      <Route path="/admin/leads" component={AdminLeads} />
+      <Route path="/educ" component={EducLogin} />
+      <Route path="/educ/dashboard" component={EducDashboard} />
+      <Route path="/educ/leads" component={EducLeads} />
+      <Route path="/educ/users" component={EducUsers} />
+      <Route path="/educ/revenue" component={EducRevenue} />
+      <Route path="/educ/content" component={EducContent} />
+      <Route path="/educ/notifications" component={EducNotifications} />
+      <Route path="/educ/settings" component={EducSettings} />
       <Route component={NotFound} />
     </Switch>
   );

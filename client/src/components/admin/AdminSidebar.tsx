@@ -18,37 +18,37 @@ import { Button } from "@/components/ui/button";
 const menuItems = [
   {
     title: "Dashboard",
-    url: "/admin/dashboard",
+    url: "/educ/dashboard",
     icon: LayoutDashboard,
   },
   {
     title: "Leads",
-    url: "/admin/leads",
+    url: "/educ/leads",
     icon: UserCheck,
   },
   {
     title: "Usuários",
-    url: "/admin/users",
+    url: "/educ/users",
     icon: Users,
   },
   {
     title: "Receita",
-    url: "/admin/revenue",
+    url: "/educ/revenue",
     icon: DollarSign,
   },
   {
     title: "Conteúdo",
-    url: "/admin/content",
+    url: "/educ/content",
     icon: FileText,
   },
   {
     title: "Notificações",
-    url: "/admin/notifications",
+    url: "/educ/notifications",
     icon: Bell,
   },
   {
     title: "Configurações",
-    url: "/admin/settings",
+    url: "/educ/settings",
     icon: Settings,
   },
 ];

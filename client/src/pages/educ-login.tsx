@@ -22,7 +22,19 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Shield, Loader2 } from "lucide-react";
+import { Shield, Loader2, Eye, EyeOff } from "lucide-react";
+
+// Declaração global para reCAPTCHA
+declare global {
+  interface Window {
+    grecaptcha: {
+      ready: (callback: () => void) => void;
+      execute: (siteKey: string, options: { action: string }) => Promise<string>;
+    };
+  }
+}
+
+const RECAPTCHA_SITE_KEY = "6LfFmfQrAAAAAAo8sRWOz6vGIw0tbAvt1nrbtsfW";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
@@ -33,6 +45,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const { refresh } = useAdminAuth();
 
@@ -47,7 +60,21 @@ export default function AdminLogin() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      const res = await apiRequest("POST", "/api/admin/login", data);
+      // Gerar token reCAPTCHA
+      let recaptchaToken = "";
+      if (window.grecaptcha) {
+        await new Promise<void>((resolve) => {
+          window.grecaptcha.ready(() => resolve());
+        });
+        recaptchaToken = await window.grecaptcha.execute(RECAPTCHA_SITE_KEY, {
+          action: "login",
+        });
+      }
+
+      const res = await apiRequest("POST", "/api/admin/login", {
+        ...data,
+        recaptchaToken,
+      });
       const response = await res.json();
 
       if (response.success) {
@@ -57,7 +84,7 @@ export default function AdminLogin() {
         });
 
         await refresh();
-        window.location.href = "/admin/dashboard";
+        window.location.href = "/educ/dashboard";
       } else {
         toast({
           variant: "destructive",
@@ -120,14 +147,29 @@ export default function AdminLogin() {
                   <FormItem>
                     <FormLabel>Senha</FormLabel>
                     <FormControl>
-                      <Input
-                        data-testid="input-password"
-                        placeholder="••••••••"
-                        type="password"
-                        autoComplete="current-password"
-                        disabled={isLoading}
-                        {...field}
-                      />
+                      <div className="relative">
+                        <Input
+                          data-testid="input-password"
+                          placeholder="••••••••"
+                          type={showPassword ? "text" : "password"}
+                          autoComplete="current-password"
+                          disabled={isLoading}
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          disabled={isLoading}
+                          data-testid="button-toggle-password"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
