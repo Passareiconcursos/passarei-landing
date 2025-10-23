@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,6 +34,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { refresh } = useAdminAuth();
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -54,6 +56,7 @@ export default function AdminLogin() {
           description: `Bem-vindo, ${response.admin.name}!`,
         });
 
+        await refresh();
         window.location.href = "/admin/dashboard";
       } else {
         toast({
