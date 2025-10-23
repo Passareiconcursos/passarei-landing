@@ -1,35 +1,79 @@
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, DollarSign, TrendingUp } from "lucide-react";
-
-const stats = [
-  {
-    title: "Total de Leads",
-    value: "0",
-    description: "Novos leads este mês",
-    icon: UserCheck,
-  },
-  {
-    title: "Usuários Ativos",
-    value: "0",
-    description: "Usuários com assinatura ativa",
-    icon: Users,
-  },
-  {
-    title: "Receita Mensal (MRR)",
-    value: "R$ 0,00",
-    description: "Receita recorrente mensal",
-    icon: DollarSign,
-  },
-  {
-    title: "Taxa de Conversão",
-    value: "0%",
-    description: "Leads convertidos em usuários",
-    icon: TrendingUp,
-  },
-];
+import { Users, UserCheck, DollarSign, TrendingUp, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function AdminDashboard() {
+  const { data: statsData, isLoading, isError } = useQuery<{
+    success: boolean;
+    stats: {
+      totalLeads: number;
+      totalUsers: number;
+      activeUsers: number;
+      activeSubscriptions: number;
+      conversionRate: string;
+      mrr: number;
+    };
+  }>({
+    queryKey: ["/api/admin/stats"],
+  });
+
+  const stats = statsData?.stats;
+  
+  const formattedMrr = stats?.mrr != null 
+    ? `R$ ${stats.mrr.toFixed(2).replace('.', ',')}` 
+    : "R$ 0,00";
+
+  const statCards = [
+    {
+      title: "Total de Leads",
+      value: stats?.totalLeads?.toString() || "0",
+      description: "Total de leads cadastrados",
+      icon: UserCheck,
+    },
+    {
+      title: "Usuários Ativos",
+      value: stats?.activeUsers?.toString() || "0",
+      description: "Usuários com assinatura ativa",
+      icon: Users,
+    },
+    {
+      title: "Receita Mensal (MRR)",
+      value: formattedMrr,
+      description: "Receita recorrente mensal",
+      icon: DollarSign,
+    },
+    {
+      title: "Taxa de Conversão",
+      value: stats?.conversionRate || "0%",
+      description: "Leads convertidos em usuários",
+      icon: TrendingUp,
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (isError) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-destructive">Erro ao carregar estatísticas</h2>
+            <p className="text-muted-foreground mt-2">Tente recarregar a página</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -41,7 +85,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
+          {statCards.map((stat) => (
             <Card key={stat.title} data-testid={`card-${stat.title.toLowerCase().replace(/\s+/g, '-')}`}>
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">

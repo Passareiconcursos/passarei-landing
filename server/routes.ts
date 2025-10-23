@@ -1,10 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "../db";
-import { leads, admins, adminSessions } from "../db/schema";
+import { leads, admins, adminSessions, users, subscriptions } from "../db/schema";
 import { insertLeadSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
-import { eq, and } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
 import {
   hashPassword,
   verifyPassword,
@@ -246,6 +246,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({
         success: false,
         error: "Erro ao buscar informações do admin.",
+      });
+    }
+  });
+
+  // GET /api/admin/stats - Get dashboard statistics
+  app.get("/api/admin/stats", requireAuth, async (req, res) => {
+    try {
+      // Get leads statistics
+      const totalLeads = await db.select({ count: count() }).from(leads);
+      const convertedLeads = await db
+        .select({ count: count() })
+        .from(leads)
+        .where(eq(leads.status, "CONVERTED"));
+      
+      // Get users statistics  
+      const totalUsers = await db.select({ count: count() }).from(users);
+      const activeUsers = await db
+        .select({ count: count() })
+        .from(users)
+        .where(eq(users.isActive, true));
+
+      // Get subscription statistics
+      const activeSubscriptions = await db
+        .select({ count: count() })
+        .from(subscriptions)
+        .where(eq(subscriptions.status, "ACTIVE"));
+
+      // Calculate MRR from active subscriptions
+      const activeSubscriptionsData = await db
+        .select({ amount: subscriptions.amount })
+        .from(subscriptions)
+        .where(eq(subscriptions.status, "ACTIVE"));
+      
+      const mrr = activeSubscriptionsData.reduce((total, sub) => total + (sub.amount || 0), 0);
+
+      // Calculate conversion rate
+      const leadsCount = Number(totalLeads[0]?.count || 0);
+      const conversionCount = Number(convertedLeads[0]?.count || 0);
+      const conversionRate = leadsCount > 0 
+        ? ((conversionCount / leadsCount) * 100).toFixed(1) 
+        : "0.0";
+
+      return res.json({
+        success: true,
+        stats: {
+          totalLeads: leadsCount,
+          totalUsers: Number(totalUsers[0]?.count || 0),
+          activeUsers: Number(activeUsers[0]?.count || 0),
+          activeSubscriptions: Number(activeSubscriptions[0]?.count || 0),
+          conversionRate: `${conversionRate}%`,
+          mrr: mrr,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erro ao buscar estatísticas.",
       });
     }
   });
