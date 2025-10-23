@@ -4,7 +4,7 @@ import { db } from "../db";
 import { leads, admins, adminSessions, users, subscriptions } from "../db/schema";
 import { insertLeadSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, count, desc, asc, like, or } from "drizzle-orm";
 import {
   hashPassword,
   verifyPassword,
@@ -304,6 +304,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({
         success: false,
         error: "Erro ao buscar estatísticas.",
+      });
+    }
+  });
+
+  // GET /api/admin/leads - List leads with filters and pagination
+  app.get("/api/admin/leads", requireAuth, async (req, res) => {
+    try {
+      const { 
+        page = "1", 
+        limit = "10", 
+        status, 
+        examType, 
+        search,
+        sortBy = "createdAt",
+        sortOrder = "desc"
+      } = req.query;
+
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const offset = (pageNum - 1) * limitNum;
+
+      // Build where conditions
+      const conditions = [];
+      
+      if (status && status !== "ALL") {
+        conditions.push(eq(leads.status, status as string));
+      }
+      
+      if (examType && examType !== "ALL") {
+        conditions.push(eq(leads.examType, examType as string));
+      }
+      
+      if (search && typeof search === "string" && search.trim()) {
+        conditions.push(
+          or(
+            like(leads.name, `%${search}%`),
+            like(leads.email, `%${search}%`),
+            like(leads.phone, `%${search}%`)
+          )
+        );
+      }
+
+      // Get total count
+      const totalResult = await db
+        .select({ count: count() })
+        .from(leads)
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+      const total = Number(totalResult[0]?.count || 0);
+
+      // Get leads
+      const orderColumn = sortBy === "createdAt" ? leads.createdAt : leads.name;
+      const orderDirection = sortOrder === "asc" ? asc : desc;
+
+      const leadsData = await db
+        .select()
+        .from(leads)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(orderDirection(orderColumn))
+        .limit(limitNum)
+        .offset(offset);
+
+      return res.json({
+        success: true,
+        leads: leadsData,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching leads:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erro ao buscar leads.",
+      });
+    }
+  });
+
+  // PATCH /api/admin/leads/:id - Update lead status
+  app.patch("/api/admin/leads/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status || !["NOVO", "CONTATADO", "QUALIFICADO", "CONVERTIDO"].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          error: "Status inválido.",
+        });
+      }
+
+      const [updatedLead] = await db
+        .update(leads)
+        .set({ status, updatedAt: new Date() })
+        .where(eq(leads.id, id))
+        .returning();
+
+      if (!updatedLead) {
+        return res.status(404).json({
+          success: false,
+          error: "Lead não encontrado.",
+        });
+      }
+
+      return res.json({
+        success: true,
+        lead: updatedLead,
+      });
+    } catch (error) {
+      console.error("Error updating lead:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erro ao atualizar lead.",
       });
     }
   });
