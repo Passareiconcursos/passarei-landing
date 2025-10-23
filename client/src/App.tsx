@@ -10,6 +10,7 @@ import Termos from "@/pages/termos";
 import Privacidade from "@/pages/privacidade";
 import Cookies from "@/pages/cookies";
 import Reembolso from "@/pages/reembolso";
+import AdminLogin from "@/pages/admin-login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/privacidade" component={Privacidade} />
       <Route path="/cookies" component={Cookies} />
       <Route path="/reembolso" component={Reembolso} />
+      <Route path="/admin" component={AdminLogin} />
       <Route component={NotFound} />
     </Switch>
   );
