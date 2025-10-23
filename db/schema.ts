@@ -19,12 +19,10 @@ import {
 export const roleEnum = pgEnum("role", ["SUPER_ADMIN", "MODERATOR", "VIEWER", "USER"]);
 export const examTypeEnum = pgEnum("exam_type", ["PM", "PC", "PRF", "PF", "OUTRO"]);
 export const leadStatusEnum = pgEnum("lead_status", [
-  "NEW",           // Novo lead
-  "CONTACTED",     // Já contatado
-  "INTERESTED",    // Interessado
-  "CONVERTED",     // Convertido em usuário
-  "UNRESPONSIVE",  // Não responde
-  "DISQUALIFIED"   // Desqualificado
+  "NOVO",          // Novo lead
+  "CONTATADO",     // Já contatado
+  "QUALIFICADO",   // Qualificado/Interessado
+  "CONVERTIDO"     // Convertido em usuário
 ]);
 export const planEnum = pgEnum("plan", ["FREE", "CALOURO", "VETERANO"]);
 export const subscriptionStatusEnum = pgEnum("subscription_status", [

@@ -258,7 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const convertedLeads = await db
         .select({ count: count() })
         .from(leads)
-        .where(eq(leads.status, "CONVERTED"));
+        .where(eq(leads.status, "CONVERTIDO"));
       
       // Get users statistics  
       const totalUsers = await db.select({ count: count() }).from(users);
