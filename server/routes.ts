@@ -270,6 +270,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Check if account is locked
+      if (admin.lockedUntil && admin.lockedUntil > new Date()) {
+        return res.json({
+          authenticated: false,
+        });
+      }
+
       return res.json({
         authenticated: true,
         admin: {
