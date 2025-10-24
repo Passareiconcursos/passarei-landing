@@ -50,6 +50,15 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "SYSTEM_ERROR",
   "MILESTONE_REACHED"
 ]);
+export const contentStatusEnum = pgEnum("content_status", ["DRAFT", "PUBLISHED", "ARCHIVED"]);
+export const subjectEnum = pgEnum("subject", [
+  "DIREITO_PENAL",
+  "DIREITO_CONSTITUCIONAL",
+  "DIREITO_ADMINISTRATIVO",
+  "PORTUGUES",
+  "RACIOCINIO_LOGICO",
+  "INFORMATICA"
+]);
 
 // ============================================
 // ADMIN - Autenticação e Permissões
@@ -256,4 +265,28 @@ export const notifications = pgTable("notifications", {
   readAt: timestamp("read_at"),
   
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ============================================
+// CONTENT - Conteúdo educacional
+// ============================================
+
+export const content = pgTable("content", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Informações básicas
+  title: text("title").notNull(),
+  subject: subjectEnum("subject").notNull(),
+  body: text("body").notNull(), // Conteúdo completo (200-500 palavras)
+  
+  // Categoria/Concurso
+  examType: examTypeEnum("exam_type").notNull(), // PM, PC, PRF, PF, OUTRO (ALL = OUTRO)
+  
+  // Status
+  status: contentStatusEnum("status").notNull().default("DRAFT"),
+  
+  // Auditoria
+  createdBy: varchar("created_by").notNull().references(() => admins.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

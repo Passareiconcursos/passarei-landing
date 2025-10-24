@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "../db";
-import { leads, admins, adminSessions, users, subscriptions } from "../db/schema";
-import { insertLeadSchema } from "@shared/schema";
+import { leads, admins, adminSessions, users, subscriptions, content } from "../db/schema";
+import { insertLeadSchema, insertContentSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { eq, and, count, desc, asc, like, or, ne } from "drizzle-orm";
 import {
@@ -619,6 +619,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({
         success: false,
         error: "Erro ao alterar senha.",
+      });
+    }
+  });
+
+  // POST /api/admin/content - Create educational content
+  app.post("/api/admin/content", requireAuth, async (req, res) => {
+    try {
+      const admin = (req as any).admin;
+
+      // Validate request body
+      const result = insertContentSchema.safeParse(req.body);
+
+      if (!result.success) {
+        const validationError = fromZodError(result.error);
+        return res.status(400).json({
+          success: false,
+          error: validationError.message,
+        });
+      }
+
+      const data = result.data;
+
+      // Create content with admin as creator
+      const [newContent] = await db
+        .insert(content)
+        .values({
+          ...data,
+          createdBy: admin.id,
+        })
+        .returning();
+
+      // Log audit
+      await logAuditAction(admin.id, "CREATE", "content", newContent.id, null, req);
+
+      return res.json({
+        success: true,
+        content: newContent,
+      });
+    } catch (error) {
+      console.error("Error creating content:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erro ao criar conteúdo.",
       });
     }
   });

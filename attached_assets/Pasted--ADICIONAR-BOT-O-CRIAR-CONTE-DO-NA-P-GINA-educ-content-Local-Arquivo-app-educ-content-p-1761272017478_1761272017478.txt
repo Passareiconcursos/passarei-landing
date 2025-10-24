@@ -1,0 +1,302 @@
+# ADICIONAR BOTÃO "CRIAR CONTEÚDO" NA PÁGINA /educ/content
+
+## Local
+Arquivo: `app/educ/content/page.tsx`
+
+## Implementar
+
+### 1. Adicionar botão no topo da página:
+```tsx
+<div className="flex justify-between items-center mb-6">
+  <h1 className="text-3xl font-bold">Conteúdo</h1>
+  
+  <button
+    onClick={() => router.push('/educ/content/new')}
+    className="bg-[#18cb96] text-white px-6 py-3 rounded-lg hover:bg-[#15b385] flex items-center gap-2"
+  >
+    <Plus size={20} />
+    Criar Conteúdo
+  </button>
+</div>
+```
+
+### 2. Criar página de criação de conteúdo:
+
+Criar arquivo: `app/educ/content/new/page.tsx`
+```tsx
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+
+export default function NewContentPage() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  
+  const [formData, setFormData] = useState({
+    title: '',
+    subject: '',
+    body: '',
+    examType: '',
+    status: 'DRAFT'
+  })
+  
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    
+    try {
+      const response = await fetch('/api/admin/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+      
+      if (response.ok) {
+        alert('Conteúdo criado com sucesso!')
+        router.push('/educ/content')
+      } else {
+        throw new Error('Erro ao criar conteúdo')
+      }
+    } catch (error) {
+      alert('Erro ao criar conteúdo')
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  return (
+    <div className="p-8 max-w-4xl">
+      <h1 className="text-3xl font-bold mb-8">Criar Novo Conteúdo</h1>
+      
+      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
+        
+        {/* Título */}
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Título *
+          </label>
+          <input
+            type="text"
+            value={formData.title}
+            onChange={(e) => setFormData({...formData, title: e.target.value})}
+            placeholder="Ex: Princípio da Legalidade"
+            className="w-full px-4 py-2 border rounded-lg"
+            required
+          />
+        </div>
+        
+        {/* Matéria */}
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Matéria *
+          </label>
+          <select
+            value={formData.subject}
+            onChange={(e) => setFormData({...formData, subject: e.target.value})}
+            className="w-full px-4 py-2 border rounded-lg"
+            required
+          >
+            <option value="">Selecione...</option>
+            <option value="Direito Penal">Direito Penal</option>
+            <option value="Direito Constitucional">Direito Constitucional</option>
+            <option value="Direito Administrativo">Direito Administrativo</option>
+            <option value="Português">Português</option>
+            <option value="Raciocínio Lógico">Raciocínio Lógico</option>
+            <option value="Informática">Informática</option>
+          </select>
+        </div>
+        
+        {/* Concurso */}
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Concurso *
+          </label>
+          <select
+            value={formData.examType}
+            onChange={(e) => setFormData({...formData, examType: e.target.value})}
+            className="w-full px-4 py-2 border rounded-lg"
+            required
+          >
+            <option value="">Selecione...</option>
+            <option value="PM">PM - Polícia Militar</option>
+            <option value="PC">PC - Polícia Civil</option>
+            <option value="PRF">PRF - Polícia Rodoviária Federal</option>
+            <option value="PF">PF - Polícia Federal</option>
+            <option value="ALL">Todos</option>
+          </select>
+        </div>
+        
+        {/* Conteúdo */}
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Conteúdo *
+          </label>
+          <textarea
+            value={formData.body}
+            onChange={(e) => setFormData({...formData, body: e.target.value})}
+            placeholder="Escreva o conteúdo educacional aqui (200-500 palavras)..."
+            className="w-full px-4 py-2 border rounded-lg min-h-[300px]"
+            required
+          />
+          <p className="text-sm text-gray-500 mt-1">
+            {formData.body.length} caracteres
+          </p>
+        </div>
+        
+        {/* Status */}
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Status
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                value="DRAFT"
+                checked={formData.status === 'DRAFT'}
+                onChange={(e) => setFormData({...formData, status: e.target.value})}
+              />
+              Rascunho (não visível para usuários)
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                value="PUBLISHED"
+                checked={formData.status === 'PUBLISHED'}
+                onChange={(e) => setFormData({...formData, status: e.target.value})}
+              />
+              Publicado (visível para usuários)
+            </label>
+          </div>
+        </div>
+        
+        {/* Ações */}
+        <div className="flex gap-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-[#18cb96] text-white px-8 py-3 rounded-lg hover:bg-[#15b385] disabled:opacity-50"
+          >
+            {loading ? 'Salvando...' : 'Salvar Conteúdo'}
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg hover:bg-gray-300"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+```
+
+### 3. Criar API route para salvar:
+
+Criar arquivo: `app/api/admin/content/route.ts`
+```typescript
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { title, subject, body: contentBody, examType, status } = body
+    
+    // Validar dados
+    if (!title || !subject || !contentBody || !examType) {
+      return NextResponse.json(
+        { error: 'Campos obrigatórios faltando' },
+        { status: 400 }
+      )
+    }
+    
+    // Criar conteúdo
+    const content = await prisma.content.create({
+      data: {
+        title,
+        subject,
+        body: contentBody,
+        examType,
+        status,
+        createdBy: 'ADMIN' // Pegar do token JWT depois
+      }
+    })
+    
+    return NextResponse.json({ success: true, content })
+  } catch (error) {
+    console.error('Erro ao criar conteúdo:', error)
+    return NextResponse.json(
+      { error: 'Erro ao criar conteúdo' },
+      { status: 500 }
+    )
+  }
+}
+```
+
+### 4. Atualizar Schema Prisma (se necessário):
+
+Verificar se `Content` tem esses campos:
+```prisma
+model Content {
+  id        String   @id @default(cuid())
+  title     String
+  subject   String
+  body      String   @db.Text
+  examType  String   // PM, PC, PRF, PF, ALL
+  status    String   @default("DRAFT") // DRAFT, PUBLISHED
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("contents")
+}
+```
+
+Se faltar algum campo, adicionar e rodar:
+```bash
+npx prisma db push
+```
+```
+
+---
+
+## 📱 COMO FUNCIONA: Conteúdo → WhatsApp
+
+### Fluxo Completo:
+```
+1. VOCÊ (Admin)
+   └─> Cria conteúdo em /educ/content/new
+   └─> Status: PUBLISHED
+   └─> Salva no banco (Prisma)
+
+2. N8N (Automação - Semana 3)
+   └─> Trigger: Todo dia às 8h
+   └─> Busca: 1 conteúdo PUBLISHED aleatório
+   └─> Para cada usuário ATIVO:
+       └─> Envia via WhatsApp API
+
+3. WHATSAPP
+   └─> Usuário recebe: "📚 Bom dia! Hoje: [Título]
+                        [Conteúdo de 300 palavras]
+                        Entendeu? 👍 Sim | ❓ Dúvida"
+
+4. USUÁRIO RESPONDE
+   └─> "👍" → Sistema envia questão
+   └─> "❓" → Sistema envia explicação expandida
+   └─> Outro → Sistema pede confirmação
+
+5. SISTEMA DE QUESTÕES
+   └─> Envia 5 questões sobre o conteúdo
+   └─> Valida respostas
+   └─> Dá feedback imediato
+   └─> Salva progresso no banco
+
+6. RELATÓRIO
+   └─> "Você acertou 4/5! Taxa: 80%
+        Sequência: 3 dias 🔥
+        Pontos: +40"

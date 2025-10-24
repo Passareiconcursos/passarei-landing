@@ -26,7 +26,8 @@ import {
   users,
   subscriptions,
   dailyMetrics,
-  notifications
+  notifications,
+  content
 } from "../db/schema";
 
 // ============================================
@@ -180,3 +181,31 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 export const selectNotificationSchema = createSelectSchema(notifications);
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+
+// ============================================
+// CONTENT SCHEMAS
+// ============================================
+
+export const insertContentSchema = createInsertSchema(content, {
+  title: z.string().min(3, "Título deve ter pelo menos 3 caracteres"),
+  subject: z.enum([
+    "DIREITO_PENAL",
+    "DIREITO_CONSTITUCIONAL",
+    "DIREITO_ADMINISTRATIVO",
+    "PORTUGUES",
+    "RACIOCINIO_LOGICO",
+    "INFORMATICA"
+  ]),
+  body: z.string().min(20, "Conteúdo deve ter pelo menos 20 caracteres"),
+  examType: z.enum(["PM", "PC", "PRF", "PF", "OUTRO"]),
+  status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).default("DRAFT"),
+}).omit({
+  id: true,
+  createdBy: true, // Backend injeta o ID do admin autenticado
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const selectContentSchema = createSelectSchema(content);
+export type InsertContent = z.infer<typeof insertContentSchema>;
+export type Content = typeof content.$inferSelect;
