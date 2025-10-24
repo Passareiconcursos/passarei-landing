@@ -31,6 +31,7 @@ function Router() {
       <Route path="/cookies" component={Cookies} />
       <Route path="/reembolso" component={Reembolso} />
       <Route path="/educ" component={EducLogin} />
+      <Route path="/educ/login" component={EducLogin} />
       <Route path="/educ/dashboard" component={EducDashboard} />
       <Route path="/educ/leads" component={EducLeads} />
       <Route path="/educ/users" component={EducUsers} />
