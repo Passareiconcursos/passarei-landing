@@ -34,7 +34,7 @@ declare global {
   }
 }
 
-const RECAPTCHA_SITE_KEY = "6LfFmfQrAAAAAAo8sRWOz6vGIw0tbAvt1nrbtsfW";
+const RECAPTCHA_SITE_KEY = "6LfS8_QrAAAAAKa3k6W4o73hyFHM2qxllhbXU18K";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
