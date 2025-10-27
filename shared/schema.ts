@@ -186,7 +186,7 @@ export type Notification = typeof notifications.$inferSelect;
 // CONTENT SCHEMAS
 // ============================================
 
-export const insertContentSchema = createInsertSchema(content, {
+const baseContentSchema = createInsertSchema(content, {
   title: z.string().min(3, "Título deve ter pelo menos 3 caracteres"),
   subject: z.enum([
     "DIREITO_PENAL",
@@ -197,6 +197,21 @@ export const insertContentSchema = createInsertSchema(content, {
     "INFORMATICA"
   ]),
   body: z.string().min(20, "Conteúdo deve ter pelo menos 20 caracteres"),
+  
+  // Novos campos opcionais
+  editalUrl: z.string().url("URL inválida").optional().or(z.literal("")),
+  sphere: z.enum(["FEDERAL", "ESTADUAL"], { required_error: "Selecione a esfera do concurso" }),
+  state: z.string().length(2, "Estado deve ter 2 caracteres").optional().or(z.literal("")),
+  
+  // Seções estruturadas (opcionais)
+  definition: z.string().optional().or(z.literal("")),
+  keyPoints: z.string().optional().or(z.literal("")),
+  example: z.string().optional().or(z.literal("")),
+  tip: z.string().optional().or(z.literal("")),
+  
+  // Tags
+  tags: z.array(z.string()).default([]),
+  
   examType: z.enum(["PM", "PC", "PRF", "PF", "OUTRO"]),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).default("DRAFT"),
 }).omit({
@@ -205,6 +220,20 @@ export const insertContentSchema = createInsertSchema(content, {
   createdAt: true,
   updatedAt: true,
 });
+
+// Adicionar validação condicional: state é obrigatório quando sphere = ESTADUAL
+export const insertContentSchema = baseContentSchema.refine(
+  (data) => {
+    if (data.sphere === "ESTADUAL" && (!data.state || data.state === "")) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "Estado é obrigatório quando a esfera for Estadual",
+    path: ["state"],
+  }
+);
 
 export const selectContentSchema = createSelectSchema(content);
 export type InsertContent = z.infer<typeof insertContentSchema>;

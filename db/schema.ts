@@ -18,6 +18,7 @@ import {
 
 export const roleEnum = pgEnum("role", ["SUPER_ADMIN", "MODERATOR", "VIEWER", "USER"]);
 export const examTypeEnum = pgEnum("exam_type", ["PM", "PC", "PRF", "PF", "OUTRO"]);
+export const sphereEnum = pgEnum("sphere", ["FEDERAL", "ESTADUAL"]);
 export const leadStatusEnum = pgEnum("lead_status", [
   "NOVO",          // Novo lead
   "CONTATADO",     // Já contatado
@@ -277,10 +278,26 @@ export const content = pgTable("content", {
   // Informações básicas
   title: text("title").notNull(),
   subject: subjectEnum("subject").notNull(),
-  body: text("body").notNull(), // Conteúdo completo (200-500 palavras)
+  body: text("body").notNull(), // Conteúdo completo (200-500 palavras) - mantido para compatibilidade
+  
+  // Link do edital (opcional)
+  editalUrl: text("edital_url"),
+  
+  // Esfera e localização
+  sphere: sphereEnum("sphere"), // FEDERAL ou ESTADUAL
+  state: varchar("state", { length: 2 }), // Estado (apenas se ESTADUAL)
   
   // Categoria/Concurso
   examType: examTypeEnum("exam_type").notNull(), // PM, PC, PRF, PF, OUTRO (ALL = OUTRO)
+  
+  // Seções estruturadas do conteúdo
+  definition: text("definition"), // Definição clara
+  keyPoints: text("key_points"), // Pontos principais
+  example: text("example"), // Exemplo prático
+  tip: text("tip"), // Dica de prova
+  
+  // Tags para busca e categorização
+  tags: text("tags").array().default(sql`ARRAY[]::text[]`), // Array de tags
   
   // Status
   status: contentStatusEnum("status").notNull().default("DRAFT"),
