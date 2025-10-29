@@ -107,6 +107,6 @@
     "bufferutil": "^4.0.8"
   },
   "prisma": {
-    "seed": "tsx prisma/seed-esm.ts"
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   }
 }
