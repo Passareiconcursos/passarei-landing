@@ -1,0 +1,36 @@
+graph TD
+    A[Admin Acessa /educ/content] --> B{Quer Criar Como?}
+    
+    B -->|Opção 1| C[Upload PDF/Link]
+    B -->|Opção 2| D[Criar Manual]
+    
+    C --> E[Seleciona Concurso]
+    E --> E1[PF / PRF / PC / PM]
+    E1 --> F[Seleciona Esfera/Estado]
+    F --> F1[Federal OU Estadual-MG]
+    F1 --> G[Seleciona Cargo Alvo]
+    G --> G1[Delegado / Soldado / Investigador]
+    G1 --> H[Upload Material]
+    H --> H1[PDF ou Cola Texto]
+    
+    H1 --> I[IA Processa em Background]
+    I --> I1[Extrai Matérias do PDF]
+    I1 --> I2[Identifica Tópicos]
+    I2 --> I3[Gera 20-30 Conteúdos]
+    I3 --> I4[Gera 5 Questões por Conteúdo]
+    I4 --> J[Status: DRAFT]
+    
+    J --> K[Admin Revisa na Lista]
+    K --> L{Aprovar?}
+    L -->|Sim| M[Publica]
+    L -->|Ajustar| N[Edita e Publica]
+    L -->|Deletar| O[Remove]
+    
+    D --> P[Formulário Simplificado]
+    P --> P1[Seleciona: Concurso + Matéria + Cargo]
+    P1 --> P2[Escreve Conteúdo]
+    P2 --> M
+    
+    M --> Q[Conteúdo Publicado]
+    Q --> R[WhatsApp Bot Acessa]
+    R --> S[Envia para Usuários]

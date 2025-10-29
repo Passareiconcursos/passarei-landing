@@ -1,0 +1,78 @@
+MATÉRIAS DOS CONCURSOS:
+
+CONHECIMENTOS BÁSICOS (Todos Concursos):
+  - Língua Portuguesa
+  - Raciocínio Lógico
+  - Matemática
+  - Informática
+  - Atualidades
+  - Geografia
+  - História
+  - Ética no Serviço Público
+  - Língua Estrangeira (Inglês/Espanhol)
+
+DIREITO (Núcleo Comum):
+  - Direito Penal
+  - Direito Processual Penal
+  - Direito Constitucional
+  - Direito Administrativo
+  - Direito Civil
+  - Direitos Humanos e Cidadania
+  - Legislação Especial
+
+DIREITO (Específico PM):
+  - Direito Penal Militar
+  - Direito Processual Penal Militar
+
+CONHECIMENTOS TÉCNICOS:
+  - Criminologia
+  - Medicina Legal
+  - Legislação de Trânsito
+  - Noções de Física
+  - Geopolítica Brasileira
+  - Primeiros Socorros
+  - Estatística
+  - Contabilidade Geral
+  - Arquivologia
+  - Administração Pública
+
+ESPECÍFICAS (Peritos):
+  - Biologia Forense
+  - Química Forense
+  - Física Forense
+  - Engenharia (várias)
+  - Informática Forense
+```
+
+**Total:** 32 matérias únicas
+
+---
+
+## 3️⃣ NOVA ARQUITETURA SIMPLIFICADA
+
+### **🏗️ ESTRUTURA HIERÁRQUICA (Inspirada em WordPress)**
+```
+PASSAREI/
+│
+├── CATEGORIAS (Tipo de Polícia)
+│   ├── Polícia Federal (PF)
+│   ├── Polícia Rodoviária Federal (PRF)
+│   ├── Polícia Civil (PC)
+│   └── Polícia Militar (PM)
+│
+├── SUBCATEGORIAS (Esfera)
+│   ├── Federal
+│   └── Estadual (AC, AL, ..., TO)
+│
+├── CARGOS (Novo!)
+│   ├── Delegado
+│   ├── Investigador
+│   ├── Escrivão
+│   ├── Agente
+│   ├── Soldado
+│   ├── Oficial
+│   └── Perito Criminal
+│
+└── MATÉRIAS (32 matérias)
+    └── CONTEÚDOS (gerados pela IA)
+        └── QUESTÕES (5-10 por conteúdo)

@@ -1,0 +1,101 @@
+// Novo modelo: Taxonomia inteligente
+model Category {
+  id          String   @id @default(cuid())
+  name        String   // "Polícia Federal", "Polícia Militar"
+  slug        String   @unique // "pf", "pm"
+  type        CategoryType @default(POLICE_TYPE)
+  
+  subcategories Subcategory[]
+  contents      Content[]
+  
+  @@map("categories")
+}
+
+enum CategoryType {
+  POLICE_TYPE  // PF, PRF, PC, PM
+  SPHERE       // Federal, Estadual
+  POSITION     // Delegado, Soldado...
+}
+
+model Subcategory {
+  id          String   @id @default(cuid())
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  
+  name        String   // "Federal", "MG", "Delegado"
+  slug        String   // "federal", "mg", "delegado"
+  
+  contents    Content[]
+  
+  @@map("subcategories")
+}
+
+model Subject {
+  id          String   @id @default(cuid())
+  name        String   // "Direito Penal"
+  slug        String   @unique // "direito-penal"
+  category    String   // "DIREITO", "CONHECIMENTOS_BASICOS"
+  
+  // PDF/Materiais de Referência
+  materials   Material[]
+  contents    Content[]
+  
+  @@map("subjects")
+}
+
+model Material {
+  id          String   @id @default(cuid())
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  
+  title       String
+  type        MaterialType
+  url         String?   // URL do PDF/Apostila
+  text        String?   @db.Text // Texto extraído pela IA
+  
+  uploadedAt  DateTime @default(now())
+  processedAt DateTime? // Quando IA processou
+  
+  @@map("materials")
+}
+
+enum MaterialType {
+  PDF
+  APOSTILA
+  TEXTO
+  LINK
+}
+
+model Content {
+  id          String   @id @default(cuid())
+  
+  // Hierarquia simplificada
+  categoryId  String   // PF, PM, PC...
+  category    Category @relation(fields: [categoryId], references: [id])
+  
+  subcategoryId String? // MG, SP, Federal...
+  subcategory   Subcategory? @relation(fields: [subcategoryId], references: [id])
+  
+  subjectId   String   // Direito Penal
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  
+  cargoTarget String[] // ["Delegado", "Investigador"]
+  
+  // Conteúdo
+  title       String
+  body        String   @db.Text
+  sections    Json?    // {definition, keyPoints, example, tip}
+  
+  // Metadata
+  source      String?  // ID do Material usado
+  generatedByAI Boolean @default(false)
+  
+  // Questões vinculadas
+  questions   Question[]
+  
+  status      ContentStatus @default(DRAFT)
+  createdAt   DateTime @default(now())
+  
+  @@index([categoryId, subjectId])
+  @@map("contents")
+}

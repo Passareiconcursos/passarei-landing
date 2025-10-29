@@ -1,0 +1,67 @@
+┌─────────────────────────────────────────────────────────┐
+│  Gerenciar Conteúdos                 [📝 Criar Novo]    │
+└─────────────────────────────────────────────────────────┘
+
+Filtros:
+[Todos ▼] [Todas Matérias ▼] [Todos Cargos ▼] [🔍 Buscar]
+
+┌─────────────────────────────────────────────────────────┐
+│ PM-MG                                                    │
+│ ├─ Direito Penal (18 conteúdos)                        │
+│ │  ├─ Princípio da Legalidade         [Editar] [❓5]   │
+│ │  ├─ Legítima Defesa                  [Editar] [❓5]   │
+│ │  └─ ...                                              │
+│ │                                                       │
+│ └─ Português (12 conteúdos)                            │
+│    ├─ Concordância Verbal              [Editar] [❓5]   │
+│    └─ ...                                              │
+│                                                          │
+│ PF                                                       │
+│ ├─ Direito Constitucional (23 conteúdos)               │
+│ └─ ...                                                  │
+└─────────────────────────────────────────────────────────┘
+
+Legenda: [❓5] = 5 questões vinculadas
+```
+
+---
+
+## 7️⃣ API CLAUDE vs OPENAI
+
+### **🏆 RECOMENDAÇÃO: ANTHROPIC (CLAUDE)**
+
+| Critério | Claude (Anthropic) | GPT-4 (OpenAI) |
+|----------|-------------------|----------------|
+| **Contexto** | 200k tokens | 128k tokens |
+| **Preço** | Mais barato | Mais caro |
+| **Precisão Jurídica** | ⭐⭐⭐⭐⭐ Excelente | ⭐⭐⭐⭐ Muito bom |
+| **Português BR** | ⭐⭐⭐⭐⭐ Nativo | ⭐⭐⭐⭐ Bom |
+| **Geração Estruturada** | JSON perfeito | Às vezes varia |
+| **Rate Limit** | Generoso | Restritivo |
+
+**VEREDITO:** Use **Claude Sonnet 4.5** (atual)
+- Processa PDFs grandes sem problema
+- Entende contexto jurídico BR
+- Mais barato ($3 por 1M tokens input)
+- JSON estruturado confiável
+
+---
+
+## 8️⃣ ECONOMIA DE TOKENS (Estratégia)
+
+### **🎯 COMO FAZER MAIS COM MENOS**
+
+#### **1. Começar com 1 Concurso (PM-MG)**
+```
+✅ Gerar 30 conteúdos PM-MG → ~100k tokens (R$ 0,30)
+✅ Gerar 150 questões       → ~50k tokens  (R$ 0,15)
+───────────────────────────────────────────────────
+TOTAL: R$ 0,45 para popular 1 concurso completo
+```
+
+#### **2. Reutilizar Conteúdo Base**
+```
+Matérias comuns (Português, Direito Penal):
+├─ Gera 1x para PM-MG
+└─ Marca também para: PM-SP, PM-RJ, PC-MG
+    (sem regerar, só duplicar no banco)

@@ -1,0 +1,45 @@
+model User {
+  id              String   @id @default(cuid())
+  phone           String   @unique
+  name            String?
+  email           String?
+  
+  // ===== ONBOARDING =====
+  onboardingCompleted Boolean @default(false)
+  
+  // Respostas do questionário
+  targetExam      String?  // "PM", "PC", "PF", "PRF", "PP", "GM"
+  targetState     String?  // "MG", "SP"...
+  targetPosition  String?  // "Soldado", "Delegado"...
+  studyDeadline   String?  // "3_MONTHS", "6_MONTHS", "1_YEAR", "CONTINUOUS"
+  studySchedule   String[] // ["MORNING", "NIGHT"]
+  currentLevel    String?  // "BEGINNER", "BASIC", "INTERMEDIATE", "ADVANCED"
+  weakSubjects    String[] // ["Raciocínio Lógico", "Matemática"]
+  
+  // ===== PLANO =====
+  plan            UserPlan @default(FREE)
+  planStartDate   DateTime?
+  planEndDate     DateTime?
+  
+  // ===== ESTATÍSTICAS =====
+  questionsAnswered Int @default(0)
+  correctAnswers    Int @default(0)
+  streak            Int @default(0) // Dias consecutivos
+  
+  // ===== FINANCEIRO =====
+  subscriptionId  String?  // ID Stripe/Mercado Pago
+  nextBillingDate DateTime?
+  referralCode    String?  @unique // Código de afiliado
+  referredBy      String?  // Quem indicou
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("users")
+}
+
+enum UserPlan {
+  FREE           // 3 questões/dia
+  CALOURO        // R$ 29,90/mês
+  VETERANO       // R$ 239,88/ano (R$ 19,99/mês)
+}
