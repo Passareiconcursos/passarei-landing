@@ -176,7 +176,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify password
+      console.log("🔍 DEBUG LOGIN:");
+      console.log("   Email recebido:", email);
+      console.log("   Senha recebida:", password);
+      console.log("   Hash no banco:", admin.passwordHash.substring(0, 30) + "...");
+      console.log("   Tentando verificar senha...");
+      
       const isValid = await verifyPassword(password, admin.passwordHash);
+      
+      console.log("   Resultado da verificação:", isValid);
 
       if (!isValid) {
         // Increment login attempts
