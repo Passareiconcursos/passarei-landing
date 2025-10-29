@@ -53,13 +53,68 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "MILESTONE_REACHED"
 ]);
 export const contentStatusEnum = pgEnum("content_status", ["DRAFT", "PUBLISHED", "ARCHIVED"]);
+
+// Novos enums para sistema de conteúdo
+export const positionEnum = pgEnum("position", [
+  "SOLDADO",
+  "CABO",
+  "SARGENTO",
+  "OFICIAL",
+  "DELEGADO",
+  "INVESTIGADOR",
+  "ESCRIVAO",
+  "AGENTE",
+  "PERITO"
+]);
+
+export const materialTypeEnum = pgEnum("material_type", [
+  "PDF",
+  "APOSTILA",
+  "TEXTO",
+  "LINK"
+]);
+
 export const subjectEnum = pgEnum("subject", [
+  // Direito
   "DIREITO_PENAL",
   "DIREITO_CONSTITUCIONAL",
   "DIREITO_ADMINISTRATIVO",
+  "DIREITO_PROCESSUAL_PENAL",
+  "DIREITO_CIVIL",
+  "DIREITO_PENAL_MILITAR",
+  "DIREITO_PROCESSUAL_PENAL_MILITAR",
+  "DIREITOS_HUMANOS",
+  "LEGISLACAO_ESPECIAL",
+  
+  // Conhecimentos Básicos
   "PORTUGUES",
   "RACIOCINIO_LOGICO",
-  "INFORMATICA"
+  "MATEMATICA",
+  "INFORMATICA",
+  "ATUALIDADES",
+  "GEOGRAFIA",
+  "HISTORIA",
+  "ETICA_SERVICO_PUBLICO",
+  "INGLES",
+  "ESPANHOL",
+  
+  // Conhecimentos Técnicos
+  "CRIMINOLOGIA",
+  "MEDICINA_LEGAL",
+  "LEGISLACAO_TRANSITO",
+  "NOCOES_FISICA",
+  "GEOPOLITICA",
+  "PRIMEIROS_SOCORROS",
+  "ESTATISTICA",
+  "CONTABILIDADE",
+  "ARQUIVOLOGIA",
+  "ADMINISTRACAO_PUBLICA",
+  
+  // Específicas Peritos
+  "BIOLOGIA_FORENSE",
+  "QUIMICA_FORENSE",
+  "FISICA_FORENSE",
+  "INFORMATICA_FORENSE"
 ]);
 
 // ============================================
@@ -270,6 +325,84 @@ export const notifications = pgTable("notifications", {
 });
 
 // ============================================
+// CATEGORIES - Tipos de Polícia
+// ============================================
+
+export const categories = pgTable("categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // "Polícia Federal", "Polícia Militar"
+  slug: text("slug").notNull().unique(), // "pf", "pm"
+  examType: examTypeEnum("exam_type").notNull(), // PM, PC, PRF, PF
+  description: text("description"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ============================================
+// SUBCATEGORIES - Esferas e Estados
+// ============================================
+
+export const subcategories = pgTable("subcategories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
+  
+  name: text("name").notNull(), // "Federal", "MG", "SP"
+  slug: text("slug").notNull(), // "federal", "mg", "sp"
+  sphere: sphereEnum("sphere").notNull(), // FEDERAL ou ESTADUAL
+  state: varchar("state", { length: 2 }), // Estado (apenas se ESTADUAL)
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ============================================
+// SUBJECTS - Matérias (Tabela de Referência)
+// ============================================
+
+export const subjects = pgTable("subjects", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // "Direito Penal"
+  slug: text("slug").notNull().unique(), // "direito-penal"
+  subjectEnum: subjectEnum("subject_enum").notNull(), // Referência ao enum
+  category: text("category").notNull(), // "DIREITO", "CONHECIMENTOS_BASICOS", "CONHECIMENTOS_TECNICOS"
+  description: text("description"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ============================================
+// MATERIALS - PDFs e Apostilas
+// ============================================
+
+export const materials = pgTable("materials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  subjectId: varchar("subject_id").references(() => subjects.id, { onDelete: "set null" }),
+  
+  title: text("title").notNull(),
+  type: materialTypeEnum("type").notNull(),
+  url: text("url"), // URL do PDF/Apostila
+  fileName: text("file_name"),
+  fileSize: integer("file_size"), // em bytes
+  
+  // Texto extraído pela IA
+  extractedText: text("extracted_text"),
+  
+  // Relacionado ao concurso
+  examType: examTypeEnum("exam_type"),
+  sphere: sphereEnum("sphere"),
+  state: varchar("state", { length: 2 }),
+  
+  uploadedBy: varchar("uploaded_by").notNull().references(() => admins.id),
+  uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
+  processedAt: timestamp("processed_at"), // Quando IA processou
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ============================================
 // CONTENT - Conteúdo educacional
 // ============================================
 
@@ -291,6 +424,11 @@ export const content = pgTable("content", {
   // Categoria/Concurso
   examType: examTypeEnum("exam_type").notNull(), // PM, PC, PRF, PF, OUTRO (ALL = OUTRO)
   
+  // NOVOS CAMPOS
+  cargoTarget: text("cargo_target").array().default(sql`ARRAY[]::text[]`), // Array de cargos ["DELEGADO", "INVESTIGADOR"]
+  generatedByAI: boolean("generated_by_ai").notNull().default(false),
+  materialId: varchar("material_id").references(() => materials.id, { onDelete: "set null" }), // Material usado para gerar
+  
   // Seções estruturadas do conteúdo
   definition: text("definition"), // Definição clara
   keyPoints: text("key_points"), // Pontos principais
@@ -302,6 +440,37 @@ export const content = pgTable("content", {
   
   // Status
   status: contentStatusEnum("status").notNull().default("DRAFT"),
+  
+  // Auditoria
+  createdBy: varchar("created_by").notNull().references(() => admins.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ============================================
+// QUESTIONS - Questões vinculadas aos conteúdos
+// ============================================
+
+export const questions = pgTable("questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentId: varchar("content_id").notNull().references(() => content.id, { onDelete: "cascade" }),
+  
+  // Questão
+  questionText: text("question_text").notNull(),
+  
+  // Alternativas
+  optionA: text("option_a").notNull(),
+  optionB: text("option_b").notNull(),
+  optionC: text("option_c").notNull(),
+  optionD: text("option_d").notNull(),
+  optionE: text("option_e"),
+  
+  correctAnswer: varchar("correct_answer", { length: 1 }).notNull(), // A, B, C, D ou E
+  explanation: text("explanation"), // Explicação da resposta
+  
+  // Metadata
+  difficulty: varchar("difficulty", { length: 20 }), // "FACIL", "MEDIO", "DIFICIL"
+  generatedByAI: boolean("generated_by_ai").notNull().default(false),
   
   // Auditoria
   createdBy: varchar("created_by").notNull().references(() => admins.id),
