@@ -1,29 +1,19 @@
 import crypto from "crypto";
+import bcrypt from "bcrypt";
 import type { Request, Response, NextFunction } from "express";
 import { db } from "../db";
 import { admins, adminSessions, auditLogs } from "../db/schema";
 import { eq, and, gt } from "drizzle-orm";
 
-// Hash password using Node.js crypto (scrypt)
+// Hash password using bcrypt
 export async function hashPassword(password: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const salt = crypto.randomBytes(16).toString("hex");
-    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-      if (err) reject(err);
-      resolve(`${salt}:${derivedKey.toString("hex")}`);
-    });
-  });
+  const saltRounds = 10;
+  return bcrypt.hash(password, saltRounds);
 }
 
-// Verify password
+// Verify password using bcrypt
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return new Promise((resolve, reject) => {
-    const [salt, key] = hash.split(":");
-    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-      if (err) reject(err);
-      resolve(key === derivedKey.toString("hex"));
-    });
-  });
+  return bcrypt.compare(password, hash);
 }
 
 // Generate session token
