@@ -4,7 +4,7 @@ import { db } from "../db";
 import { leads, admins, adminSessions, users, subscriptions, content } from "../db/schema";
 import { insertLeadSchema, insertContentSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
-import { eq, and, count, desc, asc, like, or, ne } from "drizzle-orm";
+import { eq, and, count, desc, asc, like, or, ne, sql } from "drizzle-orm";
 import {
   hashPassword,
   verifyPassword,
@@ -376,11 +376,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const conditions = [];
       
       if (status && status !== "ALL") {
-        conditions.push(eq(leads.status, status as string));
+        conditions.push(sql`${leads.status} = ${status}`);
       }
       
       if (examType && examType !== "ALL") {
-        conditions.push(eq(leads.examType, examType as string));
+        conditions.push(sql`${leads.examType} = ${examType}`);
       }
       
       if (search && typeof search === "string" && search.trim()) {
