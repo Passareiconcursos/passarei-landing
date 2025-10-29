@@ -1,4 +1,5 @@
-// SCHEMA PRISMA - PASSAREI (FASE 1)
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,130 +7,376 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// ==================== LEADS ====================
+// ===== USUÁRIOS =====
 
-model Lead {
-  id        String   @id @default(cuid())
-  
-  // Dados Pessoais
-  name      String
-  email     String   @unique
-  phone     String   @unique
-  
-  // Dados do Concurso
-  examType  ExamType
-  state     String?
-  position  String?
-  
-  // Plano de Interesse
-  interestedPlan PlanType @default(GRATUITO)
-  
-  // Marketing (UTMs)
-  utmSource     String?
-  utmMedium     String?
-  utmCampaign   String?
-  utmContent    String?
-  utmTerm       String?
-  
-  // Origem
-  referrer      String?
-  landingPage   String?
-  deviceInfo    Json?
-  
-  // Status
-  status        LeadStatus @default(NOVO)
-  
-  // Opt-ins
-  acceptedWhatsApp Boolean @default(false)
-  acceptedEmail    Boolean @default(false)
-  
-  // Controle
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  notes     String?  @db.Text
+model User {
+  id              String   @id @default(cuid())
+  phone           String   @unique
+  name            String?
+  email           String?  @unique
 
-  @@index([email])
+  // Onboarding
+  onboardingCompleted Boolean @default(false)
+  onboardingStep      Int?
+  targetExam          String?  // "PM", "PC", "PF", "PRF", "PP", "GM", "PL"
+  targetState         String?  // "MG", "SP"...
+  targetPosition      String?  // "Soldado", "Delegado"...
+  studyDeadline       String?  // "3M", "6M", "1Y", "CONTINUOUS"
+  studySchedule       String[] // ["MORNING", "NIGHT"]
+  currentLevel        String?  // "BEGINNER", "BASIC", "INTERMEDIATE", "ADVANCED"
+  weakSubjects        String[] // ["Raciocínio Lógico", "Matemática"]
+
+  // Plano
+  plan            UserPlan @default(FREE)
+  planStartDate   DateTime?
+  planEndDate     DateTime?
+  subscriptionId  String?  @unique
+
+  // Limites diários
+  questionsAnsweredToday Int @default(0)
+  lastQuestionDate       DateTime?
+
+  // Estatísticas
+  questionsAnswered Int @default(0)
+  correctAnswers    Int @default(0)
+  streak            Int @default(0)
+  level             Int @default(1)
+  xp                Int @default(0)
+
+  // Financeiro
+  totalSpent      Float @default(0)
+  nextBillingDate DateTime?
+  invoices        Invoice[]
+
+  // Afiliado
+  referralCode    String?  @unique
+  referredBy      String?
+  affiliate       Affiliate?
+  referrals       Referral[] @relation("ReferredUsers")
+
+  // Relações
+  answers         Answer[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
   @@index([phone])
-  @@index([status])
-  @@index([examType])
-  @@index([createdAt])
+  @@index([plan])
+  @@map("users")
 }
 
-enum ExamType {
-  PM
-  PC
-  PRF
-  PF
-  OUTRO
-}
-
-enum PlanType {
-  GRATUITO
+enum UserPlan {
+  FREE
   CALOURO
   VETERANO
 }
 
-enum LeadStatus {
-  NOVO
-  CONTATADO
-  ENGAJADO
-  QUALIFICADO
-  CONVERTIDO
-  PERDIDO
-  INVALIDO
+// ===== CONTEÚDOS =====
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   // "Polícia Federal", "Polícia Militar"
+  slug        String   @unique // "pf", "pm", "pp", "gm"
+  type        CategoryType
+  sphere      String?  // "FEDERAL", "ESTADUAL", "MUNICIPAL"
+
+  contents    Content[]
+
+  @@map("categories")
 }
 
-// ==================== WAITLIST ====================
-
-model WaitlistEntry {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  position  Int      @default(autoincrement())
-  notified  Boolean  @default(false)
-  examType  ExamType?
-  createdAt DateTime @default(now())
-  
-  @@index([email])
-  @@index([position])
+enum CategoryType {
+  POLICE_TYPE
+  POSITION
 }
 
-// ==================== ANALYTICS ====================
+model Subject {
+  id          String   @id @default(cuid())
+  name        String   // "Direito Penal"
+  slug        String   @unique
+  category    String   // "DIREITO", "CONHECIMENTOS_BASICOS", "ESPECIFICAS"
 
-model PageView {
-  id        String   @id @default(cuid())
-  path      String
-  sessionId String
-  ipAddress String?
-  userAgent String?  @db.Text
-  device    String?
-  browser   String?
-  os        String?
-  referrer  String?  @db.Text
-  utmSource String?
-  utmMedium String?
-  utmCampaign String?
-  timeSpent Int?
-  createdAt DateTime @default(now())
-  
-  @@index([sessionId])
-  @@index([path])
-  @@index([createdAt])
+  materials   Material[]
+  contents    Content[]
+  questions   Question[]
+
+  @@map("subjects")
 }
 
-model FormSubmission {
-  id        String   @id @default(cuid())
-  formData  Json
-  success   Boolean
-  error     String?  @db.Text
-  leadId    String?
-  ipAddress String?
-  userAgent String?  @db.Text
-  createdAt DateTime @default(now())
-  
-  @@index([success])
-  @@index([createdAt])
+model Material {
+  id          String       @id @default(cuid())
+  subjectId   String
+  subject     Subject      @relation(fields: [subjectId], references: [id])
+
+  title       String
+  type        MaterialType
+  url         String?
+  text        String?      @db.Text
+
+  uploadedAt  DateTime     @default(now())
+  processedAt DateTime?
+  processedBy String?
+
+  @@map("materials")
+}
+
+enum MaterialType {
+  PDF
+  APOSTILA
+  TEXTO
+  LINK
+}
+
+model Content {
+  id          String   @id @default(cuid())
+
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+
+  // Segmentação
+  targetExam      String[] // ["PM", "PC"]
+  targetState     String[] // ["MG", "SP", "ALL"]
+  targetPosition  String[] // ["Soldado", "Delegado"]
+  difficultyLevel String   @default("BASIC")
+
+  // Conteúdo
+  title       String
+  body        String   @db.Text
+  sections    Json?
+
+  // Metadata
+  tags        String[]
+  source      String?
+  generatedByAI Boolean @default(false)
+
+  // Questões
+  questions   Question[]
+
+  status      ContentStatus @default(DRAFT)
+  views       Int @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([categoryId, subjectId])
+  @@index([status])
+  @@map("contents")
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Question {
+  id          String   @id @default(cuid())
+
+  contentId   String
+  content     Content  @relation(fields: [contentId], references: [id])
+
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+
+  // Segmentação
+  targetExam      String[]
+  targetState     String[]
+  targetPosition  String[]
+  difficultyLevel String @default("BASIC")
+
+  // Questão
+  text        String   @db.Text
+  options     Json
+  correctAnswer String
+  explanation String   @db.Text
+  tip         String?  @db.Text
+
+  // Metadata
+  generatedByAI Boolean @default(false)
+  timesAnswered Int @default(0)
+  correctRate   Float @default(0)
+
+  // Respostas
+  answers     Answer[]
+
+  status      QuestionStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+
+  @@index([subjectId])
+  @@index([difficultyLevel])
+  @@map("questions")
+}
+
+enum QuestionStatus {
+  ACTIVE
+  INACTIVE
+  REPORTED
+}
+
+model Answer {
+  id          String   @id @default(cuid())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  questionId  String
+  question    Question @relation(fields: [questionId], references: [id])
+
+  userAnswer  String
+  correct     Boolean
+  timeSpent   Int?
+
+  answeredAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([questionId])
+  @@map("answers")
+}
+
+// ===== FINANCEIRO =====
+
+model Invoice {
+  id          String   @id @default(cuid())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  amount      Float
+  plan        UserPlan
+  period      String
+
+  nfeNumber   String?
+  nfeUrl      String?
+
+  status      InvoiceStatus @default(PENDING)
+  paidAt      DateTime?
+  issuedAt    DateTime?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  ISSUED
+  REFUNDED
+}
+
+// ===== AFILIADOS =====
+
+model Affiliate {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id])
+
+  affiliateCode String   @unique
+  affiliateLink String
+
+  commissionRate Float   @default(0.20)
+  totalEarned    Float   @default(0)
+  pendingPayout  Float   @default(0)
+
+  pixKey         String?
+  bankAccount    Json?
+
+  isActive       Boolean @default(true)
+  createdAt      DateTime @default(now())
+
+  referrals      Referral[]
+  payouts        Payout[]
+
+  @@map("affiliates")
+}
+
+model Referral {
+  id            String   @id @default(cuid())
+
+  affiliateId   String
+  affiliate     Affiliate @relation(fields: [affiliateId], references: [id])
+
+  userId        String   @unique
+  user          User     @relation("ReferredUsers", fields: [userId], references: [id])
+
+  clickedAt     DateTime @default(now())
+  convertedAt   DateTime?
+
+  plan          UserPlan?
+  commissionPaid Float @default(0)
+  commissionMonths Int @default(0)
+  maxCommissionMonths Int
+
+  status        ReferralStatus @default(PENDING)
+
+  @@index([affiliateId])
+  @@map("referrals")
+}
+
+enum ReferralStatus {
+  PENDING
+  SIGNED_UP
+  CONVERTED
+  ACTIVE
+  CHURNED
+}
+
+model Payout {
+  id          String   @id @default(cuid())
+
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+
+  amount      Float
+  method      String
+  pixKey      String?
+
+  status      PayoutStatus @default(PENDING)
+  requestedAt DateTime @default(now())
+  paidAt      DateTime?
+  receipt     String?
+
+  @@map("payouts")
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+// ===== ADMIN =====
+
+model AdminUser {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  name        String
+  role        String   @default("ADMIN")
+
+  createdAt   DateTime @default(now())
+
+  @@map("admin_users")
+}
+
+model Lead {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  phone       String?
+  targetExam  String?
+
+  source      String?
+
+  createdAt   DateTime @default(now())
+
+  @@map("leads")
 }
