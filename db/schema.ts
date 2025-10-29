@@ -9,7 +9,8 @@ import {
   integer,
   real,
   json,
-  date
+  date,
+  uuid
 } from "drizzle-orm/pg-core";
 
 // ============================================
@@ -66,7 +67,7 @@ export const subjectEnum = pgEnum("subject", [
 // ============================================
 
 export const admins = pgTable("admins", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
@@ -81,12 +82,12 @@ export const admins = pgTable("admins", {
   // Auditoria
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  createdBy: varchar("created_by"),
+  createdBy: uuid("created_by"),
 });
 
 export const adminSessions = pgTable("admin_sessions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  adminId: varchar("admin_id").notNull().references(() => admins.id, { onDelete: "cascade" }),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: uuid("admin_id").notNull().references(() => admins.id, { onDelete: "cascade" }),
   
   token: text("token").notNull().unique(),
   ipAddress: text("ip_address"),
@@ -101,12 +102,12 @@ export const adminSessions = pgTable("admin_sessions", {
 // ============================================
 
 export const auditLogs = pgTable("audit_logs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  adminId: varchar("admin_id").notNull().references(() => admins.id),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: uuid("admin_id").notNull().references(() => admins.id),
   
   action: auditActionEnum("action").notNull(),
   resource: text("resource").notNull(), // "Lead", "User", "Content"
-  resourceId: varchar("resource_id"),
+  resourceId: uuid("resource_id"),
   changes: json("changes"), // Antes/depois
   
   ipAddress: text("ip_address"),
@@ -119,7 +120,7 @@ export const auditLogs = pgTable("audit_logs", {
 // ============================================
 
 export const leads = pgTable("leads", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   phone: text("phone").notNull(),
@@ -127,10 +128,10 @@ export const leads = pgTable("leads", {
   state: varchar("state", { length: 2 }).notNull(),
   
   // Novos campos para admin
-  status: leadStatusEnum("status").notNull().default("NEW"),
+  status: leadStatusEnum("status").notNull().default("NOVO"),
   source: text("source").default("landing_page"),
   notes: text("notes"),
-  assignedTo: varchar("assigned_to").references(() => admins.id),
+  assignedTo: uuid("assigned_to").references(() => admins.id),
   
   // Marketing/UTM
   utmSource: text("utm_source"),
@@ -151,7 +152,7 @@ export const leads = pgTable("leads", {
 // ============================================
 
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
@@ -170,14 +171,14 @@ export const users = pgTable("users", {
   phoneVerified: boolean("phone_verified").notNull().default(false),
   
   // Assinatura
-  subscriptionId: varchar("subscription_id").unique(),
+  subscriptionId: uuid("subscription_id").unique(),
   subscriptionStatus: text("subscription_status"),
   currentPeriodStart: timestamp("current_period_start"),
   currentPeriodEnd: timestamp("current_period_end"),
   cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
   
   // Origem
-  leadOriginId: varchar("lead_origin_id").unique().references(() => leads.id),
+  leadOriginId: uuid("lead_origin_id").unique().references(() => leads.id),
   
   // Timestamps
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -190,8 +191,8 @@ export const users = pgTable("users", {
 // ============================================
 
 export const subscriptions = pgTable("subscriptions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   
   // Gateway de pagamento
   externalId: text("external_id").notNull().unique(),
@@ -225,7 +226,7 @@ export const subscriptions = pgTable("subscriptions", {
 // ============================================
 
 export const dailyMetrics = pgTable("daily_metrics", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   date: date("date").notNull().unique(),
   
   // Leads
@@ -254,8 +255,8 @@ export const dailyMetrics = pgTable("daily_metrics", {
 // ============================================
 
 export const notifications = pgTable("notifications", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  adminId: varchar("admin_id").notNull().references(() => admins.id),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: uuid("admin_id").notNull().references(() => admins.id),
   
   type: notificationTypeEnum("type").notNull(),
   title: text("title").notNull(),
@@ -273,7 +274,7 @@ export const notifications = pgTable("notifications", {
 // ============================================
 
 export const content = pgTable("content", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   
   // Informações básicas
   title: text("title").notNull(),
@@ -303,7 +304,7 @@ export const content = pgTable("content", {
   status: contentStatusEnum("status").notNull().default("DRAFT"),
   
   // Auditoria
-  createdBy: varchar("created_by").notNull().references(() => admins.id),
+  createdBy: uuid("created_by").notNull().references(() => admins.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
