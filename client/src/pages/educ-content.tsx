@@ -132,6 +132,26 @@ export default function EducContent() {
     };
   }>({
     queryKey: ['/api/admin/content', filters],
+    queryFn: async () => {
+      // Build query params from filters
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== '' && value !== null && value !== undefined) {
+          params.append(key, String(value));
+        }
+      });
+      
+      const url = `/api/admin/content?${params.toString()}`;
+      const res = await fetch(url, {
+        credentials: 'include',
+      });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
+      return res.json();
+    },
   });
 
   const form = useForm<ContentFormData>({

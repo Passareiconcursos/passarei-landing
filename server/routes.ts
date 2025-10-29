@@ -796,14 +796,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const data = result.data;
 
+      // Prepare data, converting empty strings to null for FK fields
+      const contentData = {
+        ...data,
+        materialId: data.materialId || null,  // Convert empty string to null
+        state: data.state || null,             // Convert empty string to null
+        sphere: data.sphere || null,           // Convert empty string to null
+        createdBy: admin.id,
+        generatedByAI: false, // Manual creation
+      };
+
       // Create content with admin as creator
       const [newContent] = await db
         .insert(content)
-        .values({
-          ...data,
-          createdBy: admin.id,
-          generatedByAI: false, // Manual creation
-        })
+        .values(contentData)
         .returning();
 
       // Log audit
@@ -853,13 +859,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Prepare data, converting empty strings to null for FK fields
+      const updateData = {
+        ...result.data,
+        materialId: result.data.materialId || null,  // Convert empty string to null
+        state: result.data.state || null,             // Convert empty string to null
+        sphere: result.data.sphere || null,           // Convert empty string to null
+        updatedAt: new Date(),
+      };
+
       // Update content
       const [updatedContent] = await db
         .update(content)
-        .set({
-          ...result.data,
-          updatedAt: new Date(),
-        })
+        .set(updateData)
         .where(eq(content.id, id))
         .returning();
 
