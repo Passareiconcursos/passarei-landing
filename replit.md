@@ -21,12 +21,6 @@ Preferred communication style: Simple, everyday language.
 - **Validation**: Zod schemas shared between client and server for consistent validation (e.g., Brazilian phone format, email).
 - **Admin System**: Comprehensive admin panel with JWT-based authentication, role-based access control, audit logging, and routes for lead management, user statistics, and content.
 
-### Data Storage
-- **Database**: PostgreSQL via Neon serverless driver.
-- **ORM**: Drizzle ORM for type-safe queries.
-- **Schema**: `leads` table with UUIDs, enum types for `exam_type` and `lead_status` (NOVO, CONTATADO, QUALIFICADO, CONVERTIDO), timestamp fields.
-- **Data Access**: Centralized database client, shared schema definitions (`shared/schema.ts`).
-- **Admin Database Schema**: Includes tables for `admins`, `adminSessions`, `auditLogs`, `users`, `subscriptions`, `dailyMetrics`, `notifications`, and `leads` with specific enums for roles and statuses.
 
 ### Key Architectural Decisions
 - **Monorepo**: Single repository for client, server, and shared code with path aliases.
