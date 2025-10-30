@@ -1,3 +1,4 @@
+cat > package.json << 'EOF'
 {
   "name": "rest-express",
   "version": "1.0.0",
@@ -106,5 +107,9 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   }
 }
+EOF
