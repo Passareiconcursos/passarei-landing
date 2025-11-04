@@ -1,4 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
+import dotenv from "dotenv";
+
+// Carregar variáveis do .env
+dotenv.config();
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,

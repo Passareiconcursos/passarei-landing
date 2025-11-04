@@ -1072,3 +1072,63 @@ app.post("/api/admin/ai/generate-questions", async (req, res) => {
     const { contentTitle, contentBody, subject } = req.body;
 
     if (!contentTitle || !contentBody || !subject) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Campos obrigatórios: contentTitle, contentBody, subject" 
+      });
+    }
+
+    console.log("🤖 Gerando questões para:", contentTitle);
+
+    const { generateQuestions } = await import("./ai-service");
+    const result = await generateQuestions({ contentTitle, contentBody, subject });
+
+    console.log("✅ Questões geradas:", result.questions.length);
+
+    return res.json({ success: true, questions: result.questions });
+  } catch (error: any) {
+    console.error("❌ Erro ao gerar questões:", error);
+    return res.status(500).json({ 
+      success: false,
+      error: "Erro ao gerar questões", 
+      details: error.message 
+    });
+  }
+});
+
+// Endpoint para salvar conteúdo gerado pela IA
+app.post("/api/admin/content", async (req, res) => {
+  try {
+    const { title, subject, examType, definition, keyPoints, example, tip, tags, status } = req.body;
+
+    // Pegar o admin ID da sessão (simplificado para teste)
+    const adminId = "admin-id-placeholder"; // TODO: pegar da sessão real
+
+    const newContent = await db.insert(content).values({
+      title,
+      subject,
+      examType,
+      sphere: "FEDERAL",
+      definition,
+      keyPoints,
+      example,
+      tip,
+      tags: tags || [],
+      body: `${definition}\n\n${keyPoints}\n\n${example}\n\n${tip}`,
+      status: status || "DRAFT",
+      generatedByAI: true,
+      createdBy: adminId,
+    }).returning();
+
+    console.log("✅ Conteúdo salvo no banco:", newContent[0].id);
+
+    return res.json({ success: true, content: newContent[0] });
+  } catch (error: any) {
+    console.error("❌ Erro ao salvar conteúdo:", error);
+    return res.status(500).json({ 
+      success: false,
+      error: "Erro ao salvar conteúdo", 
+      details: error.message 
+    });
+  }
+});
