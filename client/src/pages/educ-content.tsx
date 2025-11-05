@@ -13,16 +13,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Edit, 
-  Trash2, 
+import {
+  Plus,
+  Search,
+  Filter,
+  Edit,
+  Trash2,
   Sparkles,
   ChevronLeft,
   ChevronRight,
-  FileText
+  FileText,
+  Wand2,
+  Loader2,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,125 +35,101 @@ import { insertContentSchema, type Content } from "@shared/schema";
 
 type ContentFormData = z.infer<typeof insertContentSchema>;
 
-// Matérias expandidas com as 34 matérias
+const aiGenerationSchema = z.object({
+  subject: z.string().min(1, "Selecione uma matéria"),
+  examType: z.string().min(1, "Selecione um concurso"),
+  topic: z.string().min(3, "Digite o tópico (mínimo 3 caracteres)"),
+});
+
+type AIGenerationData = z.infer<typeof aiGenerationSchema>;
+
 const subjects = {
-  'Direito': [
-    { value: 'DIREITO_PENAL', label: 'Direito Penal' },
-    { value: 'DIREITO_CONSTITUCIONAL', label: 'Direito Constitucional' },
-    { value: 'DIREITO_ADMINISTRATIVO', label: 'Direito Administrativo' },
-    { value: 'DIREITO_PROCESSUAL_PENAL', label: 'Direito Processual Penal' },
-    { value: 'DIREITO_CIVIL', label: 'Direito Civil' },
-    { value: 'DIREITO_PENAL_MILITAR', label: 'Direito Penal Militar' },
-    { value: 'DIREITO_PROCESSUAL_PENAL_MILITAR', label: 'Direito Processual Penal Militar' },
-    { value: 'DIREITOS_HUMANOS', label: 'Direitos Humanos' },
-    { value: 'LEGISLACAO_ESPECIAL', label: 'Legislação Especial' },
+  Direito: [
+    { value: "DIREITO_PENAL", label: "Direito Penal" },
+    { value: "DIREITO_CONSTITUCIONAL", label: "Direito Constitucional" },
+    { value: "DIREITO_ADMINISTRATIVO", label: "Direito Administrativo" },
+    { value: "DIREITO_PROCESSUAL_PENAL", label: "Direito Processual Penal" },
+    { value: "DIREITO_CIVIL", label: "Direito Civil" },
+    { value: "DIREITO_PENAL_MILITAR", label: "Direito Penal Militar" },
+    {
+      value: "DIREITO_PROCESSUAL_PENAL_MILITAR",
+      label: "Direito Processual Penal Militar",
+    },
+    { value: "DIREITOS_HUMANOS", label: "Direitos Humanos" },
+    { value: "LEGISLACAO_ESPECIAL", label: "Legislação Especial" },
   ],
-  'Conhecimentos Básicos': [
-    { value: 'PORTUGUES', label: 'Português' },
-    { value: 'RACIOCINIO_LOGICO', label: 'Raciocínio Lógico' },
-    { value: 'MATEMATICA', label: 'Matemática' },
-    { value: 'INFORMATICA', label: 'Informática' },
-    { value: 'ATUALIDADES', label: 'Atualidades' },
-    { value: 'GEOGRAFIA', label: 'Geografia' },
-    { value: 'HISTORIA', label: 'História' },
-    { value: 'ETICA_SERVICO_PUBLICO', label: 'Ética no Serviço Público' },
-    { value: 'INGLES', label: 'Inglês' },
-    { value: 'ESPANHOL', label: 'Espanhol' },
+  "Conhecimentos Básicos": [
+    { value: "PORTUGUES", label: "Português" },
+    { value: "RACIOCINIO_LOGICO", label: "Raciocínio Lógico" },
+    { value: "MATEMATICA", label: "Matemática" },
+    { value: "INFORMATICA", label: "Informática" },
+    { value: "ATUALIDADES", label: "Atualidades" },
+    { value: "GEOGRAFIA", label: "Geografia" },
+    { value: "HISTORIA", label: "História" },
+    { value: "ETICA_SERVICO_PUBLICO", label: "Ética no Serviço Público" },
+    { value: "INGLES", label: "Inglês" },
+    { value: "ESPANHOL", label: "Espanhol" },
   ],
-  'Conhecimentos Técnicos': [
-    { value: 'CRIMINOLOGIA', label: 'Criminologia' },
-    { value: 'MEDICINA_LEGAL', label: 'Medicina Legal' },
-    { value: 'LEGISLACAO_TRANSITO', label: 'Legislação de Trânsito' },
-    { value: 'NOCOES_FISICA', label: 'Noções de Física' },
-    { value: 'GEOPOLITICA', label: 'Geopolítica' },
-    { value: 'PRIMEIROS_SOCORROS', label: 'Primeiros Socorros' },
-    { value: 'ESTATISTICA', label: 'Estatística' },
-    { value: 'CONTABILIDADE', label: 'Contabilidade' },
-    { value: 'ARQUIVOLOGIA', label: 'Arquivologia' },
-    { value: 'ADMINISTRACAO_PUBLICA', label: 'Administração Pública' },
+  "Conhecimentos Técnicos": [
+    { value: "CRIMINOLOGIA", label: "Criminologia" },
+    { value: "MEDICINA_LEGAL", label: "Medicina Legal" },
+    { value: "LEGISLACAO_TRANSITO", label: "Legislação de Trânsito" },
+    { value: "NOCOES_FISICA", label: "Noções de Física" },
+    { value: "GEOPOLITICA", label: "Geopolítica" },
+    { value: "PRIMEIROS_SOCORROS", label: "Primeiros Socorros" },
+    { value: "ESTATISTICA", label: "Estatística" },
+    { value: "CONTABILIDADE", label: "Contabilidade" },
+    { value: "ARQUIVOLOGIA", label: "Arquivologia" },
+    { value: "ADMINISTRACAO_PUBLICA", label: "Administração Pública" },
   ],
-  'Perícia': [
-    { value: 'BIOLOGIA_FORENSE', label: 'Biologia Forense' },
-    { value: 'QUIMICA_FORENSE', label: 'Química Forense' },
-    { value: 'FISICA_FORENSE', label: 'Física Forense' },
-    { value: 'INFORMATICA_FORENSE', label: 'Informática Forense' },
-  ]
+  Perícia: [
+    { value: "BIOLOGIA_FORENSE", label: "Biologia Forense" },
+    { value: "QUIMICA_FORENSE", label: "Química Forense" },
+    { value: "FISICA_FORENSE", label: "Física Forense" },
+    { value: "INFORMATICA_FORENSE", label: "Informática Forense" },
+  ],
 };
 
 const examTypeLabels: Record<string, string> = {
-  'PM': 'PM',
-  'PC': 'PC',
-  'PRF': 'PRF',
-  'PF': 'PF',
-  'OUTRO': 'Outro'
+  PM: "PM",
+  PC: "PC",
+  PRF: "PRF",
+  PF: "PF",
+  OUTRO: "Outro",
 };
 
 const statusLabels: Record<string, string> = {
-  'DRAFT': 'Rascunho',
-  'PUBLISHED': 'Publicado',
-  'ARCHIVED': 'Arquivado'
+  DRAFT: "Rascunho",
+  PUBLISHED: "Publicado",
+  ARCHIVED: "Arquivado",
 };
 
 function getSubjectLabel(value: string): string {
   for (const category of Object.values(subjects)) {
-    const found = category.find(s => s.value === value);
+    const found = category.find((s) => s.value === value);
     if (found) return found.label;
   }
   return value;
 }
 
 export default function EducContent() {
+  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const { toast } = useToast();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedContent, setGeneratedContent] = useState<any>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
-  // Filters state
   const [filters, setFilters] = useState({
-    search: '',
-    subject: '',
-    examType: '',
-    sphere: '',
-    state: '',
-    status: '',
-    generatedByAI: '',
+    search: "",
+    subject: "",
+    examType: "",
+    status: "",
     page: 1,
-    limit: 20,
-  });
-
-  // Fetch content list
-  const { data, isLoading: isLoadingContent } = useQuery<{
-    success: boolean;
-    content: Content[];
-    pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      totalPages: number;
-    };
-  }>({
-    queryKey: ['/api/admin/content', filters],
-    queryFn: async () => {
-      // Build query params from filters
-      const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== '' && value !== null && value !== undefined) {
-          params.append(key, String(value));
-        }
-      });
-      
-      const url = `/api/admin/content?${params.toString()}`;
-      const res = await fetch(url, {
-        credentials: 'include',
-      });
-      
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      
-      return res.json();
-    },
+    limit: 10,
   });
 
   const form = useForm<ContentFormData>({
@@ -159,50 +137,109 @@ export default function EducContent() {
     defaultValues: {
       title: "",
       subject: "DIREITO_PENAL",
-      examType: "PF",
-      body: "",
+      examType: "PRF",
       sphere: "FEDERAL",
-      cargoTarget: [],
-      materialId: "",
-      definition: "",
-      keyPoints: "",
-      example: "",
-      tip: "",
-      tags: [],
+      body: "",
       status: "DRAFT",
+      generatedByAI: false,
     },
   });
 
-  const onSubmit = async (data: ContentFormData) => {
-    setIsLoading(true);
+  const aiForm = useForm<AIGenerationData>({
+    resolver: zodResolver(aiGenerationSchema),
+    defaultValues: {
+      subject: "DIREITO_ADMINISTRATIVO",
+      examType: "PRF",
+      topic: "",
+    },
+  });
+
+  const { data, isLoading: isLoadingContent } = useQuery({
+    queryKey: ["/api/admin/content/list", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) params.append(key, value.toString());
+      });
+      const res = await fetch(`/api/admin/content/list?${params}`);
+      if (!res.ok) throw new Error("Erro ao carregar conteúdos");
+      return res.json();
+    },
+  });
+
+  const handleGenerateWithAI = async (data: AIGenerationData) => {
+    setIsGenerating(true);
     try {
-      const method = editingContent ? "PUT" : "POST";
-      const endpoint = editingContent 
-        ? `/api/admin/content/${editingContent.id}` 
-        : "/api/admin/content";
-      
-      const res = await apiRequest(method, endpoint, data);
-      const response = await res.json();
+      const response = await fetch("/api/admin/ai/generate-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
 
-      if (response.success) {
-        toast({
-          title: editingContent ? "Conteúdo atualizado!" : "Conteúdo criado!",
-          description: `"${data.title}" foi ${editingContent ? 'atualizado' : 'adicionado'} com sucesso.`,
-        });
+      const result = await response.json();
 
-        setIsDialogOpen(false);
-        setEditingContent(null);
-        form.reset();
-        
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/content"] });
-      } else {
-        throw new Error(response.error || "Erro ao salvar conteúdo");
+      if (!result.success) {
+        throw new Error(result.error || "Erro ao gerar conteúdo");
       }
+
+      setGeneratedContent({
+        ...result.content,
+        subject: data.subject,
+        examType: data.examType,
+      });
+      setShowPreview(true);
+
+      toast({
+        title: "✅ Conteúdo gerado!",
+        description: "Revise e edite se necessário antes de salvar.",
+      });
     } catch (error: any) {
       toast({
+        title: "❌ Erro ao gerar",
+        description: error.message,
         variant: "destructive",
-        title: "Erro ao salvar conteúdo",
-        description: error.message || "Ocorreu um erro inesperado.",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSaveGenerated = async () => {
+    if (!generatedContent) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/admin/content/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...generatedContent,
+          status: "PUBLISHED",
+          generatedByAI: true,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Erro ao salvar");
+      }
+
+      toast({
+        title: "✅ Conteúdo salvo!",
+        description: "O conteúdo foi publicado com sucesso.",
+      });
+
+      setIsAIDialogOpen(false);
+      setShowPreview(false);
+      setGeneratedContent(null);
+      aiForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/content/list"] });
+    } catch (error: any) {
+      toast({
+        title: "❌ Erro ao salvar",
+        description: error.message,
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -215,107 +252,140 @@ export default function EducContent() {
       title: content.title,
       subject: content.subject,
       examType: content.examType,
+      sphere: content.sphere || "FEDERAL",
       body: content.body,
-      sphere: content.sphere || undefined,
-      state: content.state || "",
-      cargoTarget: content.cargoTarget || [],
-      materialId: content.materialId || "",
-      definition: content.definition || "",
-      keyPoints: content.keyPoints || "",
-      example: content.example || "",
-      tip: content.tip || "",
-      tags: content.tags || [],
       status: content.status,
+      generatedByAI: content.generatedByAI,
     });
     setIsDialogOpen(true);
   };
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Tem certeza que deseja deletar "${title}"?`)) return;
+    if (!confirm(`Tem certeza que deseja excluir "${title}"?`)) return;
 
     try {
-      const res = await apiRequest("DELETE", `/api/admin/content/${id}`);
-      const response = await res.json();
-
-      if (response.success) {
-        toast({
-          title: "Conteúdo deletado!",
-          description: `"${title}" foi removido com sucesso.`,
-        });
-        queryClient.invalidateQueries({ queryKey: ["/api/admin/content"] });
-      } else {
-        throw new Error(response.error || "Erro ao deletar");
-      }
+      await apiRequest(`/api/admin/content/${id}`, { method: "DELETE" });
+      toast({
+        title: "Conteúdo excluído",
+        description: "O conteúdo foi removido com sucesso",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/content/list"] });
     } catch (error: any) {
       toast({
-        variant: "destructive",
-        title: "Erro ao deletar",
+        title: "Erro ao excluir",
         description: error.message,
+        variant: "destructive",
       });
     }
   };
 
-  const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
+  const onSubmit = async (data: ContentFormData) => {
+    setIsLoading(true);
+    try {
+      if (editingContent) {
+        await apiRequest(`/api/admin/content/${editingContent.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        });
+        toast({
+          title: "Conteúdo atualizado",
+          description: "As alterações foram salvas",
+        });
+      } else {
+        await apiRequest("/api/admin/content", {
+          method: "POST",
+          body: JSON.stringify(data),
+        });
+        toast({
+          title: "Conteúdo criado",
+          description: "O novo conteúdo foi adicionado",
+        });
+      }
+      setIsDialogOpen(false);
+      setEditingContent(null);
+      form.reset();
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/content/list"] });
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const clearFilters = () => {
     setFilters({
-      search: '',
-      subject: '',
-      examType: '',
-      sphere: '',
-      state: '',
-      status: '',
-      generatedByAI: '',
+      search: "",
+      subject: "",
+      examType: "",
+      status: "",
       page: 1,
-      limit: 20,
+      limit: 10,
     });
   };
 
-  const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) => key !== 'page' && key !== 'limit' && value !== ''
-  ).length;
+  const activeFiltersCount = [
+    filters.search,
+    filters.subject,
+    filters.examType,
+    filters.status,
+  ].filter(Boolean).length;
 
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold" data-testid="heading-content">Conteúdo</h1>
+            <h1 className="text-3xl font-bold">📚 Conteúdo Educacional</h1>
             <p className="text-muted-foreground">
-              Gerencie o conteúdo educacional da plataforma
+              Gerencie o conteúdo de estudo para os alunos
             </p>
           </div>
-          <Button
-            onClick={() => {
-              setEditingContent(null);
-              form.reset();
-              setIsDialogOpen(true);
-            }}
-            data-testid="button-create-content"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Criar Conteúdo
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => {
+                setEditingContent(null);
+                form.reset();
+                setIsDialogOpen(true);
+              }}
+              variant="outline"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Manual
+            </Button>
+            <Button
+              onClick={() => {
+                aiForm.reset();
+                setGeneratedContent(null);
+                setShowPreview(false);
+                setIsAIDialogOpen(true);
+              }}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            >
+              <Wand2 className="h-4 w-4 mr-2" />
+              Gerar com IA
+            </Button>
+          </div>
         </div>
 
-        {/* Filters */}
         <Card className="p-4">
           <div className="flex items-center gap-4 flex-wrap">
-            {/* Search */}
-            <div className="flex-1 min-w-[250px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por título ou conteúdo..."
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
-                  className="pl-10"
-                  data-testid="input-search"
-                />
-              </div>
+            <div className="flex-1 min-w-[200px]">
+              <Input
+                placeholder="Buscar por título..."
+                value={filters.search}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    search: e.target.value,
+                    page: 1,
+                  }))
+                }
+                data-testid="input-search"
+              />
             </div>
 
             <Button
@@ -334,20 +404,26 @@ export default function EducContent() {
             )}
           </div>
 
-          {/* Advanced Filters */}
           {showFilters && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t">
               <div>
-                <Label>Matéria</Label>
+                <Label htmlFor="filter-subject">Matéria</Label>
                 <select
+                  id="filter-subject"
                   value={filters.subject}
-                  onChange={(e) => handleFilterChange('subject', e.target.value)}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      subject: e.target.value,
+                      page: 1,
+                    }))
+                  }
                   className="w-full px-3 py-2 border rounded-md"
                 >
                   <option value="">Todas</option>
                   {Object.entries(subjects).map(([category, items]) => (
                     <optgroup key={category} label={category}>
-                      {items.map(subject => (
+                      {items.map((subject) => (
                         <option key={subject.value} value={subject.value}>
                           {subject.label}
                         </option>
@@ -358,193 +434,186 @@ export default function EducContent() {
               </div>
 
               <div>
-                <Label>Tipo de Concurso</Label>
+                <Label htmlFor="filter-exam">Concurso</Label>
                 <select
+                  id="filter-exam"
                   value={filters.examType}
-                  onChange={(e) => handleFilterChange('examType', e.target.value)}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      examType: e.target.value,
+                      page: 1,
+                    }))
+                  }
                   className="w-full px-3 py-2 border rounded-md"
                 >
                   <option value="">Todos</option>
                   {Object.entries(examTypeLabels).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <Label>Status</Label>
+                <Label htmlFor="filter-status">Status</Label>
                 <select
+                  id="filter-status"
                   value={filters.status}
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      status: e.target.value,
+                      page: 1,
+                    }))
+                  }
                   className="w-full px-3 py-2 border rounded-md"
                 >
                   <option value="">Todos</option>
                   {Object.entries(statusLabels).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
                   ))}
-                </select>
-              </div>
-
-              <div>
-                <Label>Gerado por IA</Label>
-                <select
-                  value={filters.generatedByAI}
-                  onChange={(e) => handleFilterChange('generatedByAI', e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md"
-                >
-                  <option value="">Todos</option>
-                  <option value="true">Sim</option>
-                  <option value="false">Não</option>
                 </select>
               </div>
             </div>
           )}
         </Card>
 
-        {/* Content List */}
         <Card className="p-6">
-          {isLoadingContent ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Carregando...
-            </div>
-          ) : data?.content && data.content.length > 0 ? (
-            <div className="space-y-4">
-              {data.content.map((content) => (
-                <div
-                  key={content.id}
-                  className="flex items-start justify-between gap-4 p-4 border rounded-lg hover-elevate"
-                  data-testid={`content-item-${content.id}`}
-                >
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <h3 className="font-semibold text-lg">{content.title}</h3>
-                      {content.generatedByAI && (
-                        <Badge variant="secondary" className="gap-1">
-                          <Sparkles className="h-3 w-3" />
-                          IA
-                        </Badge>
-                      )}
-                      <Badge variant={content.status === 'PUBLISHED' ? 'default' : 'secondary'}>
-                        {statusLabels[content.status]}
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                      <span>{getSubjectLabel(content.subject)}</span>
-                      <span>•</span>
-                      <span>{examTypeLabels[content.examType]}</span>
-                      {content.sphere && (
-                        <>
-                          <span>•</span>
-                          <span>{content.sphere}</span>
-                        </>
-                      )}
-                      {content.state && (
-                        <>
-                          <span>•</span>
-                          <span>{content.state}</span>
-                        </>
-                      )}
-                    </div>
-
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {content.body}
-                    </p>
-
-                    {content.tags && content.tags.length > 0 && (
-                      <div className="flex gap-2 flex-wrap">
-                        {content.tags.map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-xs">
-                            {tag}
+          <div className="space-y-4">
+            {isLoadingContent ? (
+              <div className="text-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+                <p className="mt-4 text-muted-foreground">
+                  Carregando conteúdos...
+                </p>
+              </div>
+            ) : data?.contents && data.contents.length > 0 ? (
+              <>
+                {data.contents.map((content: Content) => (
+                  <div
+                    key={content.id}
+                    className="flex items-start justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0 pr-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-semibold text-lg truncate">
+                          {content.title}
+                        </h3>
+                        {content.generatedByAI && (
+                          <Badge
+                            variant="secondary"
+                            className="flex items-center gap-1"
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            IA
                           </Badge>
-                        ))}
+                        )}
+                        <Badge
+                          variant={
+                            content.status === "PUBLISHED"
+                              ? "default"
+                              : "secondary"
+                          }
+                        >
+                          {statusLabels[content.status]}
+                        </Badge>
                       </div>
-                    )}
+                      <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                        <span>📚 {getSubjectLabel(content.subject)}</span>
+                        <span>•</span>
+                        <span>🎯 {examTypeLabels[content.examType]}</span>
+                        <span>•</span>
+                        <span>
+                          {new Date(content.createdAt).toLocaleDateString(
+                            "pt-BR",
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(content)}
+                        data-testid={`button-edit-${content.id}`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(content.id, content.title)}
+                        data-testid={`button-delete-${content.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
+                ))}
 
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(content)}
-                      data-testid={`button-edit-${content.id}`}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(content.id, content.title)}
-                      data-testid={`button-delete-${content.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-
-              {/* Pagination */}
-              {data.pagination && data.pagination.totalPages > 1 && (
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <p className="text-sm text-muted-foreground">
-                    Mostrando {((data.pagination.page - 1) * data.pagination.limit) + 1} - {Math.min(data.pagination.page * data.pagination.limit, data.pagination.total)} de {data.pagination.total} conteúdos
-                  </p>
-                  <div className="flex gap-2">
+                {data.pagination && data.pagination.totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-2 pt-4">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setFilters(prev => ({ ...prev, page: prev.page - 1 }))}
+                      onClick={() =>
+                        setFilters((prev) => ({ ...prev, page: prev.page - 1 }))
+                      }
                       disabled={filters.page === 1}
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled
-                    >
+                    <Button variant="outline" size="sm" disabled>
                       {data.pagination.page} / {data.pagination.totalPages}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setFilters(prev => ({ ...prev, page: prev.page + 1 }))}
+                      onClick={() =>
+                        setFilters((prev) => ({ ...prev, page: prev.page + 1 }))
+                      }
                       disabled={filters.page >= data.pagination.totalPages}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-12 space-y-4">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground" />
+                <div>
+                  <p className="font-medium">Nenhum conteúdo encontrado</p>
+                  <p className="text-sm text-muted-foreground">
+                    {activeFiltersCount > 0
+                      ? "Tente ajustar os filtros ou limpar a busca"
+                      : 'Clique em "Gerar com IA" para começar'}
+                  </p>
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-12 space-y-4">
-              <FileText className="h-12 w-12 mx-auto text-muted-foreground" />
-              <div>
-                <p className="font-medium">Nenhum conteúdo encontrado</p>
-                <p className="text-sm text-muted-foreground">
-                  {activeFiltersCount > 0 
-                    ? 'Tente ajustar os filtros ou limpar a busca' 
-                    : 'Clique em "Criar Conteúdo" para adicionar'}
-                </p>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </Card>
       </div>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={(open) => {
-        setIsDialogOpen(open);
-        if (!open) {
-          setEditingContent(null);
-          form.reset();
-        }
-      }}>
+      <Dialog
+        open={isDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            setEditingContent(null);
+            form.reset();
+          }
+        }}
+      >
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingContent ? 'Editar Conteúdo' : 'Criar Novo Conteúdo'}
+              {editingContent ? "Editar Conteúdo" : "Criar Novo Conteúdo"}
             </DialogTitle>
           </DialogHeader>
 
@@ -558,7 +627,9 @@ export default function EducContent() {
                 placeholder="Ex: Princípio da Legalidade"
               />
               {form.formState.errors.title && (
-                <p className="text-sm text-destructive mt-1">{form.formState.errors.title.message}</p>
+                <p className="text-sm text-destructive mt-1">
+                  {form.formState.errors.title.message}
+                </p>
               )}
             </div>
 
@@ -573,8 +644,10 @@ export default function EducContent() {
                 >
                   {Object.entries(subjects).map(([category, items]) => (
                     <optgroup key={category} label={category}>
-                      {items.map(subject => (
-                        <option key={subject.value} value={subject.value}>{subject.label}</option>
+                      {items.map((subject) => (
+                        <option key={subject.value} value={subject.value}>
+                          {subject.label}
+                        </option>
                       ))}
                     </optgroup>
                   ))}
@@ -590,7 +663,9 @@ export default function EducContent() {
                   className="w-full px-3 py-2 border rounded-md"
                 >
                   {Object.entries(examTypeLabels).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -606,7 +681,9 @@ export default function EducContent() {
                 className="min-h-[150px]"
               />
               {form.formState.errors.body && (
-                <p className="text-sm text-destructive mt-1">{form.formState.errors.body.message}</p>
+                <p className="text-sm text-destructive mt-1">
+                  {form.formState.errors.body.message}
+                </p>
               )}
             </div>
 
@@ -618,7 +695,9 @@ export default function EducContent() {
                 className="w-full px-3 py-2 border rounded-md"
               >
                 {Object.entries(statusLabels).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -638,10 +717,231 @@ export default function EducContent() {
                 className="flex-1"
                 data-testid="button-submit-content"
               >
-                {isLoading ? 'Salvando...' : editingContent ? 'Atualizar' : 'Criar'}
+                {isLoading
+                  ? "Salvando..."
+                  : editingContent
+                    ? "Atualizar"
+                    : "Criar"}
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAIDialogOpen} onOpenChange={setIsAIDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wand2 className="h-5 w-5 text-purple-600" />
+              Gerar Conteúdo com Inteligência Artificial
+            </DialogTitle>
+          </DialogHeader>
+
+          {!showPreview ? (
+            <form
+              onSubmit={aiForm.handleSubmit(handleGenerateWithAI)}
+              className="space-y-6"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="ai-subject">Matéria</Label>
+                  <select
+                    id="ai-subject"
+                    {...aiForm.register("subject")}
+                    className="w-full px-3 py-2 border rounded-md"
+                  >
+                    {Object.entries(subjects).map(([category, items]) => (
+                      <optgroup key={category} label={category}>
+                        {items.map((subject) => (
+                          <option key={subject.value} value={subject.value}>
+                            {subject.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="ai-exam">Concurso</Label>
+                  <select
+                    id="ai-exam"
+                    {...aiForm.register("examType")}
+                    className="w-full px-3 py-2 border rounded-md"
+                  >
+                    {Object.entries(examTypeLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="ai-topic">Tópico</Label>
+                <Input
+                  id="ai-topic"
+                  {...aiForm.register("topic")}
+                  placeholder="Ex: Princípios da Administração Pública"
+                />
+                {aiForm.formState.errors.topic && (
+                  <p className="text-sm text-destructive mt-1">
+                    {aiForm.formState.errors.topic.message}
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground mt-1">
+                  Digite o tópico específico que deseja gerar conteúdo
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-900">
+                  <strong>💡 Dica:</strong> Seja específico no tópico para obter
+                  melhores resultados. Ex: "Princípio da Legalidade" ao invés de
+                  apenas "Legalidade"
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAIDialogOpen(false)}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isGenerating}
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-4 w-4 mr-2" />
+                      Gerar Conteúdo
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm text-green-900">
+                  ✅ Conteúdo gerado com sucesso! Revise e edite se necessário
+                  antes de salvar.
+                </p>
+              </div>
+
+              {generatedContent && (
+                <div className="space-y-4">
+                  <div>
+                    <Label>Título</Label>
+                    <Input
+                      value={generatedContent.title}
+                      onChange={(e) =>
+                        setGeneratedContent({
+                          ...generatedContent,
+                          title: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Definição</Label>
+                    <Textarea
+                      value={generatedContent.definition}
+                      onChange={(e) =>
+                        setGeneratedContent({
+                          ...generatedContent,
+                          definition: e.target.value,
+                        })
+                      }
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Pontos-Chave</Label>
+                    <Textarea
+                      value={generatedContent.keyPoints}
+                      onChange={(e) =>
+                        setGeneratedContent({
+                          ...generatedContent,
+                          keyPoints: e.target.value,
+                        })
+                      }
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Exemplo Prático</Label>
+                    <Textarea
+                      value={generatedContent.example}
+                      onChange={(e) =>
+                        setGeneratedContent({
+                          ...generatedContent,
+                          example: e.target.value,
+                        })
+                      }
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Dica para Prova</Label>
+                    <Textarea
+                      value={generatedContent.tip}
+                      onChange={(e) =>
+                        setGeneratedContent({
+                          ...generatedContent,
+                          tip: e.target.value,
+                        })
+                      }
+                      className="min-h-[100px]"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowPreview(false);
+                    setGeneratedContent(null);
+                  }}
+                  className="flex-1"
+                >
+                  ← Voltar
+                </Button>
+                <Button
+                  onClick={handleSaveGenerated}
+                  disabled={isLoading}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Salvar e Publicar"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </AdminLayout>
