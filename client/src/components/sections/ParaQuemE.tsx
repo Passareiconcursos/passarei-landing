@@ -1,4 +1,3 @@
-import { Clock, TrendingUp, MapPin, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function ParaQuemE() {
@@ -6,54 +5,53 @@ export function ParaQuemE() {
     document.getElementById("lead-form")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const features = [
+  const profiles = [
     {
-      title: "Trabalha 8h/dia e tem pouco tempo livre",
-      description: "Estude nos intervalos, no ônibus, em qualquer momento. Apenas 15 minutos por dia são suficientes para resultados reais."
+      emoji: "🎓",
+      title: "Iniciante",
+      description: "Começando do zero e precisa de direcionamento estruturado",
     },
     {
-      title: "Já tentou e não conseguiu aprovação",
-      description: "Nosso sistema identifica suas dificuldades específicas e foca exatamente onde você mais precisa melhorar."
+      emoji: "💪",
+      title: "Determinado",
+      description: "Já estuda mas quer otimizar tempo e aumentar aprovação",
     },
     {
-      title: "Se perde em editais enormes sem saber por onde começar",
-      description: "Enviamos seu edital e nossa IA cria um plano personalizado, priorizando o que realmente cai na sua prova."
+      emoji: "💰",
+      title: "Sem Grana",
+      description: "Quer qualidade de cursinho caro por preço que cabe no bolso",
     },
     {
-      title: "Prefere ler e praticar ao invés de videoaulas longas",
-      description: "Aprenda por textos diretos, questões reais das bancas e feedback inteligente. Sem enrolação, só resultado."
-    }
+      emoji: "📱",
+      title: "Praticidade",
+      description: "Precisa estudar no busão, metrô, intervalo do trabalho",
+    },
   ];
 
   return (
-    <section className="py-16 md:py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-4 md:px-6">
-        <h2 className="text-3xl md:text-4xl font-bold text-center text-foreground mb-12">
-          O Passarei é Ideal Para Você Se:
-        </h2>
+    <section id="para-quem-e" className="py-20 bg-gray-50">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            Para Quem é o Passarei?
+          </h2>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Se você se identifica com algum desses perfis, o Passarei foi feito para você
+          </p>
+        </div>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
-          {features.map((feature, index) => (
-            <div 
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+          {profiles.map((profile, index) => (
+            <div
               key={index}
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all"
-              data-testid={`card-para-quem-e-${index}`}
+              className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition-all hover:-translate-y-2"
             >
-              {/* Ícone - Centralizado e com tamanho fixo */}
-              <div className="flex items-center justify-center w-12 h-12 bg-[#18cb96] bg-opacity-10 rounded-full mb-4">
-                <svg className="w-6 h-6 text-[#18cb96]" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-              
-              {/* Título */}
+              <div className="text-5xl mb-4">{profile.emoji}</div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">
-                {feature.title}
+                {profile.title}
               </h3>
-              
-              {/* Descrição */}
               <p className="text-gray-600 leading-relaxed">
-                {feature.description}
+                {profile.description}
               </p>
             </div>
           ))}
@@ -61,12 +59,11 @@ export function ParaQuemE() {
 
         <div className="text-center">
           <Button
-            size="lg"
             onClick={scrollToForm}
-            className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
-            data-testid="button-para-quem-e-cta"
+            size="lg"
+            className="bg-[#18cb96] hover:bg-[#14b584] text-white px-12 py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
           >
-            🎯 Quero Começar Agora
+            🎯 Experimentar Grátis
           </Button>
         </div>
       </div>

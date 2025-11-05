@@ -1,4 +1,4 @@
-import { Check, X, Crown, Zap, Target } from "lucide-react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Pricing() {
@@ -6,230 +6,193 @@ export function Pricing() {
     document.getElementById("lead-form")?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const plans = [
+    {
+      name: "Gratuito",
+      price: "0",
+      period: "/sempre",
+      description: "Perfeito para testar a plataforma",
+      features: [
+        "3 conteúdos por semana",
+        "5 questões comentadas/semana",
+        "Acesso ao painel web",
+        "Suporte por email",
+      ],
+      cta: "Testar Grátis",
+      highlight: false,
+      popular: false,
+    },
+    {
+      name: "Calouro",
+      price: "12,90",
+      period: "/mês",
+      description: "Para quem quer estudar sério",
+      features: [
+        "Conteúdo diário no WhatsApp",
+        "Questões ilimitadas",
+        "Correção de redação ilimitada",
+        "Suporte prioritário",
+        "Simulados mensais",
+        "Material em PDF",
+      ],
+      cta: "Começar Teste Grátis",
+      highlight: true,
+      popular: true,
+      badge: "MAIS POPULAR",
+    },
+    {
+      name: "Veterano",
+      price: "9,90",
+      period: "/mês no anual",
+      description: "Melhor custo-benefício",
+      pricingDetail: "R$ 118,80 cobrados anualmente",
+      features: [
+        "Tudo do plano Calouro",
+        "23% de desconto",
+        "Acesso antecipado a novos recursos",
+        "Prioridade máxima no suporte",
+        "Bônus: Curso de redação",
+        "Garantia de 30 dias",
+      ],
+      cta: "Começar Teste Grátis",
+      highlight: false,
+      popular: false,
+      savings: "Economize R$ 36/ano",
+    },
+  ];
+
   return (
-    <section className="py-16 md:py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-4 md:px-6">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+    <section id="planos" className="py-20 bg-white">
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-16">
+          <div className="inline-block mb-4">
+            <span className="bg-[#18cb96]/10 text-[#18cb96] px-4 py-2 rounded-full text-sm font-semibold">
+              💰 Economize até 90%
+            </span>
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             Escolha Seu Plano
           </h2>
-          <p className="text-xl text-muted-foreground">
-            Comece grátis. Evolua quando quiser.
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            O mesmo conteúdo dos cursinhos caros, por um preço que você pode pagar
           </p>
         </div>
 
-        {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
-          {/* Free Plan */}
-          <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-md hover:shadow-xl transition-all hover-elevate" data-testid="card-plano-gratuito">
-            <div className="text-center mb-6">
-              <Target className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-foreground mb-2">PLANO GRATUITO</h3>
-              <div className="mb-4">
-                <span className="text-4xl font-bold text-foreground">R$ 0</span>
-                <span className="text-muted-foreground">/para sempre</span>
-              </div>
-              <p className="text-sm text-muted-foreground">🎯 Ideal para conhecer</p>
-            </div>
-
-            <ul className="space-y-3 mb-6">
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground">1 conteúdo/dia</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground">3 questões/dia</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground">Estatísticas básicas</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground">Suporte via chat</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <X className="w-5 h-5 text-muted-foreground mt-0.5" />
-                <span className="text-sm text-muted-foreground">Sem repetição espaçada</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <X className="w-5 h-5 text-muted-foreground mt-0.5" />
-                <span className="text-sm text-muted-foreground">Sem áudios explicativos</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <X className="w-5 h-5 text-muted-foreground mt-0.5" />
-                <span className="text-sm text-muted-foreground">Sem análise de edital</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <X className="w-5 h-5 text-muted-foreground mt-0.5" />
-                <span className="text-sm text-muted-foreground">Anúncios ocasionais</span>
-              </li>
-            </ul>
-
-            <Button
-              variant="outline"
-              className="w-full hover-elevate active-elevate-2"
-              onClick={scrollToForm}
-              data-testid="button-plano-gratuito"
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-12">
+          {plans.map((plan, index) => (
+            <div
+              key={index}
+              className={`relative rounded-2xl p-8 ${
+                plan.highlight
+                  ? "bg-gradient-to-br from-[#18cb96] to-[#14b584] text-white shadow-2xl scale-105 border-4 border-[#18cb96]"
+                  : "bg-white border-2 border-gray-200 hover:border-[#18cb96] transition-all hover:shadow-xl"
+              }`}
             >
-              Começar Grátis
-            </Button>
-            <p className="text-xs text-center text-muted-foreground mt-2">Sem cartão de crédito</p>
-          </div>
+              {plan.popular && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-xs font-bold shadow-lg">
+                    {plan.badge}
+                  </span>
+                </div>
+              )}
 
-          {/* Calouro Plan - Most Popular */}
-          <div className="bg-white rounded-2xl p-8 border-4 border-primary shadow-2xl hover:shadow-3xl transition-all relative hover-elevate" data-testid="card-plano-calouro">
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-              <div className="bg-primary text-white px-4 py-1 rounded-full text-sm font-semibold">
-                MAIS POPULAR
+              {plan.savings && (
+                <div className="absolute -top-4 right-4">
+                  <span className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                    {plan.savings}
+                  </span>
+                </div>
+              )}
+
+              <div className="mb-6">
+                <h3
+                  className={`text-2xl font-bold mb-2 ${
+                    plan.highlight ? "text-white" : "text-gray-900"
+                  }`}
+                >
+                  {plan.name}
+                </h3>
+                <p
+                  className={`text-sm ${
+                    plan.highlight ? "text-white/90" : "text-gray-600"
+                  }`}
+                >
+                  {plan.description}
+                </p>
               </div>
-            </div>
-            
-            <div className="text-center mb-6 mt-4">
-              <Zap className="w-12 h-12 text-primary mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-foreground mb-2">💎 PLANO CALOURO</h3>
-              <div className="mb-4">
-                <span className="text-4xl font-bold text-foreground">R$ 29,90</span>
-                <span className="text-muted-foreground">/mês</span>
+
+              <div className="mb-6">
+                <div className="flex items-baseline">
+                  <span
+                    className={`text-5xl font-bold ${
+                      plan.highlight ? "text-white" : "text-gray-900"
+                    }`}
+                  >
+                    R$ {plan.price}
+                  </span>
+                  <span
+                    className={`ml-2 ${
+                      plan.highlight ? "text-white/80" : "text-gray-600"
+                    }`}
+                  >
+                    {plan.period}
+                  </span>
+                </div>
+                {plan.pricingDetail && (
+                  <p
+                    className={`text-sm mt-1 ${
+                      plan.highlight ? "text-white/80" : "text-gray-500"
+                    }`}
+                  >
+                    {plan.pricingDetail}
+                  </p>
+                )}
               </div>
-              <p className="text-sm text-primary font-semibold">🔥 Para quem quer resultado</p>
-            </div>
 
-            <ul className="space-y-3 mb-6">
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">Conteúdo ilimitado</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">Questões ilimitadas</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">Repetição espaçada (SM-2)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">Áudios explicativos</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">Análise completa edital</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">Estatísticas avançadas</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">Suporte prioritário</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">Sem anúncios</span>
-              </li>
-            </ul>
+              <ul className="space-y-4 mb-8">
+                {plan.features.map((feature, i) => (
+                  <li key={i} className="flex items-start">
+                    <Check
+                      className={`w-5 h-5 mr-3 flex-shrink-0 ${
+                        plan.highlight ? "text-white" : "text-[#18cb96]"
+                      }`}
+                    />
+                    <span
+                      className={`text-sm ${
+                        plan.highlight ? "text-white" : "text-gray-700"
+                      }`}
+                    >
+                      {feature}
+                    </span>
+                  </li>
+                ))}
+              </ul>
 
-            <Button
-              className="w-full bg-[#18cb96] hover:bg-[#14b584] text-white"
-              onClick={scrollToForm}
-              data-testid="button-plano-calouro"
-            >
-              Eu Vou Passar! 🚀
-            </Button>
-            <p className="text-xs text-center text-muted-foreground mt-2">💳 R$ 29,90 no cartão ou Pix</p>
-          </div>
-
-          {/* Veterano Plan */}
-          <div className="bg-white rounded-2xl p-8 border-2 border-yellow-400 shadow-md hover:shadow-xl transition-all relative hover-elevate" data-testid="card-plano-veterano">
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-              <div className="bg-yellow-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                MELHOR VALOR
-              </div>
+              <Button
+                onClick={scrollToForm}
+                className={`w-full py-6 rounded-xl font-semibold text-base transition-all ${
+                  plan.highlight
+                    ? "bg-white text-[#18cb96] hover:bg-gray-100 shadow-lg"
+                    : "bg-[#18cb96] text-white hover:bg-[#14b584] hover:scale-105"
+                }`}
+              >
+                {plan.cta}
+              </Button>
             </div>
-
-            <div className="text-center mb-6 mt-4">
-              <Crown className="w-12 h-12 text-yellow-600 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-foreground mb-2">🏆 PLANO VETERANO</h3>
-              <div className="mb-2">
-                <span className="text-4xl font-bold text-foreground">R$ 19,90</span>
-                <span className="text-muted-foreground">/mês</span>
-              </div>
-              <p className="text-sm text-muted-foreground mb-2">cobrado anualmente (R$ 238,80/ano)</p>
-              <p className="text-sm text-yellow-700 font-semibold">💰 Economize R$ 119/ano</p>
-            </div>
-
-            <ul className="space-y-3 mb-6">
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">TUDO do Calouro +</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">Preparação física (TAF)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">Simulados mensais</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">Dicas de prova</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">Suporte 24/7 prioritário</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-primary mt-0.5" />
-                <span className="text-sm text-foreground font-medium">Bônus: Guia do Candidato</span>
-              </li>
-            </ul>
-
-            <Button
-              variant="outline"
-              className="w-full border-2 border-yellow-600 text-yellow-700 hover:bg-yellow-50 hover-elevate active-elevate-2"
-              onClick={scrollToForm}
-              data-testid="button-plano-veterano"
-            >
-              Garantir Desconto 👑
-            </Button>
-            <p className="text-xs text-center text-muted-foreground mt-2">💳 R$ 238,80 (12x sem juros)</p>
-          </div>
-        </div>
-
-        {/* Features Below Cards */}
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-8 mb-8 text-center">
-          <div className="grid md:grid-cols-4 gap-4 mb-6">
-            <div className="flex items-center justify-center gap-2 text-sm text-foreground">
-              <span>🔒</span>
-              <span>Pagamento 100% seguro</span>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-sm text-foreground">
-              <span>💳</span>
-              <span>Cartão, Pix ou boleto</span>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-sm text-foreground">
-              <span>🔄</span>
-              <span>Garantia de 7 dias</span>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-sm text-foreground">
-              <span>🎁</span>
-              <span>1ª semana grátis</span>
-            </div>
-          </div>
+          ))}
         </div>
 
         <div className="text-center">
+          <p className="text-gray-600 mb-6">
+            🔒 Garantia de 7 dias • Cancele quando quiser • Sem taxas escondidas
+          </p>
           <Button
-            size="lg"
             onClick={scrollToForm}
-            className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
-            data-testid="button-pricing-cta"
+            size="lg"
+            variant="outline"
+            className="border-2 border-[#18cb96] text-[#18cb96] hover:bg-[#18cb96] hover:text-white px-12 py-6 text-lg font-semibold rounded-xl transition-all"
           >
-            <span className="text-2xl mr-2">💚</span>
-            Começar Meu Plano Agora
+            Testar Agora
           </Button>
         </div>
       </div>
