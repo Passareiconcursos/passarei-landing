@@ -12,6 +12,12 @@ interface GenerateContentParams {
   subject: string;
   examType: string;
   topic: string;
+  editalContext?: {
+    organization: string;
+    year: number;
+    weight: number;
+  };
+  adminNotes?: string;
 }
 
 interface GenerateQuestionsParams {
@@ -21,32 +27,55 @@ interface GenerateQuestionsParams {
 }
 
 export async function generateContent(params: GenerateContentParams) {
-  const { subject, examType, topic } = params;
+  const { subject, examType, topic, editalContext, adminNotes } = params;
+
+  const editalInfo = editalContext
+    ? `\n\nCONTEXTO DO EDITAL:
+- Banca: ${editalContext.organization}
+- Ano: ${editalContext.year}
+- Peso desta matéria: ${editalContext.weight}%
+- IMPORTANTE: Use exemplos ESPECÍFICOS para ${examType}, não de outras polícias!`
+    : "";
+
+  const adminNotesSection = adminNotes
+    ? `\n\nOBSERVAÇÕES DO ADMINISTRADOR (PRIORIZE ESTAS ORIENTAÇÕES):
+${adminNotes}`
+    : "";
 
   const prompt = `Você é um especialista em concursos públicos brasileiros, especialmente para carreiras policiais.
+${editalInfo}
+${adminNotesSection}
 
 TAREFA: Criar um conteúdo educacional completo sobre o tema "${topic}" para ${examType} (matéria: ${subject}).
+
+ATENÇÃO ESPECIAL:
+- Se for PF (Polícia Federal): Use exemplos de crimes federais, competência da PF
+- Se for PRF (Polícia Rodoviária Federal): Use exemplos de trânsito em rodovias federais
+- Se for PM (Polícia Militar): Use exemplos de policiamento ostensivo estadual
+- Se for PC (Polícia Civil): Use exemplos de investigação criminal estadual
+- NÃO misture competências de polícias diferentes!
 
 ESTRUTURA OBRIGATÓRIA:
 1. DEFINIÇÃO (2-3 frases claras e diretas)
 2. PONTOS PRINCIPAIS (3-5 pontos em bullet points)
-3. EXEMPLO PRÁTICO (caso real ou situação do dia a dia policial)
-4. DICA DE PROVA (pegadinha comum ou erro frequente)
+3. EXEMPLO PRÁTICO (caso real específico para ${examType})
+4. DICA DE PROVA (pegadinha comum ou erro frequente em ${editalContext?.organization || "bancas de concurso"})
 
 REGRAS:
 - Linguagem clara e objetiva
-- Foco em concursos policiais
+- Foco específico em ${examType}
 - Base legal quando aplicável (cite artigos de lei)
 - 200-400 palavras no total
 - Português brasileiro formal
+- Exemplos práticos do dia a dia de ${examType}
 
 Formate a resposta em JSON assim:
 {
   "title": "Título do conteúdo",
   "definition": "Definição clara",
   "keyPoints": "• Ponto 1\\n• Ponto 2\\n• Ponto 3",
-  "example": "Exemplo prático",
-  "tip": "Dica de prova",
+  "example": "Exemplo prático ESPECÍFICO para ${examType}",
+  "tip": "Dica de prova para ${editalContext?.organization || "concursos"}",
   "tags": ["tag1", "tag2", "tag3"]
 }`;
 
@@ -56,9 +85,8 @@ Formate a resposta em JSON assim:
     messages: [{ role: "user", content: prompt }],
   });
 
-  const responseText = message.content[0].type === "text" 
-    ? message.content[0].text 
-    : "";
+  const responseText =
+    message.content[0].type === "text" ? message.content[0].text : "";
 
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
@@ -110,9 +138,8 @@ Formate a resposta em JSON assim:
     messages: [{ role: "user", content: prompt }],
   });
 
-  const responseText = message.content[0].type === "text" 
-    ? message.content[0].text 
-    : "";
+  const responseText =
+    message.content[0].type === "text" ? message.content[0].text : "";
 
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {

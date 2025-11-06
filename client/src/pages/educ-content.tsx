@@ -161,7 +161,11 @@ export default function EducContent() {
     },
   });
 
-  const { data, isLoading: isLoadingContent } = useQuery({
+  const {
+    data,
+    isLoading: isLoadingContent,
+    refetch,
+  } = useQuery({
     queryKey: ["/api/admin/content/list", filters],
     queryFn: async () => {
       const params = new URLSearchParams();
