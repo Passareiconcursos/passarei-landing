@@ -739,7 +739,7 @@ export default function EducContent() {
         open={isAIDialogOpen}
         onClose={() => setIsAIDialogOpen(false)}
         onSuccess={() => {
-          loadContent();
+          refetch();
           setIsAIDialogOpen(false);
         }}
       />
