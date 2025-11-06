@@ -29,7 +29,7 @@ export default function Reembolso() {
               <li><strong>Sem perguntas:</strong> Não pedimos justificativa (embora feedback seja bem-vindo)</li>
               <li><strong>Sem burocracia:</strong> Processo simples e rápido</li>
               <li><strong>100% do valor:</strong> Reembolso completo do valor pago</li>
-              <li><strong>Todos os planos pagos:</strong> Válido para Calouro (R$ 29,90) e Veterano (R$ 238,80)</li>
+              <li><strong>Todos os planos pagos:</strong> Válido para Calouro (R$ 12,90) e Veterano (R$ 118,80)</li>
             </ul>
           </section>
 
@@ -83,8 +83,8 @@ export default function Reembolso() {
               <ul className="list-disc pl-6 text-foreground mb-4 space-y-2">
                 <li><strong>Primeira assinatura:</strong> Primeira vez que assina um plano pago</li>
                 <li><strong>Dentro de 7 dias:</strong> Solicitação feita dentro do período de garantia</li>
-                <li><strong>Planos mensais:</strong> Assinatura do Plano Calouro (R$ 29,90/mês)</li>
-                <li><strong>Planos anuais:</strong> Assinatura do Plano Veterano (R$ 238,80/ano)</li>
+                <li><strong>Planos mensais:</strong> Assinatura do Plano Calouro (R$ 12,90/mês)</li>
+                <li><strong>Planos anuais:</strong> Assinatura do Plano Veterano (R$ 118,80/ano)</li>
               </ul>
             </div>
 
@@ -219,18 +219,18 @@ export default function Reembolso() {
             </div>
 
             <div className="mb-6">
-              <h3 className="text-xl font-semibold text-foreground mb-3">7.2 Plano Calouro (Mensal - R$ 29,90/mês)</h3>
+              <h3 className="text-xl font-semibold text-foreground mb-3">7.2 Plano Calouro (Mensal - R$ 12,90/mês)</h3>
               <ul className="list-disc pl-6 text-foreground mb-4">
-                <li><strong>Primeiros 7 dias:</strong> Reembolso total de R$ 29,90</li>
+                <li><strong>Primeiros 7 dias:</strong> Reembolso total de R$ 12,90</li>
                 <li><strong>Após 7 dias:</strong> Sem reembolso, apenas cancelamento (acesso até fim do mês pago)</li>
                 <li><strong>Renovação automática:</strong> Cobrada mensalmente até cancelamento</li>
               </ul>
             </div>
 
             <div className="mb-6">
-              <h3 className="text-xl font-semibold text-foreground mb-3">7.3 Plano Veterano (Anual - R$ 238,80/ano)</h3>
+              <h3 className="text-xl font-semibold text-foreground mb-3">7.3 Plano Veterano (Anual - R$ 118,80/ano)</h3>
               <ul className="list-disc pl-6 text-foreground mb-4">
-                <li><strong>Primeiros 7 dias:</strong> Reembolso total de R$ 238,80</li>
+                <li><strong>Primeiros 7 dias:</strong> Reembolso total de R$ 118,80</li>
                 <li><strong>Após 7 dias:</strong> Sem reembolso, apenas cancelamento (acesso até fim dos 12 meses)</li>
                 <li><strong>Sem reembolso proporcional:</strong> Não fazemos reembolso de meses não utilizados</li>
                 <li><strong>Renovação automática:</strong> Cobrada anualmente até cancelamento</li>

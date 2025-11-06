@@ -1,3 +1,4 @@
+import { Concursos } from "@/components/sections/Concursos";
 import { Header } from "@/components/Header";
 import { Hero } from "@/components/sections/Hero";
 import { SocialProof } from "@/components/sections/SocialProof";
@@ -16,21 +17,16 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
       <Header />
       <Hero />
+      <Concursos />
       <div id="social-proof">
         <SocialProof />
       </div>
-      <div id="para-quem-e">
-        <ParaQuemE />
-      </div>
-      <div id="beneficios">
-        <Beneficios />
-      </div>
+      <ParaQuemE />
+      <Beneficios />
       <div id="como-funciona">
         <ComoFunciona />
       </div>
-      <div id="comparativo">
-        <Comparativo />
-      </div>
+      <Comparativo />
       <div id="planos">
         <Pricing />
       </div>

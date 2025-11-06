@@ -4,131 +4,153 @@ import { Loader2 } from "lucide-react";
 import { trackFormSubmit } from "@/components/Analytics";
 
 const estados = [
-  { value: 'AC', label: 'Acre' },
-  { value: 'AL', label: 'Alagoas' },
-  { value: 'AP', label: 'Amapá' },
-  { value: 'AM', label: 'Amazonas' },
-  { value: 'BA', label: 'Bahia' },
-  { value: 'CE', label: 'Ceará' },
-  { value: 'DF', label: 'Distrito Federal' },
-  { value: 'ES', label: 'Espírito Santo' },
-  { value: 'GO', label: 'Goiás' },
-  { value: 'MA', label: 'Maranhão' },
-  { value: 'MT', label: 'Mato Grosso' },
-  { value: 'MS', label: 'Mato Grosso do Sul' },
-  { value: 'MG', label: 'Minas Gerais' },
-  { value: 'PA', label: 'Pará' },
-  { value: 'PB', label: 'Paraíba' },
-  { value: 'PR', label: 'Paraná' },
-  { value: 'PE', label: 'Pernambuco' },
-  { value: 'PI', label: 'Piauí' },
-  { value: 'RJ', label: 'Rio de Janeiro' },
-  { value: 'RN', label: 'Rio Grande do Norte' },
-  { value: 'RS', label: 'Rio Grande do Sul' },
-  { value: 'RO', label: 'Rondônia' },
-  { value: 'RR', label: 'Roraima' },
-  { value: 'SC', label: 'Santa Catarina' },
-  { value: 'SP', label: 'São Paulo' },
-  { value: 'SE', label: 'Sergipe' },
-  { value: 'TO', label: 'Tocantins' },
+  { value: "AC", label: "Acre" },
+  { value: "AL", label: "Alagoas" },
+  { value: "AP", label: "Amapá" },
+  { value: "AM", label: "Amazonas" },
+  { value: "BA", label: "Bahia" },
+  { value: "CE", label: "Ceará" },
+  { value: "DF", label: "Distrito Federal" },
+  { value: "ES", label: "Espírito Santo" },
+  { value: "GO", label: "Goiás" },
+  { value: "MA", label: "Maranhão" },
+  { value: "MT", label: "Mato Grosso" },
+  { value: "MS", label: "Mato Grosso do Sul" },
+  { value: "MG", label: "Minas Gerais" },
+  { value: "PA", label: "Pará" },
+  { value: "PB", label: "Paraíba" },
+  { value: "PR", label: "Paraná" },
+  { value: "PE", label: "Pernambuco" },
+  { value: "PI", label: "Piauí" },
+  { value: "RJ", label: "Rio de Janeiro" },
+  { value: "RN", label: "Rio Grande do Norte" },
+  { value: "RS", label: "Rio Grande do Sul" },
+  { value: "RO", label: "Rondônia" },
+  { value: "RR", label: "Roraima" },
+  { value: "SC", label: "Santa Catarina" },
+  { value: "SP", label: "São Paulo" },
+  { value: "SE", label: "Sergipe" },
+  { value: "TO", label: "Tocantins" },
 ];
 
 const concursos = [
-  { value: 'PM', label: 'PM - Polícia Militar' },
-  { value: 'PC', label: 'PC - Polícia Civil' },
-  { value: 'PRF', label: 'PRF - Polícia Rodoviária Federal' },
-  { value: 'PF', label: 'PF - Polícia Federal' },
-  { value: 'OUTRO', label: 'Outro concurso policial' },
+  // Federal
+  { value: "PF", label: "PF - Polícia Federal", group: "Federal" },
+  { value: "PRF", label: "PRF - Polícia Rodoviária Federal", group: "Federal" },
+  { value: "PP_FEDERAL", label: "Polícia Penal Federal", group: "Federal" },
+  {
+    value: "PL_FEDERAL",
+    label: "Polícia Legislativa Federal",
+    group: "Federal",
+  },
+
+  // Estadual
+  { value: "PM", label: "PM - Polícia Militar", group: "Estadual" },
+  { value: "PC", label: "PC - Polícia Civil", group: "Estadual" },
+  { value: "PP_ESTADUAL", label: "Polícia Penal Estadual", group: "Estadual" },
+  {
+    value: "PL_ESTADUAL",
+    label: "Polícia Legislativa Estadual",
+    group: "Estadual",
+  },
+  { value: "CBM", label: "CBM - Corpo de Bombeiros", group: "Estadual" },
+
+  // Municipal
+  { value: "GM", label: "GM - Guarda Municipal", group: "Municipal" },
+
+  // Outro
+  { value: "OUTRO", label: "Outro", group: "" },
 ];
 
 export function LeadForm() {
   const [, setLocation] = useLocation();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    examType: '',
-    state: '',
+    name: "",
+    email: "",
+    phone: "",
+    examType: "",
+    state: "",
     acceptedWhatsApp: false,
   });
 
   const maskPhone = (value: string) => {
     return value
-      .replace(/\D/g, '')
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{5})(\d)/, '$1-$2')
-      .replace(/(-\d{4})\d+?$/, '$1');
+      .replace(/\D/g, "")
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{5})(\d)/, "$1-$2")
+      .replace(/(-\d{4})\d+?$/, "$1");
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    
-    if (name === 'phone') {
-      setFormData(prev => ({ ...prev, [name]: maskPhone(value) }));
+
+    if (name === "phone") {
+      setFormData((prev) => ({ ...prev, [name]: maskPhone(value) }));
     } else {
-      setFormData(prev => ({ 
-        ...prev, 
-        [name]: type === 'checkbox' ? checked : value 
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : value,
       }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       // Validações
       if (!formData.name || formData.name.length < 3) {
-        throw new Error('Nome deve ter pelo menos 3 caracteres');
+        throw new Error("Nome deve ter pelo menos 3 caracteres");
       }
-      
-      if (!formData.email.includes('@')) {
-        throw new Error('Email inválido');
+
+      if (!formData.email.includes("@")) {
+        throw new Error("Email inválido");
       }
-      
+
       if (formData.phone.length < 15) {
-        throw new Error('WhatsApp inválido. Use o formato (99) 99999-9999');
+        throw new Error("WhatsApp inválido. Use o formato (99) 99999-9999");
       }
-      
+
       if (!formData.examType) {
-        throw new Error('Selecione o tipo de concurso');
+        throw new Error("Selecione o tipo de concurso");
       }
-      
+
       if (!formData.state) {
-        throw new Error('Selecione o estado');
+        throw new Error("Selecione o estado");
       }
-      
+
       if (!formData.acceptedWhatsApp) {
-        throw new Error('Você precisa aceitar receber conteúdo via WhatsApp');
+        throw new Error("Você precisa aceitar receber conteúdo via WhatsApp");
       }
 
       // Enviar para API
-      const response = await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Erro ao processar cadastro');
+        throw new Error(data.error || "Erro ao processar cadastro");
       }
 
       // Track successful form submission
-      trackFormSubmit('lead_form', {
+      trackFormSubmit("lead_form", {
         exam_type: formData.examType,
         state: formData.state,
       });
 
       // Sucesso - redirecionar
-      setLocation('/obrigado');
-
+      setLocation("/obrigado");
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
@@ -213,14 +235,71 @@ export function LeadForm() {
               required
               data-testid="select-exam-type"
             >
-              <option value="" className="text-gray-900">Selecione o concurso</option>
-              {concursos.map(c => (
-                <option key={c.value} value={c.value} className="text-gray-900">{c.label}</option>
-              ))}
+              <option value="" className="text-gray-900">
+                Selecione o concurso
+              </option>
+
+              <optgroup label="Federal">
+                {concursos
+                  .filter((c) => c.group === "Federal")
+                  .map((c) => (
+                    <option
+                      key={c.value}
+                      value={c.value}
+                      className="text-gray-900"
+                    >
+                      {c.label}
+                    </option>
+                  ))}
+              </optgroup>
+
+              <optgroup label="Estadual">
+                {concursos
+                  .filter((c) => c.group === "Estadual")
+                  .map((c) => (
+                    <option
+                      key={c.value}
+                      value={c.value}
+                      className="text-gray-900"
+                    >
+                      {c.label}
+                    </option>
+                  ))}
+              </optgroup>
+
+              <optgroup label="Municipal">
+                {concursos
+                  .filter((c) => c.group === "Municipal")
+                  .map((c) => (
+                    <option
+                      key={c.value}
+                      value={c.value}
+                      className="text-gray-900"
+                    >
+                      {c.label}
+                    </option>
+                  ))}
+              </optgroup>
+
+              {concursos
+                .filter((c) => !c.group)
+                .map((c) => (
+                  <option
+                    key={c.value}
+                    value={c.value}
+                    className="text-gray-900"
+                  >
+                    {c.label}
+                  </option>
+                ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
               </svg>
             </div>
           </div>
@@ -240,14 +319,26 @@ export function LeadForm() {
               required
               data-testid="select-state"
             >
-              <option value="" className="text-gray-900">Selecione seu estado</option>
-              {estados.map(estado => (
-                <option key={estado.value} value={estado.value} className="text-gray-900">{estado.label}</option>
+              <option value="" className="text-gray-900">
+                Selecione seu estado
+              </option>
+              {estados.map((estado) => (
+                <option
+                  key={estado.value}
+                  value={estado.value}
+                  className="text-gray-900"
+                >
+                  {estado.label}
+                </option>
               ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
               </svg>
             </div>
           </div>

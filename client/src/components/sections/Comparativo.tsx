@@ -7,7 +7,7 @@ export function Comparativo() {
   };
 
   const features = [
-    { name: "Preço mensal", passarei: "R$ 19,90*", cursinhos: "R$ 200-500", livros: "R$ 150+" },
+    { name: "Preço mensal", passarei: "R$ 12,90*", cursinhos: "R$ 200-500", livros: "R$ 150+" },
     { name: "Estuda pelo WhatsApp", passarei: "check", cursinhos: "x", livros: "x" },
     { name: "Conteúdo personalizado", passarei: "IA adapta", cursinhos: "Igual p/ todos", livros: "Não" },
     { name: "Análise automática do edital", passarei: "check", cursinhos: "x", livros: "x" },

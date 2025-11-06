@@ -91,10 +91,16 @@ const subjects = {
 };
 
 const examTypeLabels: Record<string, string> = {
-  PM: "PM",
-  PC: "PC",
-  PRF: "PRF",
-  PF: "PF",
+  PF: "PF - Polícia Federal",
+  PRF: "PRF - Polícia Rodoviária Federal",
+  PP_FEDERAL: "Polícia Penal Federal",
+  PL_FEDERAL: "Polícia Legislativa Federal",
+  PM: "PM - Polícia Militar",
+  PC: "PC - Polícia Civil",
+  PP_ESTADUAL: "Polícia Penal Estadual",
+  PL_ESTADUAL: "Polícia Legislativa Estadual",
+  CBM: "CBM - Corpo de Bombeiros",
+  GM: "GM - Guarda Municipal",
   OUTRO: "Outro",
 };
 

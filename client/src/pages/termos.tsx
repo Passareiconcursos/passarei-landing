@@ -83,7 +83,7 @@ export default function Termos() {
             <div className="mb-6">
               <h3 className="text-xl font-semibold text-foreground mb-3">4.2 Plano Calouro</h3>
               <ul className="list-disc pl-6 text-foreground mb-4">
-                <li>R$ 29,90 por mês</li>
+                <li>R$ 12,90 por mês</li>
                 <li>Conteúdo ilimitado</li>
                 <li>Assistente de IA completo</li>
                 <li>Questões ilimitadas</li>
@@ -94,7 +94,7 @@ export default function Termos() {
             <div className="mb-6">
               <h3 className="text-xl font-semibold text-foreground mb-3">4.3 Plano Veterano</h3>
               <ul className="list-disc pl-6 text-foreground mb-4">
-                <li>R$ 238,80 por ano (equivalente a R$ 19,90/mês)</li>
+                <li>R$ 118,80 por ano (equivalente a R$ 12,90/mês)</li>
                 <li>Todos os recursos do Plano Calouro</li>
                 <li>Preparação para TAF (Teste de Aptidão Física)</li>
                 <li>Simulados completos</li>

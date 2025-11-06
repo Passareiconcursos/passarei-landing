@@ -47,7 +47,7 @@ export function SocialProof() {
           </div>
           <div className="hidden sm:block w-px h-5 bg-border"></div>
           <div className="text-primary font-semibold">
-            154 aprovações 2024
+            154 aprovações 2025
           </div>
         </div>
       </div>

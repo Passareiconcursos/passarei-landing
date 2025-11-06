@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 
 export function Pricing() {
   const scrollToForm = () => {
-    document.getElementById("lead-form")?.scrollIntoView({ behavior: "smooth" });
+    document
+      .getElementById("lead-form")
+      ?.scrollIntoView({ behavior: "smooth" });
   };
 
   const plans = [
@@ -43,13 +45,13 @@ export function Pricing() {
     {
       name: "Veterano",
       price: "9,90",
-      period: "/mês no anual",
+      period: "/mês",
+      pricingDetail: "R$ 118,80/ano",
       description: "Melhor custo-benefício",
-      pricingDetail: "R$ 118,80 cobrados anualmente",
       features: [
         "Tudo do plano Calouro",
         "23% de desconto",
-        "Acesso antecipado a novos recursos",
+        "Acesso antecipado a recursos",
         "Prioridade máxima no suporte",
         "Bônus: Curso de redação",
         "Garantia de 30 dias",
@@ -74,7 +76,8 @@ export function Pricing() {
             Escolha Seu Plano
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            O mesmo conteúdo dos cursinhos caros, por um preço que você pode pagar
+            O mesmo conteúdo dos cursinhos caros, por um preço que você pode
+            pagar
           </p>
         </div>
 
@@ -124,7 +127,7 @@ export function Pricing() {
               <div className="mb-6">
                 <div className="flex items-baseline">
                   <span
-                    className={`text-5xl font-bold ${
+                    className={`text-4xl font-bold ${
                       plan.highlight ? "text-white" : "text-gray-900"
                     }`}
                   >

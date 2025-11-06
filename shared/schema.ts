@@ -1,15 +1,15 @@
 import { sql } from "drizzle-orm";
-import { 
-  pgTable, 
-  text, 
-  varchar, 
-  timestamp, 
-  pgEnum, 
-  boolean, 
+import {
+  pgTable,
+  text,
+  varchar,
+  timestamp,
+  pgEnum,
+  boolean,
   integer,
   real,
   json,
-  date
+  date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -32,7 +32,7 @@ import {
   subcategories,
   subjects,
   materials,
-  questions
+  questions,
 } from "../db/schema";
 
 // ============================================
@@ -42,8 +42,25 @@ import {
 export const insertLeadSchema = createInsertSchema(leads, {
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   email: z.string().email("Email inválido"),
-  phone: z.string().regex(/^\(\d{2}\) \d{5}-\d{4}$/, "WhatsApp inválido. Use o formato (99) 99999-9999"),
-  examType: z.enum(["PM", "PC", "PRF", "PF", "OUTRO"]),
+  phone: z
+    .string()
+    .regex(
+      /^\(\d{2}\) \d{5}-\d{4}$/,
+      "WhatsApp inválido. Use o formato (99) 99999-9999",
+    ),
+  examType: z.enum([
+    "PF",
+    "PRF",
+    "PP_FEDERAL",
+    "PL_FEDERAL",
+    "PM",
+    "PC",
+    "PP_ESTADUAL",
+    "PL_ESTADUAL",
+    "CBM",
+    "GM",
+    "OUTRO",
+  ]),
   state: z.string().length(2, "Estado inválido"),
   acceptedWhatsApp: z.boolean().refine((val) => val === true, {
     message: "Você deve aceitar receber conteúdo via WhatsApp",
@@ -95,7 +112,10 @@ export type Admin = typeof admins.$inferSelect;
 export type AdminLogin = z.infer<typeof adminLoginSchema>;
 
 // Admin sem senha (para retornar ao frontend)
-export type AdminPublic = Omit<Admin, 'passwordHash' | 'loginAttempts' | 'lockedUntil'>;
+export type AdminPublic = Omit<
+  Admin,
+  "passwordHash" | "loginAttempts" | "lockedUntil"
+>;
 
 // ============================================
 // ADMIN SESSION SCHEMAS
@@ -131,7 +151,19 @@ export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email("Email inválido"),
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   phone: z.string().regex(/^\(\d{2}\) \d{5}-\d{4}$/, "Telefone inválido"),
-  examType: z.enum(["PM", "PC", "PRF", "PF", "OUTRO"]),
+  examType: z.enum([
+    "PF",
+    "PRF",
+    "PP_FEDERAL",
+    "PL_FEDERAL",
+    "PM",
+    "PC",
+    "PP_ESTADUAL",
+    "PL_ESTADUAL",
+    "CBM",
+    "GM",
+    "OUTRO",
+  ]),
   state: z.string().length(2, "Estado inválido"),
 }).omit({
   id: true,
@@ -144,7 +176,7 @@ export const insertUserSchema = createInsertSchema(users, {
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
-export type UserPublic = Omit<User, 'passwordHash'>;
+export type UserPublic = Omit<User, "passwordHash">;
 
 // ============================================
 // SUBSCRIPTION SCHEMAS
@@ -230,29 +262,47 @@ const baseContentSchema = createInsertSchema(content, {
     "BIOLOGIA_FORENSE",
     "QUIMICA_FORENSE",
     "FISICA_FORENSE",
-    "INFORMATICA_FORENSE"
+    "INFORMATICA_FORENSE",
   ]),
   body: z.string().min(20, "Conteúdo deve ter pelo menos 20 caracteres"),
-  
+
   // Novos campos opcionais
   editalUrl: z.string().url("URL inválida").optional().or(z.literal("")),
-  sphere: z.enum(["FEDERAL", "ESTADUAL"], { required_error: "Selecione a esfera do concurso" }),
-  state: z.string().length(2, "Estado deve ter 2 caracteres").optional().or(z.literal("")),
-  
+  sphere: z.enum(["FEDERAL", "ESTADUAL"], {
+    required_error: "Selecione a esfera do concurso",
+  }),
+  state: z
+    .string()
+    .length(2, "Estado deve ter 2 caracteres")
+    .optional()
+    .or(z.literal("")),
+
   // NOVOS CAMPOS
   cargoTarget: z.array(z.string()).default([]), // Array de cargos
   materialId: z.string().optional().or(z.literal("")), // Material usado para gerar
-  
+
   // Seções estruturadas (opcionais)
   definition: z.string().optional().or(z.literal("")),
   keyPoints: z.string().optional().or(z.literal("")),
   example: z.string().optional().or(z.literal("")),
   tip: z.string().optional().or(z.literal("")),
-  
+
   // Tags
   tags: z.array(z.string()).default([]),
-  
-  examType: z.enum(["PM", "PC", "PRF", "PF", "OUTRO"]),
+
+  examType: z.enum([
+    "PF",
+    "PRF",
+    "PP_FEDERAL",
+    "PL_FEDERAL",
+    "PM",
+    "PC",
+    "PP_ESTADUAL",
+    "PL_ESTADUAL",
+    "CBM",
+    "GM",
+    "OUTRO",
+  ]),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).default("DRAFT"),
 }).omit({
   id: true,
@@ -273,7 +323,7 @@ export const insertContentSchema = baseContentSchema.refine(
   {
     message: "Estado é obrigatório quando a esfera for Estadual",
     path: ["state"],
-  }
+  },
 );
 
 export const selectContentSchema = createSelectSchema(content);
@@ -287,7 +337,19 @@ export type Content = typeof content.$inferSelect;
 export const insertCategorySchema = createInsertSchema(categories, {
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   slug: z.string().min(2, "Slug inválido"),
-  examType: z.enum(["PM", "PC", "PRF", "PF", "OUTRO"]),
+  examType: z.enum([
+    "PF",
+    "PRF",
+    "PP_FEDERAL",
+    "PL_FEDERAL",
+    "PM",
+    "PC",
+    "PP_ESTADUAL",
+    "PL_ESTADUAL",
+    "CBM",
+    "GM",
+    "OUTRO",
+  ]),
 }).omit({
   id: true,
   createdAt: true,
@@ -344,7 +406,21 @@ export const insertMaterialSchema = createInsertSchema(materials, {
   title: z.string().min(3, "Título deve ter pelo menos 3 caracteres"),
   type: z.enum(["PDF", "APOSTILA", "TEXTO", "LINK"]),
   url: z.string().url("URL inválida").optional().or(z.literal("")),
-  examType: z.enum(["PM", "PC", "PRF", "PF", "OUTRO"]).optional(),
+  examType: z
+    .enum([
+      "PF",
+      "PRF",
+      "PP_FEDERAL",
+      "PL_FEDERAL",
+      "PM",
+      "PC",
+      "PP_ESTADUAL",
+      "PL_ESTADUAL",
+      "CBM",
+      "GM",
+      "OUTRO",
+    ])
+    .optional(),
   sphere: z.enum(["FEDERAL", "ESTADUAL"]).optional(),
   state: z.string().length(2, "Estado inválido").optional().or(z.literal("")),
 }).omit({
