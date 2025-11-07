@@ -316,6 +316,7 @@ export default function EducContent() {
       setEditingContent(null);
       form.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/admin/content/list"] });
+      window.location.reload();
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -743,8 +744,12 @@ export default function EducContent() {
         open={isAIDialogOpen}
         onClose={() => setIsAIDialogOpen(false)}
         onSuccess={() => {
-          refetch();
-          setIsAIDialogOpen(false);
+          queryClient.invalidateQueries({
+            queryKey: ["/api/admin/content/list"],
+          });
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
         }}
       />
     </AdminLayout>
