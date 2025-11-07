@@ -1,8 +1,8 @@
 export function Concursos() {
   const concursos = [
-    { icon: "🔵", name: "Polícia Federal", sigla: "PF", nivel: "Federal" },
+    { icon: "🚘", name: "Polícia Federal", sigla: "PF", nivel: "Federal" },
     {
-      icon: "🛣️",
+      icon: "🚦",
       name: "Polícia Rodoviária Federal",
       sigla: "PRF",
       nivel: "Federal",
@@ -14,7 +14,7 @@ export function Concursos() {
       nivel: "Federal",
     },
     {
-      icon: "🏛️",
+      icon: "👔",
       name: "Polícia Legislativa Federal",
       sigla: "PL Federal",
       nivel: "Federal",
