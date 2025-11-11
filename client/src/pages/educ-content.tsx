@@ -747,6 +747,8 @@ export default function EducContent() {
           queryClient.invalidateQueries({
             queryKey: ["/api/admin/content/list"],
           });
+          setIsAIDialogOpen(false);
+          // Recarregar página após 500ms para garantir que salvou
           setTimeout(() => {
             window.location.reload();
           }, 500);
