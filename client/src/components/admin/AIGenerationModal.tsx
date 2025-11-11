@@ -24,8 +24,9 @@ interface Edital {
 interface EditalSubject {
   name: string;
   weight: number;
-  questions: number;
-  topics: string[];
+  totalTopics?: number;
+  topicsList?: string[];
+  topics?: string[];
 }
 
 interface GeneratedContent {
@@ -45,24 +46,17 @@ interface Props {
 export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
   const { toast } = useToast();
 
-  // Estados do wizard
   const [step, setStep] = useState(1);
   const [editais, setEditais] = useState<Edital[]>([]);
   const [selectedEdital, setSelectedEdital] = useState<Edital | null>(null);
-  const [selectedSubject, setSelectedSubject] = useState<EditalSubject | null>(
-    null,
-  );
+  const [selectedSubject, setSelectedSubject] = useState<EditalSubject | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string>("");
   const [generatedTopics, setGeneratedTopics] = useState<string[]>([]);
-
-  // Estados de geração
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedContent, setGeneratedContent] =
-    useState<GeneratedContent | null>(null);
+  const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  // Carregar editais ao abrir
   useEffect(() => {
     if (open) {
       loadEditais();
@@ -103,30 +97,37 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
   };
 
   const handleSelectSubject = (subjectName: string) => {
-    const subject = selectedEdital?.subjects.find(
-      (s) => s.name === subjectName,
-    );
+    const subject = selectedEdital?.subjects.find((s) => s.name === subjectName);
     setSelectedSubject(subject || null);
     setSelectedTopic("");
     if (subject) setStep(3);
   };
 
+  const getTopicsList = (subject: EditalSubject | null): string[] => {
+    if (!subject) return [];
+    return subject.topicsList || subject.topics || [];
+  };
+
   const getSuggestedTopic = () => {
     if (!selectedSubject) return null;
-    const availableTopics = selectedSubject.topicsList.filter(
-      // ✅
-      (t) =>
-        !generatedTopics.includes(
-          `${selectedEdital?.examType}-${selectedSubject.name}-${t}`,
-        ),
+    const topicsList = getTopicsList(selectedSubject);
+    const availableTopics = topicsList.filter(
+      (t) => !generatedTopics.includes(`${selectedEdital?.examType}-${selectedSubject.name}-${t}`)
     );
     return availableTopics[0] || null;
   };
 
   const isTopicGenerated = (topic: string) => {
-    return generatedTopics.includes(
-      `${selectedEdital?.examType}-${selectedSubject?.name}-${topic}`,
-    );
+    return generatedTopics.includes(`${selectedEdital?.examType}-${selectedSubject?.name}-${topic}`);
+  };
+
+  const getProgressPercentage = () => {
+    if (!selectedSubject) return 0;
+    const topicsList = getTopicsList(selectedSubject);
+    const total = topicsList.length;
+    if (total === 0) return 0;
+    const generated = topicsList.filter((t) => isTopicGenerated(t)).length;
+    return Math.round((generated / total) * 100);
   };
 
   const handleGenerate = async () => {
@@ -248,7 +249,6 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
         throw new Error(data.error);
       }
 
-      // Registrar tópico como gerado
       await fetch("/api/admin/content/log-generation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -288,15 +288,6 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
     onClose();
   };
 
-  const getProgressPercentage = () => {
-    if (!selectedSubject) return 0;
-    const total = selectedSubject.topicsList.length;
-    const generated = selectedSubject.topicsList.filter((t) =>
-      isTopicGenerated(t),
-    ).length;
-    return Math.round((generated / total) * 100);
-  };
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -307,18 +298,13 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        {/* PASSO 1: Escolher Concurso */}
         {step >= 1 && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? "bg-purple-600 text-white" : "bg-gray-200"}`}
-              >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? "bg-purple-600 text-white" : "bg-gray-200"}`}>
                 1
               </div>
-              <Label className="text-lg font-semibold">
-                Escolha o Concurso
-              </Label>
+              <Label className="text-lg font-semibold">Escolha o Concurso</Label>
             </div>
 
             <div className="grid grid-cols-1 gap-3 pl-10">
@@ -345,13 +331,10 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
           </div>
         )}
 
-        {/* PASSO 2: Escolher Matéria */}
         {step >= 2 && selectedEdital && (
           <div className="space-y-4 mt-6">
             <div className="flex items-center gap-2">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? "bg-purple-600 text-white" : "bg-gray-200"}`}
-              >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? "bg-purple-600 text-white" : "bg-gray-200"}`}>
                 2
               </div>
               <Label className="text-lg font-semibold">Escolha a Matéria</Label>
@@ -359,12 +342,11 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
 
             <div className="grid grid-cols-1 gap-3 pl-10">
               {selectedEdital.subjects.map((subject) => {
-                const topicsList = subject.topicsList || subject.topics || [];
-                const progress = Math.round(
-                  (topicsList.filter((t) => isTopicGenerated(t)).length /
-                    topicsList.length) *
-                    100,
-                );
+                const topicsList = getTopicsList(subject);
+                const progress = topicsList.length > 0 
+                  ? Math.round((topicsList.filter((t) => isTopicGenerated(t)).length / topicsList.length) * 100)
+                  : 0;
+                
                 return (
                   <button
                     key={subject.name}
@@ -376,9 +358,7 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
-                      <div className="font-semibold">
-                        {subject.name.replace(/_/g, " ")}
-                      </div>
+                      <div className="font-semibold">{subject.name.replace(/_/g, " ")}</div>
                       <div className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
                         Peso: {subject.weight}%
                       </div>
@@ -395,8 +375,7 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
                       <span className="text-xs">{progress}%</span>
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      {topicsList.filter((t) => isTopicGenerated(t)).length}/
-                      {topicsList.length} tópicos gerados
+                      {topicsList.filter((t) => isTopicGenerated(t)).length}/{topicsList.length} tópicos gerados
                     </div>
                   </button>
                 );
@@ -405,13 +384,10 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
           </div>
         )}
 
-        {/* PASSO 3: Escolher Tópico */}
         {step >= 3 && selectedSubject && (
           <div className="space-y-4 mt-6">
             <div className="flex items-center gap-2">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? "bg-purple-600 text-white" : "bg-gray-200"}`}
-              >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? "bg-purple-600 text-white" : "bg-gray-200"}`}>
                 3
               </div>
               <Label className="text-lg font-semibold">Escolha o Tópico</Label>
@@ -422,9 +398,7 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
                 <div className="p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="h-4 w-4 text-yellow-600" />
-                    <span className="font-semibold text-yellow-900">
-                      Sugestão Inteligente
-                    </span>
+                    <span className="font-semibold text-yellow-900">Sugestão Inteligente</span>
                   </div>
                   <button
                     onClick={() => setSelectedTopic(getSuggestedTopic()!)}
@@ -440,10 +414,8 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
               )}
 
               <div className="space-y-2">
-                <div className="text-sm font-medium text-gray-600">
-                  Ou escolha outro:
-                </div>
-                {selectedSubject.topicsList.map((topic) => {
+                <div className="text-sm font-medium text-gray-600">Ou escolha outro:</div>
+                {getTopicsList(selectedSubject).map((topic) => {
                   const isGenerated = isTopicGenerated(topic);
                   const isSuggested = topic === getSuggestedTopic();
 
@@ -469,9 +441,7 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
                       )}
                       <span>{topic}</span>
                       {isGenerated && (
-                        <span className="ml-auto text-xs text-green-600 font-medium">
-                          ✓ Gerado
-                        </span>
+                        <span className="ml-auto text-xs text-green-600 font-medium">✓ Gerado</span>
                       )}
                     </button>
                   );
@@ -479,9 +449,7 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => setStep(2)}>
-                  ← Voltar
-                </Button>
+                <Button variant="outline" onClick={() => setStep(2)}>← Voltar</Button>
                 <Button
                   onClick={handleGenerate}
                   disabled={!selectedTopic || isGenerating}
@@ -504,7 +472,6 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
           </div>
         )}
 
-        {/* PASSO 4: Preview e Ajustes */}
         {step === 4 && generatedContent && (
           <div className="space-y-4 mt-6">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -518,12 +485,7 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
                 <Label>Título</Label>
                 <Input
                   value={generatedContent.title}
-                  onChange={(e) =>
-                    setGeneratedContent({
-                      ...generatedContent,
-                      title: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setGeneratedContent({ ...generatedContent, title: e.target.value })}
                 />
               </div>
 
@@ -531,12 +493,7 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
                 <Label>Definição</Label>
                 <Textarea
                   value={generatedContent.definition}
-                  onChange={(e) =>
-                    setGeneratedContent({
-                      ...generatedContent,
-                      definition: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setGeneratedContent({ ...generatedContent, definition: e.target.value })}
                   className="min-h-[100px]"
                 />
               </div>
@@ -545,12 +502,7 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
                 <Label>Pontos-Chave</Label>
                 <Textarea
                   value={generatedContent.keyPoints}
-                  onChange={(e) =>
-                    setGeneratedContent({
-                      ...generatedContent,
-                      keyPoints: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setGeneratedContent({ ...generatedContent, keyPoints: e.target.value })}
                   className="min-h-[100px]"
                 />
               </div>
@@ -559,12 +511,7 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
                 <Label>Exemplo Prático</Label>
                 <Textarea
                   value={generatedContent.example}
-                  onChange={(e) =>
-                    setGeneratedContent({
-                      ...generatedContent,
-                      example: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setGeneratedContent({ ...generatedContent, example: e.target.value })}
                   className="min-h-[100px]"
                 />
               </div>
@@ -573,12 +520,7 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
                 <Label>Dica para Prova</Label>
                 <Textarea
                   value={generatedContent.tip}
-                  onChange={(e) =>
-                    setGeneratedContent({
-                      ...generatedContent,
-                      tip: e.target.value,
-                    })
-                  }
+                  onChange={(e) => setGeneratedContent({ ...generatedContent, tip: e.target.value })}
                   className="min-h-[100px]"
                 />
               </div>
@@ -612,9 +554,7 @@ export function AIGenerationModal({ open, onClose, onSuccess }: Props) {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setStep(3)}>
-                ← Voltar
-              </Button>
+              <Button variant="outline" onClick={() => setStep(3)}>← Voltar</Button>
               <Button
                 onClick={handleSave}
                 disabled={isSaving}
