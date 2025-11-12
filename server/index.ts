@@ -1,8 +1,10 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { registerAIRoutes } from "./ai-routes";
 import { registerEditalRoutes } from "./edital-routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { startTelegramBot } from "./telegram/bot";
 
 const app = express();
 app.use(express.json());
@@ -40,17 +42,13 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
-
-  // Registrar rotas de IA
+  
   registerAIRoutes(app);
-
-  // Registrar rotas de editais
   registerEditalRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
     res.status(status).json({ message });
     throw err;
   });
@@ -60,6 +58,9 @@ app.use((req, res, next) => {
   } else {
     serveStatic(app);
   }
+
+  // Iniciar Telegram Bot
+  startTelegramBot().catch(console.error);
 
   const port = parseInt(process.env.PORT || "5000", 10);
   server.listen(
