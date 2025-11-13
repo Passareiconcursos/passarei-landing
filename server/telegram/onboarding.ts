@@ -1,33 +1,416 @@
+import TelegramBot from "node-telegram-bot-api";
 import { db } from "../../db";
-import { users } from "../../db/schema";
-import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
-export async function startOnboarding(bot: any, chatId: number, telegramId: string, name: string) {
-  await bot.sendMessage(chatId, `👋 Olá *${name}*!
+interface OnboardingState {
+  step: number;
+  waitingFor?: "estado" | "municipio";
+  data: {
+    examType?: string;
+    state?: string;
+    municipio?: string;
+    cargo?: string;
+    nivel?: string;
+    facilidades?: string[];
+    dificuldades?: string[];
+    timeUntilExam?: string;
+    schedule?: string;
+  };
+}
 
-Seja bem-vindo ao *Passarei* - sua plataforma de estudos para concursos policiais! 🚀
+const onboardingStates = new Map<string, OnboardingState>();
 
-Vamos configurar sua experiência em apenas 3 passos:`, { parse_mode: 'Markdown' });
+const CARGOS: any = {
+  PC: [
+    "Delegado",
+    "Escrivão",
+    "Investigador",
+    "Agente de Polícia",
+    "Perito Criminal",
+    "Papiloscopista",
+  ],
+  PM: ["Soldado", "Aspirante a Oficial"],
+  PF: ["Agente", "Escrivão", "Delegado", "Perito Criminal"],
+  PRF: ["Policial Rodoviário Federal"],
+  CBM: ["Soldado", "Aspirante a Oficial"],
+  GM: ["Guarda Municipal"],
+  PP_ESTADUAL: ["Agente Penitenciário"],
+  PP_FEDERAL: ["Agente Federal Penitenciário"],
+  PL_ESTADUAL: ["Agente de Polícia Legislativa"],
+  PL_FEDERAL: ["Policial Legislativo Federal"],
+};
 
-  await new Promise(r => setTimeout(r, 1000));
+export async function startOnboarding(
+  bot: TelegramBot,
+  chatId: number,
+  telegramId: string,
+  name: string,
+) {
+  onboardingStates.set(telegramId, { step: 1, data: {} });
 
-  // PASSO 1: Escolher concurso
-  const keyboard1 = {
+  await bot.sendMessage(
+    chatId,
+    `👋 *${name}*!\n\nBem-vindo ao *Passarei*! 🚀\n\nVamos criar seu plano personalizado em *8 perguntas*.\n\nPronto? 💪`,
+    { parse_mode: "Markdown" },
+  );
+
+  await new Promise((r) => setTimeout(r, 1500));
+
+  const keyboard = {
     inline_keyboard: [
-      [{ text: '🎯 PF', callback_data: 'onb_PF' }, { text: '🚓 PRF', callback_data: 'onb_PRF' }],
-      [{ text: '🚔 PM', callback_data: 'onb_PM' }, { text: '🕵️ PC', callback_data: 'onb_PC' }],
-      [{ text: '🚒 CBM', callback_data: 'onb_CBM' }, { text: '⚖️ PP', callback_data: 'onb_PP' }]
-    ]
+      [
+        { text: "🎯 PF", callback_data: "onb_PF" },
+        { text: "🚓 PRF", callback_data: "onb_PRF" },
+      ],
+      [
+        { text: "🚔 PM", callback_data: "onb_PM" },
+        { text: "🕵️ PC", callback_data: "onb_PC" },
+      ],
+      [
+        { text: "🚒 CBM", callback_data: "onb_CBM" },
+        { text: "⚖️ PP_ESTADUAL", callback_data: "onb_PP_ESTADUAL" },
+      ],
+      [
+        { text: "🏛️ PL_ESTADUAL", callback_data: "onb_PL_ESTADUAL" },
+        { text: "🛡️ GM", callback_data: "onb_GM" },
+      ],
+      [
+        { text: "⚖️ PP_FEDERAL", callback_data: "onb_PP_FEDERAL" },
+        { text: "🏛️ PL_FEDERAL", callback_data: "onb_PL_FEDERAL" },
+      ],
+    ],
   };
 
-  await bot.sendMessage(chatId, 
-    `*PASSO 1/3* 🎯\n\nQual concurso você está estudando?`,
-    { parse_mode: 'Markdown', reply_markup: keyboard1 }
+  await bot.sendMessage(
+    chatId,
+    `*PERGUNTA 1/8* 🎯\n\nQual concurso você está estudando?`,
+    { parse_mode: "Markdown", reply_markup: keyboard },
   );
 }
 
-export async function saveUserPreference(telegramId: string, field: string, value: string) {
-  await db.update(users)
-    .set({ [field]: value })
-    .where(eq(users.username, telegramId));
+export async function handleOnboardingCallback(bot: TelegramBot, query: any) {
+  const chatId = query.message?.chat.id;
+  const telegramId = String(query.from.id);
+  const data = query.data;
+
+  if (!chatId) return;
+
+  const state = onboardingStates.get(telegramId);
+  if (!state) return;
+
+  console.log(`📝 Step ${state.step}: ${data}`);
+
+  // P1: Concurso
+  if (data.startsWith("onb_") && state.step === 1) {
+    const examType = data.replace("onb_", "");
+    state.data.examType = examType;
+    state.step = 2;
+
+    await bot.answerCallbackQuery(query.id, { text: `✅ ${examType}!` });
+
+    const isEstadual = [
+      "PM",
+      "PC",
+      "CBM",
+      "PP_ESTADUAL",
+      "PL_ESTADUAL",
+    ].includes(examType);
+    const isMunicipal = examType === "GM";
+
+    if (isEstadual) {
+      state.waitingFor = "estado";
+      await bot.sendMessage(
+        chatId,
+        `*PERGUNTA 2/8* 📍\n\nDigite o *estado* (ex: MG, SP):`,
+        { parse_mode: "Markdown" },
+      );
+    } else if (isMunicipal) {
+      state.waitingFor = "municipio";
+      await bot.sendMessage(
+        chatId,
+        `*PERGUNTA 2/8* 🏙️\n\nDigite o *município*:`,
+        { parse_mode: "Markdown" },
+      );
+    } else {
+      state.data.state = "FEDERAL";
+      state.step = 3;
+      await askCargo(bot, chatId, examType);
+    }
+  }
+
+  // P3: Cargo
+  else if (data.startsWith("cargo_") && state.step === 3) {
+    state.data.cargo = data.replace("cargo_", "");
+    state.step = 4;
+    await bot.answerCallbackQuery(query.id);
+    await askNivel(bot, chatId);
+  }
+
+  // P4: Nível
+  else if (data.startsWith("nivel_") && state.step === 4) {
+    state.data.nivel = data.replace("nivel_", "");
+    state.step = 5;
+    state.data.facilidades = [];
+    await bot.answerCallbackQuery(query.id);
+    await askFacilidades(bot, chatId);
+  }
+
+  // P5: Facilidades
+  else if (data.startsWith("facil_") && state.step === 5) {
+    const facil = data.replace("facil_", "");
+
+    if (facil === "NONE") {
+      state.data.facilidades = [];
+      state.step = 6;
+      await bot.answerCallbackQuery(query.id);
+      await askDificuldades(bot, chatId);
+      return;
+    }
+
+    if (facil === "DONE") {
+      state.step = 6;
+      await bot.answerCallbackQuery(query.id);
+      await askDificuldades(bot, chatId);
+      return;
+    }
+
+    if (!state.data.facilidades!.includes(facil)) {
+      state.data.facilidades!.push(facil);
+      await bot.answerCallbackQuery(query.id, { text: `✅ ${facil}!` });
+    }
+  }
+
+  // P6: Dificuldades
+  else if (data.startsWith("dific_") && state.step === 6) {
+    const dific = data.replace("dific_", "");
+
+    if (dific === "NONE") {
+      state.data.dificuldades = [];
+      state.step = 7;
+      await bot.answerCallbackQuery(query.id);
+      await askTime(bot, chatId);
+      return;
+    }
+
+    if (dific === "DONE") {
+      state.step = 7;
+      await bot.answerCallbackQuery(query.id);
+      await askTime(bot, chatId);
+      return;
+    }
+
+    if (!state.data.dificuldades) state.data.dificuldades = [];
+    if (!state.data.dificuldades!.includes(dific)) {
+      state.data.dificuldades!.push(dific);
+      await bot.answerCallbackQuery(query.id, { text: `✅ ${dific}!` });
+    }
+  }
+
+  // P7: Tempo
+  else if (data.startsWith("time_") && state.step === 7) {
+    const time = data.replace("time_", "");
+    state.data.timeUntilExam = time;
+    state.step = 8;
+    await bot.answerCallbackQuery(query.id, { text: "✅ Anotado!" });
+    await askSchedule(bot, chatId);
+  }
+
+  // P8: Horário - FINALIZAR
+  else if (data.startsWith("hora_") && state.step === 8) {
+    const schedule = data.replace("hora_", "");
+    state.data.schedule = schedule;
+    await bot.answerCallbackQuery(query.id, { text: "✅ Perfeito!" });
+    await finishOnboarding(bot, chatId, telegramId, state.data);
+  }
 }
+
+export async function handleOnboardingMessage(bot: TelegramBot, msg: any) {
+  const chatId = msg.chat.id;
+  const telegramId = String(msg.from?.id);
+  const text = msg.text?.trim();
+
+  const state = onboardingStates.get(telegramId);
+  if (!state || !state.waitingFor) return;
+
+  if (state.waitingFor === "estado" && state.step === 2) {
+    state.data.state = text?.toUpperCase();
+    state.waitingFor = undefined;
+    state.step = 3;
+    await askCargo(bot, chatId, state.data.examType!);
+  } else if (state.waitingFor === "municipio" && state.step === 2) {
+    state.data.municipio = text;
+    state.data.state = text;
+    state.waitingFor = undefined;
+    state.step = 3;
+    await askCargo(bot, chatId, state.data.examType!);
+  }
+}
+
+async function askCargo(bot: TelegramBot, chatId: number, examType: string) {
+  const cargos = CARGOS[examType] || ["Outro"];
+
+  const keyboard = {
+    inline_keyboard: cargos.map((c: string) => [
+      { text: c, callback_data: `cargo_${c}` },
+    ]),
+  };
+
+  await bot.sendMessage(
+    chatId,
+    `*PERGUNTA 3/8* 👮\n\nQual cargo você pretende?`,
+    { parse_mode: "Markdown", reply_markup: keyboard },
+  );
+}
+
+async function askNivel(bot: TelegramBot, chatId: number) {
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: "🌱 Iniciante", callback_data: "nivel_INICIANTE" }],
+      [{ text: "📚 Intermediário", callback_data: "nivel_INTERMEDIARIO" }],
+      [{ text: "🎓 Avançado", callback_data: "nivel_AVANCADO" }],
+    ],
+  };
+
+  await bot.sendMessage(
+    chatId,
+    `*PERGUNTA 4/8* 📊\n\nQual seu nível de conhecimento nas matérias do concurso?`,
+    { parse_mode: "Markdown", reply_markup: keyboard },
+  );
+}
+
+async function askFacilidades(bot: TelegramBot, chatId: number) {
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: "Direito Penal", callback_data: "facil_Penal" }],
+      [
+        {
+          text: "Direito Constitucional",
+          callback_data: "facil_Constitucional",
+        },
+      ],
+      [{ text: "Português", callback_data: "facil_Portugues" }],
+      [{ text: "Raciocínio Lógico", callback_data: "facil_Logica" }],
+      [{ text: "✅ Próxima pergunta", callback_data: "facil_DONE" }],
+      [{ text: "Nenhuma", callback_data: "facil_NONE" }],
+    ],
+  };
+
+  await bot.sendMessage(
+    chatId,
+    `*PERGUNTA 5/8* 💚\n\nEm qual área você JÁ TEM FACILIDADE?\n\n_Pode escolher várias matérias_`,
+    { parse_mode: "Markdown", reply_markup: keyboard },
+  );
+}
+
+async function askDificuldades(bot: TelegramBot, chatId: number) {
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: "Direito Penal", callback_data: "dific_Penal" }],
+      [
+        {
+          text: "Direito Constitucional",
+          callback_data: "dific_Constitucional",
+        },
+      ],
+      [{ text: "Português", callback_data: "dific_Portugues" }],
+      [{ text: "Raciocínio Lógico", callback_data: "dific_Logica" }],
+      [{ text: "✅ Próxima pergunta", callback_data: "dific_DONE" }],
+      [{ text: "Nenhuma", callback_data: "dific_NONE" }],
+    ],
+  };
+
+  await bot.sendMessage(
+    chatId,
+    `*PERGUNTA 6/8* 🎯\n\nEm qual área você TEM MAIS DIFICULDADE?\n\n_Vamos focar mais tempo nela!_`,
+    { parse_mode: "Markdown", reply_markup: keyboard },
+  );
+}
+
+async function askTime(bot: TelegramBot, chatId: number) {
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: "⚡ 0-3 meses", callback_data: "time_0-3meses" }],
+      [{ text: "📅 3-6 meses", callback_data: "time_3-6meses" }],
+      [{ text: "📆 6-12 meses", callback_data: "time_6-12meses" }],
+      [{ text: "🎯 Mais de 1 ano", callback_data: "time_1ano+" }],
+    ],
+  };
+
+  await bot.sendMessage(
+    chatId,
+    `*PERGUNTA 7/8* 📅\n\nQuanto tempo você tem até a prova?`,
+    { parse_mode: "Markdown", reply_markup: keyboard },
+  );
+}
+
+async function askSchedule(bot: TelegramBot, chatId: number) {
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: "🌅 Manhã (06h-12h)", callback_data: "hora_manha" }],
+      [{ text: "☀️ Tarde (12h-18h)", callback_data: "hora_tarde" }],
+      [{ text: "🌙 Noite (18h-23h)", callback_data: "hora_noite" }],
+      [{ text: "🎯 Manhã + Tarde", callback_data: "hora_manha_tarde" }],
+      [{ text: "🌟 Tarde + Noite", callback_data: "hora_tarde_noite" }],
+    ],
+  };
+
+  await bot.sendMessage(
+    chatId,
+    `*PERGUNTA 8/8* ⏰\n\nQuando você PREFERE estudar?\n\n_Enviaremos conteúdo automaticamente nesses horários!_`,
+    { parse_mode: "Markdown", reply_markup: keyboard },
+  );
+}
+
+async function finishOnboarding(
+  bot: TelegramBot,
+  chatId: number,
+  telegramId: string,
+  data: any,
+) {
+  try {
+    await db.execute(sql`
+      UPDATE users 
+      SET exam_type = ${data.examType},
+          state = ${data.state},
+          cargo = ${data.cargo},
+          nivel_conhecimento = ${data.nivel},
+          onboarding_completed = true
+      WHERE telegram_id = ${telegramId}
+    `);
+
+    onboardingStates.delete(telegramId);
+
+    const scheduleText = data.schedule?.replace("_", " + ") || data.schedule;
+
+    await bot.sendMessage(
+      chatId,
+      `🎉 *PERFIL CRIADO COM SUCESSO!*\n\n` +
+        `📋 *RESUMO DO SEU PLANO DE ESTUDOS:*\n\n` +
+        `🎯 Concurso: *${data.examType}*\n` +
+        `📍 Local: *${data.state}*\n` +
+        `👮 Cargo: *${data.cargo}*\n` +
+        `📊 Nível: *${data.nivel}*\n` +
+        `💚 Facilidades: *${data.facilidades?.join(", ") || "Nenhuma"}*\n` +
+        `🎯 Focar em: *${data.dificuldades?.join(", ") || "Todas as matérias"}*\n` +
+        `📅 Tempo: *${data.timeUntilExam}*\n` +
+        `⏰ Horário de estudo: *${scheduleText}*\n\n` +
+        `⏳ *Criando seu plano de estudos personalizado...*`,
+      { parse_mode: "Markdown" },
+    );
+
+    await new Promise((r) => setTimeout(r, 3000));
+
+    await bot.sendMessage(
+      chatId,
+      `✅ *Plano de estudos criado!*\n\n` +
+        `🚀 *Iniciamos em 1 minuto!*\n\n` +
+        `Começaremos com: *${data.dificuldades?.[0] || "Direito Penal"}*\n\n` +
+        `Prepare-se! 💪📚`,
+      { parse_mode: "Markdown" },
+    );
+  } catch (error) {
+    console.error("Erro ao finalizar:", error);
+  }
+}
+
+export { onboardingStates };
