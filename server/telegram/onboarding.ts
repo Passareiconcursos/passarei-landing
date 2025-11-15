@@ -1,6 +1,84 @@
+import { startLearningSession } from "./learning-session";
 import TelegramBot from "node-telegram-bot-api";
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
+
+// MAPEAMENTO ESTÁTICO COMO FALLBACK GARANTIDO
+const SUBJECT_FALLBACK: any = {
+  PF: [
+    "Direito Constitucional",
+    "Direito Administrativo",
+    "Direito Penal",
+    "Português",
+    "Raciocínio Lógico",
+    "Informática",
+  ],
+  PRF: [
+    "Direito Constitucional",
+    "Direito Administrativo",
+    "Legislação de Trânsito",
+    "Português",
+    "Raciocínio Lógico",
+    "Informática",
+  ],
+  PC: [
+    "Direito Constitucional",
+    "Direito Penal",
+    "Direito Processual Penal",
+    "Português",
+    "Raciocínio Lógico",
+    "Criminalística",
+  ],
+  PM: [
+    "Direito Constitucional",
+    "Direito Penal",
+    "Português",
+    "Raciocínio Lógico",
+    "Matemática",
+    "Legislação Militar",
+  ],
+  CBM: [
+    "Português",
+    "Matemática",
+    "Raciocínio Lógico",
+    "Física",
+    "Química",
+    "Primeiros Socorros",
+  ],
+  GM: [
+    "Direito Constitucional",
+    "Português",
+    "Matemática",
+    "Legislação Municipal",
+    "Atualidades",
+  ],
+  PP_ESTADUAL: [
+    "Direito Constitucional",
+    "Direito Penal",
+    "Português",
+    "Legislação Penitenciária",
+    "Atualidades",
+  ],
+  PP_FEDERAL: [
+    "Direito Constitucional",
+    "Direito Penal",
+    "Português",
+    "Legislação Penitenciária",
+    "Direitos Humanos",
+  ],
+  PL_ESTADUAL: [
+    "Direito Constitucional",
+    "Direito Administrativo",
+    "Português",
+    "Atualidades",
+  ],
+  PL_FEDERAL: [
+    "Direito Constitucional",
+    "Direito Administrativo",
+    "Português",
+    "Atualidades",
+  ],
+};
 
 interface OnboardingState {
   step: number;
@@ -100,7 +178,6 @@ export async function handleOnboardingCallback(bot: TelegramBot, query: any) {
 
   console.log(`📝 Step ${state.step}: ${data}`);
 
-  // P1: Concurso
   if (data.startsWith("onb_") && state.step === 1) {
     const examType = data.replace("onb_", "");
     state.data.examType = examType;
@@ -121,7 +198,7 @@ export async function handleOnboardingCallback(bot: TelegramBot, query: any) {
       state.waitingFor = "estado";
       await bot.sendMessage(
         chatId,
-        `*PERGUNTA 2/8* 📍\n\nDigite o *estado* (ex: MG, SP):`,
+        `*PERGUNTA 2/8* 📍\n\nDigite o *estado* (ex: MG, SP, RS):`,
         { parse_mode: "Markdown" },
       );
     } else if (isMunicipal) {
@@ -136,41 +213,42 @@ export async function handleOnboardingCallback(bot: TelegramBot, query: any) {
       state.step = 3;
       await askCargo(bot, chatId, examType);
     }
-  }
-
-  // P3: Cargo
-  else if (data.startsWith("cargo_") && state.step === 3) {
+  } else if (data.startsWith("cargo_") && state.step === 3) {
     state.data.cargo = data.replace("cargo_", "");
     state.step = 4;
     await bot.answerCallbackQuery(query.id);
     await askNivel(bot, chatId);
-  }
-
-  // P4: Nível
-  else if (data.startsWith("nivel_") && state.step === 4) {
+  } else if (data.startsWith("nivel_") && state.step === 4) {
     state.data.nivel = data.replace("nivel_", "");
     state.step = 5;
     state.data.facilidades = [];
     await bot.answerCallbackQuery(query.id);
-    await askFacilidades(bot, chatId);
-  }
-
-  // P5: Facilidades
-  else if (data.startsWith("facil_") && state.step === 5) {
+    await askFacilidades(bot, chatId, state.data.examType!);
+  } else if (data.startsWith("facil_") && state.step === 5) {
     const facil = data.replace("facil_", "");
 
     if (facil === "NONE") {
       state.data.facilidades = [];
       state.step = 6;
       await bot.answerCallbackQuery(query.id);
-      await askDificuldades(bot, chatId);
+      await askDificuldades(
+        bot,
+        chatId,
+        state.data.examType!,
+        state.data.facilidades!,
+      );
       return;
     }
 
     if (facil === "DONE") {
       state.step = 6;
       await bot.answerCallbackQuery(query.id);
-      await askDificuldades(bot, chatId);
+      await askDificuldades(
+        bot,
+        chatId,
+        state.data.examType!,
+        state.data.facilidades!,
+      );
       return;
     }
 
@@ -178,10 +256,7 @@ export async function handleOnboardingCallback(bot: TelegramBot, query: any) {
       state.data.facilidades!.push(facil);
       await bot.answerCallbackQuery(query.id, { text: `✅ ${facil}!` });
     }
-  }
-
-  // P6: Dificuldades
-  else if (data.startsWith("dific_") && state.step === 6) {
+  } else if (data.startsWith("dific_") && state.step === 6) {
     const dific = data.replace("dific_", "");
 
     if (dific === "NONE") {
@@ -204,21 +279,13 @@ export async function handleOnboardingCallback(bot: TelegramBot, query: any) {
       state.data.dificuldades!.push(dific);
       await bot.answerCallbackQuery(query.id, { text: `✅ ${dific}!` });
     }
-  }
-
-  // P7: Tempo
-  else if (data.startsWith("time_") && state.step === 7) {
-    const time = data.replace("time_", "");
-    state.data.timeUntilExam = time;
+  } else if (data.startsWith("time_") && state.step === 7) {
+    state.data.timeUntilExam = data.replace("time_", "");
     state.step = 8;
     await bot.answerCallbackQuery(query.id, { text: "✅ Anotado!" });
     await askSchedule(bot, chatId);
-  }
-
-  // P8: Horário - FINALIZAR
-  else if (data.startsWith("hora_") && state.step === 8) {
-    const schedule = data.replace("hora_", "");
-    state.data.schedule = schedule;
+  } else if (data.startsWith("hora_") && state.step === 8) {
+    state.data.schedule = data.replace("hora_", "");
     await bot.answerCallbackQuery(query.id, { text: "✅ Perfeito!" });
     await finishOnboarding(bot, chatId, telegramId, state.data);
   }
@@ -248,7 +315,6 @@ export async function handleOnboardingMessage(bot: TelegramBot, msg: any) {
 
 async function askCargo(bot: TelegramBot, chatId: number, examType: string) {
   const cargos = CARGOS[examType] || ["Outro"];
-
   const keyboard = {
     inline_keyboard: cargos.map((c: string) => [
       { text: c, callback_data: `cargo_${c}` },
@@ -278,18 +344,19 @@ async function askNivel(bot: TelegramBot, chatId: number) {
   );
 }
 
-async function askFacilidades(bot: TelegramBot, chatId: number) {
+async function askFacilidades(
+  bot: TelegramBot,
+  chatId: number,
+  examType: string,
+) {
+  // USA FALLBACK GARANTIDO
+  const subjectNames = SUBJECT_FALLBACK[examType] || SUBJECT_FALLBACK["PF"];
+
   const keyboard = {
     inline_keyboard: [
-      [{ text: "Direito Penal", callback_data: "facil_Penal" }],
-      [
-        {
-          text: "Direito Constitucional",
-          callback_data: "facil_Constitucional",
-        },
-      ],
-      [{ text: "Português", callback_data: "facil_Portugues" }],
-      [{ text: "Raciocínio Lógico", callback_data: "facil_Logica" }],
+      ...subjectNames.map((name: string) => [
+        { text: name, callback_data: `facil_${name}` },
+      ]),
       [{ text: "✅ Próxima pergunta", callback_data: "facil_DONE" }],
       [{ text: "Nenhuma", callback_data: "facil_NONE" }],
     ],
@@ -302,18 +369,21 @@ async function askFacilidades(bot: TelegramBot, chatId: number) {
   );
 }
 
-async function askDificuldades(bot: TelegramBot, chatId: number) {
+async function askDificuldades(
+  bot: TelegramBot,
+  chatId: number,
+  examType: string,
+  facilidades: string[],
+) {
+  // USA FALLBACK GARANTIDO E EXCLUI FACILIDADES
+  const allSubjects = SUBJECT_FALLBACK[examType] || SUBJECT_FALLBACK["PF"];
+  const filtered = allSubjects.filter((s: string) => !facilidades.includes(s));
+
   const keyboard = {
     inline_keyboard: [
-      [{ text: "Direito Penal", callback_data: "dific_Penal" }],
-      [
-        {
-          text: "Direito Constitucional",
-          callback_data: "dific_Constitucional",
-        },
-      ],
-      [{ text: "Português", callback_data: "dific_Portugues" }],
-      [{ text: "Raciocínio Lógico", callback_data: "dific_Logica" }],
+      ...filtered.map((name: string) => [
+        { text: name, callback_data: `dific_${name}` },
+      ]),
       [{ text: "✅ Próxima pergunta", callback_data: "dific_DONE" }],
       [{ text: "Nenhuma", callback_data: "dific_NONE" }],
     ],
@@ -403,11 +473,22 @@ async function finishOnboarding(
     await bot.sendMessage(
       chatId,
       `✅ *Plano de estudos criado!*\n\n` +
-        `🚀 *Iniciamos em 1 minuto!*\n\n` +
-        `Começaremos com: *${data.dificuldades?.[0] || "Direito Penal"}*\n\n` +
-        `Prepare-se! 💪📚`,
+        `🚀 *Preparando sua primeira aula...*\n\n` +
+        `📚 Começaremos com: *${data.dificuldades?.[0] || "Direito Penal"}*\n\n` +
+        `Em instantes você receberá o primeiro conteúdo!\n\n` +
+        `Prepare-se! 💪`,
       { parse_mode: "Markdown" },
     );
+
+    setTimeout(() => {
+      startLearningSession(
+        bot,
+        chatId,
+        telegramId,
+        data.examType!,
+        data.dificuldades || [],
+      );
+    }, 3000);
   } catch (error) {
     console.error("Erro ao finalizar:", error);
   }

@@ -1,6 +1,7 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { getRandomContent, createOrGetUser, checkUserLimit, incrementUserCount } from './database';
 import { startOnboarding, handleOnboardingCallback, handleOnboardingMessage, onboardingStates } from './onboarding';
+import { handleLearningCallback } from './learning-session';
 
 const token = process.env.TELEGRAM_BOT_TOKEN || '';
 let bot: TelegramBot | null = null;
@@ -11,6 +12,9 @@ export async function startTelegramBot() {
   bot = new TelegramBot(token, { polling: true });
 
   bot.on('callback_query', async (query) => {
+    const isLearning = await handleLearningCallback(bot!, query);
+    if (isLearning) return;
+    
     await handleOnboardingCallback(bot!, query);
   });
 
@@ -20,18 +24,6 @@ export async function startTelegramBot() {
     const telegramId = String(msg.from?.id);
     await createOrGetUser(telegramId, name);
     await startOnboarding(bot!, chatId, telegramId, name);
-  });
-
-  bot.onText(/\/conteudo/, async (msg) => {
-    const chatId = msg.chat.id;
-    const telegramId = String(msg.from?.id);
-    const canAccess = await checkUserLimit(telegramId);
-    if (!canAccess) return bot?.sendMessage(chatId, `⚠️ Limite!\n💎 /premium`);
-    await bot?.sendMessage(chatId, '📚 Buscando...');
-    const content = await getRandomContent();
-    if (!content) return bot?.sendMessage(chatId, '❌ Erro');
-    await incrementUserCount(telegramId);
-    await bot?.sendMessage(chatId, `📚 *${content.title}*\n\n${content.definition}`, { parse_mode: 'Markdown' });
   });
 
   bot.on('message', async (msg) => {
