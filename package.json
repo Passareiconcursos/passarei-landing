@@ -108,6 +108,8 @@
     "bcrypt": "^6.0.0",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.0",
+    "node-fetch": "^2.7.0",
+    "pdf-parse": "^2.4.5",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.17",
     "ts-node": "^10.9.2",

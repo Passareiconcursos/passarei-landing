@@ -1,17 +1,11 @@
 import TelegramBot from "node-telegram-bot-api";
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
-import { getRandomContent } from "./database";
 
 interface LearningSession {
   userId: string;
   chatId: number;
-  currentStep:
-    | "content"
-    | "exercise"
-    | "waiting_answer"
-    | "waiting_doubt"
-    | "explaining_doubt";
+  currentStep: "content" | "exercise" | "waiting_answer" | "waiting_doubt" | "explaining_doubt";
   currentContent: any;
   currentQuestion: any;
   contentsSent: number;
@@ -19,52 +13,27 @@ interface LearningSession {
   wrongAnswers: number;
   usedContentIds: string[];
   difficulties: string[];
+  facilities: string[];
+  examType: string;
   startTime: Date;
 }
 
 const activeSessions = new Map<string, LearningSession>();
 
 const FEEDBACK_CORRECT = [
-  {
-    title: "EXCELENTE!",
-    msg: "Sua resposta está correta! Você demonstrou total compreensão do conceito.",
-  },
-  {
-    title: "PARABÉNS!",
-    msg: "Acertou! Continue assim que a aprovação está cada vez mais próxima!",
-  },
-  {
-    title: "MUITO BEM!",
-    msg: "Resposta correta! Você está no caminho certo para a aprovação!",
-  },
-  {
-    title: "PERFEITO!",
-    msg: "Isso mesmo! Sua dedicação está rendendo frutos!",
-  },
+  { title: "EXCELENTE!", msg: "Sua resposta está correta! Você demonstrou total compreensão do conceito." },
+  { title: "PARABÉNS!", msg: "Acertou! Continue assim que a aprovação está cada vez mais próxima!" },
+  { title: "MUITO BEM!", msg: "Resposta correta! Você está no caminho certo para a aprovação!" },
+  { title: "PERFEITO!", msg: "Isso mesmo! Sua dedicação está rendendo frutos!" },
   { title: "MANDOU BEM!", msg: "Correto! Você está dominando esse conteúdo!" },
 ];
 
 const FEEDBACK_WRONG = [
-  {
-    title: "NÃO FOI DESSA VEZ!",
-    msg: "Mas não desanime! O erro é parte do aprendizado.",
-  },
-  {
-    title: "VAMOS LÁ!",
-    msg: "Não acertou, mas está no caminho! Vou te explicar:",
-  },
-  {
-    title: "QUASE LÁ!",
-    msg: "Resposta incorreta, mas você está evoluindo! Entenda o porquê:",
-  },
-  {
-    title: "FOCO TOTAL!",
-    msg: "Errou, mas agora vai acertar sempre! Veja a explicação:",
-  },
-  {
-    title: "CONTINUAR TENTANDO!",
-    msg: "Incorreto, mas cada erro te aproxima do sucesso! Vamos lá:",
-  },
+  { title: "NÃO FOI DESSA VEZ!", msg: "Mas não desanime! O erro é parte do aprendizado." },
+  { title: "VAMOS LÁ!", msg: "Não acertou, mas está no caminho! Vou te explicar:" },
+  { title: "QUASE LÁ!", msg: "Resposta incorreta, mas você está evoluindo! Entenda o porquê:" },
+  { title: "FOCO TOTAL!", msg: "Errou, mas agora vai acertar sempre! Veja a explicação:" },
+  { title: "CONTINUAR TENTANDO!", msg: "Incorreto, mas cada erro te aproxima do sucesso! Vamos lá:" },
 ];
 
 const FIXATION_TIPS = [
@@ -83,8 +52,10 @@ export async function startLearningSession(
   telegramId: string,
   examType: string,
   dificuldades: string[],
+  facilidades: string[] = [],
 ) {
-  console.log("🎓 Iniciando sessão");
+  console.log("🎓 Iniciando sessão inteligente");
+  console.log(`📊 Concurso: ${examType}, Dificuldades: ${dificuldades.join(', ')}`);
 
   const session: LearningSession = {
     userId: telegramId,
@@ -97,6 +68,8 @@ export async function startLearningSession(
     wrongAnswers: 0,
     usedContentIds: [],
     difficulties: dificuldades,
+    facilities: facilidades,
+    examType: examType,
     startTime: new Date(),
   };
 
@@ -104,27 +77,54 @@ export async function startLearningSession(
 
   await new Promise((r) => setTimeout(r, 15000));
 
-  await sendNextContent(bot, session, examType);
+  await sendNextContent(bot, session);
 }
 
-async function sendNextContent(
-  bot: TelegramBot,
-  session: LearningSession,
-  examType: string,
-) {
-  let content = await getRandomContent(examType);
+async function getSmartContent(session: LearningSession) {
+  console.log(`🔍 Buscando conteúdo para ${session.examType}...`);
+  
+  let result;
+  
+  // Se já usou conteúdos, excluir eles
+  if (session.usedContentIds.length > 0) {
+    result = await db.execute(sql`
+      SELECT * FROM ai_generated_content
+      WHERE exam_type = ${session.examType}
+        AND id NOT IN (${sql.join(session.usedContentIds.map(id => sql`${id}`), sql`, `)})
+      ORDER BY RANDOM()
+      LIMIT 1
+    `);
+  } else {
+    // Primeira vez, buscar qualquer um
+    result = await db.execute(sql`
+      SELECT * FROM ai_generated_content
+      WHERE exam_type = ${session.examType}
+      ORDER BY RANDOM()
+      LIMIT 1
+    `);
+  }
 
-  if (!content || session.usedContentIds.includes(content.id)) {
-    const content2 = await getRandomContent(examType);
-    if (!content2 || session.usedContentIds.includes(content2.id)) {
-      await bot.sendMessage(
-        session.chatId,
-        "✅ Parabéns! Você estudou todo conteúdo disponível por hoje! 🎉",
-      );
-      activeSessions.delete(session.userId);
-      return;
-    }
-    content = content2;
+  if (result.rows.length > 0) {
+    console.log(`✅ Conteúdo encontrado: ${result.rows[0].title}`);
+    return result.rows[0];
+  }
+
+  console.log(`⚠️ Nenhum conteúdo encontrado para ${session.examType}`);
+  return null;
+}
+
+async function sendNextContent(bot: TelegramBot, session: LearningSession) {
+  const content = await getSmartContent(session);
+
+  if (!content) {
+    await bot.sendMessage(
+      session.chatId,
+      `⚠️ *Conteúdo em preparação!*\n\nEstamos preparando materiais específicos para ${session.examType}.\n\nVolte em breve! 📚`,
+      { parse_mode: "Markdown" }
+    );
+    
+    activeSessions.delete(session.userId);
+    return;
   }
 
   session.currentContent = content;
@@ -147,7 +147,7 @@ ${content.definition}
 
 ✅ *PONTOS-CHAVE*
 
-${content.keyPoints}
+${content.key_points}
 
 ━━━━━━━━━━━━━━━━
 
@@ -193,37 +193,65 @@ Selecione a alternativa correta:`;
   session.currentStep = "waiting_answer";
 }
 
-// ✅ FUNÇÃO CORRIGIDA - ALTERNATIVAS CURTAS
 function generateMultipleChoice(content: any) {
   const title = content.title;
-  const firstSentence = content.definition.split('.')[0];
-  
-  // Criar resposta correta curta (máx 60 chars)
-  let correctAnswer = `${title}`;
-  if (firstSentence.length < 40) {
-    correctAnswer = `${title}: ${firstSentence}`;
-  }
-  if (correctAnswer.length > 60) {
-    correctAnswer = correctAnswer.substring(0, 57) + '...';
-  }
+  const def = content.definition;
 
-  // Alternativas erradas CURTAS
+  let correctAnswer = def.length > 100 ? def.substring(0, 97) + "..." : def;
+
   const wrongAnswers = [
-    'Não relevante para concursos',
-    'Conceito desatualizado',
-    'Apenas direito privado',
-    'Não consta no edital'
+    `${title} refere-se exclusivamente a crimes dolosos contra o patrimônio`,
+    `${title} só se aplica quando há violência ou grave ameaça à pessoa`,
+    `${title} é conceito do direito civil sem aplicação no direito penal`,
+    `${title} exige sempre a presença de dolo específico para configuração`,
   ];
 
-  const allOptions = [correctAnswer, ...wrongAnswers.slice(0, 3)];
-  const shuffled = allOptions.sort(() => Math.random() - 0.5);
+  const shuffledWrong = wrongAnswers.sort(() => Math.random() - 0.5).slice(0, 3);
+  const options = [correctAnswer, ...shuffledWrong];
+  const shuffledOptions = options.sort(() => Math.random() - 0.5);
 
   return {
-    question: `O que é ${title}?`,
-    options: shuffled,
+    question: `Sobre ${title}, assinale a alternativa CORRETA:`,
+    options: shuffledOptions,
     correctAnswer: correctAnswer,
-    correctIndex: shuffled.indexOf(correctAnswer),
+    correctIndex: shuffledOptions.indexOf(correctAnswer),
   };
+}
+
+async function sendDailyReport(bot: TelegramBot, session: LearningSession) {
+  const duration = Math.floor((new Date().getTime() - session.startTime.getTime()) / 60000);
+  const total = session.correctAnswers + session.wrongAnswers;
+  const percentage = total > 0 ? Math.round((session.correctAnswers / total) * 100) : 0;
+
+  const report = `📊 *RELATÓRIO DE ESTUDOS*
+
+━━━━━━━━━━━━━━━━
+
+⏱️ *Tempo de estudo:* ${duration} minutos
+📚 *Conteúdos estudados:* ${session.contentsSent}
+✅ *Acertos:* ${session.correctAnswers}
+❌ *Erros:* ${session.wrongAnswers}
+📈 *Aproveitamento:* ${percentage}%
+
+━━━━━━━━━━━━━━━━
+
+${percentage >= 80 ? "🏆 *EXCELENTE!* Desempenho excepcional!" : ""}
+${percentage >= 60 && percentage < 80 ? "💪 *MUITO BOM!* Continue assim!" : ""}
+${percentage < 60 && total > 0 ? "📖 *FOCO!* Revise os conteúdos com atenção!" : ""}
+${total === 0 ? "📚 *Comece a estudar amanhã!*" : ""}
+
+Volte amanhã para mais conteúdos! 🚀`;
+
+  await bot.sendMessage(session.chatId, report, { parse_mode: "Markdown" });
+  
+  if (total > 0) {
+    await db.execute(sql`
+      UPDATE users 
+      SET daily_content_count = daily_content_count + ${session.contentsSent},
+          total_questions_answered = total_questions_answered + ${total}
+      WHERE telegram_id = ${session.userId}
+    `);
+  }
 }
 
 export async function handleLearningCallback(bot: TelegramBot, query: any) {
@@ -243,8 +271,7 @@ export async function handleLearningCallback(bot: TelegramBot, query: any) {
 
     if (isCorrect) {
       session.correctAnswers++;
-      const feedback =
-        FEEDBACK_CORRECT[Math.floor(Math.random() * FEEDBACK_CORRECT.length)];
+      const feedback = FEEDBACK_CORRECT[Math.floor(Math.random() * FEEDBACK_CORRECT.length)];
 
       const message = `✅ *${feedback.title}*
 
@@ -260,13 +287,10 @@ ${session.currentContent.tip}
 
 ✨ Lembre-se sempre disso para acertar questões similares!`;
 
-      await bot.sendMessage(session.chatId, message, {
-        parse_mode: "Markdown",
-      });
+      await bot.sendMessage(session.chatId, message, { parse_mode: "Markdown" });
     } else {
       session.wrongAnswers++;
-      const feedback =
-        FEEDBACK_WRONG[Math.floor(Math.random() * FEEDBACK_WRONG.length)];
+      const feedback = FEEDBACK_WRONG[Math.floor(Math.random() * FEEDBACK_WRONG.length)];
 
       const message = `❌ *${feedback.title}*
 
@@ -286,9 +310,7 @@ ${session.currentContent.definition}
 
 📚 Releia os pontos-chave e você vai dominar isso!`;
 
-      await bot.sendMessage(session.chatId, message, {
-        parse_mode: "Markdown",
-      });
+      await bot.sendMessage(session.chatId, message, { parse_mode: "Markdown" });
     }
 
     await new Promise((r) => setTimeout(r, 2000));
@@ -305,11 +327,10 @@ ${session.currentContent.definition}
       ],
     };
 
-    await bot.sendMessage(
-      session.chatId,
-      "❓ *Ficou alguma dúvida sobre esse conteúdo?*",
-      { parse_mode: "Markdown", reply_markup: doubtKeyboard },
-    );
+    await bot.sendMessage(session.chatId, "❓ *Ficou alguma dúvida sobre esse conteúdo?*", {
+      parse_mode: "Markdown",
+      reply_markup: doubtKeyboard,
+    });
 
     session.currentStep = "waiting_doubt";
     return true;
@@ -317,7 +338,7 @@ ${session.currentContent.definition}
 
   if (data === "doubt_no" && session.currentStep === "waiting_doubt") {
     await bot.answerCallbackQuery(query.id, { text: "🚀 Próximo conteúdo!" });
-    await sendNextContent(bot, session, session.currentContent.examType);
+    await sendNextContent(bot, session);
     return true;
   }
 
@@ -340,13 +361,11 @@ Em outras palavras: ${session.currentContent.definition.split(".")[0]}.
 
 📝 *Para fixar melhor:*
 
-${session.currentContent.keyPoints.split("•").filter((p: string) => p.trim())[0]}
+${session.currentContent.key_points.split("•").filter((p: string) => p.trim())[0]}
 
 ━━━━━━━━━━━━━━━━`;
 
-    await bot.sendMessage(session.chatId, simplified, {
-      parse_mode: "Markdown",
-    });
+    await bot.sendMessage(session.chatId, simplified, { parse_mode: "Markdown" });
     await new Promise((r) => setTimeout(r, 3000));
 
     const newQuestion = generateMultipleChoice(session.currentContent);
@@ -374,10 +393,7 @@ Selecione a alternativa correta:`,
     return true;
   }
 
-  if (
-    data.startsWith("answer2_") &&
-    session.currentStep === "explaining_doubt"
-  ) {
+  if (data.startsWith("answer2_") && session.currentStep === "explaining_doubt") {
     const answerIdx = parseInt(data.replace("answer2_", ""));
     const isCorrect = answerIdx === session.currentQuestion.correctIndex;
 
@@ -408,7 +424,7 @@ Não se preocupe, vamos revisar isso no futuro! 📚`,
     }
 
     await new Promise((r) => setTimeout(r, 3000));
-    await sendNextContent(bot, session, session.currentContent.examType);
+    await sendNextContent(bot, session);
     return true;
   }
 

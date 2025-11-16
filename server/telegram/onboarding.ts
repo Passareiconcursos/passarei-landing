@@ -487,6 +487,7 @@ async function finishOnboarding(
         telegramId,
         data.examType!,
         data.dificuldades || [],
+        data.facilidades || [],
       );
     }, 3000);
   } catch (error) {
