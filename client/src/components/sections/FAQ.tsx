@@ -29,28 +29,28 @@ export function FAQ() {
     },
     {
       number: 4,
+      question: "Quais são os limites de cada plano?",
+      answer: "PLANO FREE (R$ 0):\n• 2 matérias por dia (60/mês)\n• 2 correções de exercícios/dia\n• SEM correção de redação\n• Suporte em até 24h\n\nPLANO CALOURO (R$ 12,90/mês):\n• 10 matérias por dia (300/mês)\n• 10 correções de exercícios/dia\n• 1 redação GRÁTIS/dia (30/mês)\n• Redações extras: R$ 1,90\n• Suporte em até 2h\n\nPLANO VETERANO (R$ 9,90/mês no anual):\n• 30 matérias por dia (900/mês)\n• 30 correções de exercícios/dia\n• 3 redações GRÁTIS/dia (90/mês)\n• Redações extras: R$ 0,99\n• Suporte VIP em até 30min (24/7)\n• Programa de afiliados (20% comissão)"
+    },
+    {
+      number: 5,
       question: "Quanto tempo por dia preciso estudar?",
       answer: "Recomendamos 15-30 minutos por dia para resultados consistentes.\n\nO segredo não é estudar horas seguidas, mas sim estudar UM POUCO TODOS OS DIAS.\n\nNosso método de repetição espaçada é otimizado para sessões curtas. Você aprende mais em 15min focados do que em 2h de aula cansativa.\n\nDistribuição ideal:\n• Manhã: 5-10min (leitura do conteúdo)\n• Tarde/Noite: 10-15min (questões práticas)\n• Total: 15-25min/dia"
     },
     {
-      number: 5,
+      number: 6,
       question: "Posso pausar quando quiser?",
       answer: "Sim! Total flexibilidade:\n\n• Plano Gratuito: Pause a qualquer momento\n• Planos Pagos: Pause por até 3 meses sem perder progresso\n\nQuando voltar, você continua exatamente de onde parou.\n\nIdeal para:\n• Férias\n• Mudança de concurso\n• Imprevistos pessoais\n• Reajuste de estratégia\n\nSem burocracia, sem taxas, sem pegadinha."
     },
     {
-      number: 6,
+      number: 7,
       question: "Como funciona a garantia de 7 dias?",
       answer: "Simples e transparente:\n\n1. Assine qualquer plano pago (Calouro ou Veterano)\n2. Use por até 7 dias\n3. Se não gostar por QUALQUER motivo, envie email para: suporte@passarei.com.br\n4. Devolvemos 100% do seu dinheiro\n\nSem perguntas incômodas.\nSem \"mas por quê?\".\nSem burocracia.\n\nAcreditamos tanto no Passarei que assumimos TODO o risco."
     },
     {
-      number: 7,
-      question: "Precisa de internet o tempo todo?",
-      answer: "Sim, o WhatsApp precisa de conexão para funcionar.\n\nMAS o consumo de dados é mínimo:\n• Textos: ~50KB cada\n• Questões: ~100KB cada\n• Total: menos de 1MB por dia\n\nQualquer plano de internet móvel básico é suficiente.\n\nSe ficar sem internet:\n• As mensagens chegam quando você reconectar\n• Nada se perde\n• Você continua de onde parou"
-    },
-    {
       number: 8,
-      question: "Por que não tem videoaulas?",
-      answer: "Decisão estratégica baseada em ciência:\n\nVideoaulas são passivas:\n• Você assiste e acha que aprendeu\n• Mas não testou o conhecimento\n• Taxa de retenção: ~10%\n\nNosso método é ativo:\n• Você lê (atenção plena)\n• Pratica imediatamente (questões)\n• Revisa programadamente (memória longo prazo)\n• Taxa de retenção: ~70%\n\nAlém disso:\n• Você estuda em QUALQUER lugar (ônibus, fila, etc)\n• Sem precisar de fone, tela grande ou concentração total\n• 3x mais rápido que videoaulas\n\nEstudos provam: Leitura + Prática > Vídeos"
+      question: "Como vocês são tão mais baratos que os concorrentes?",
+      answer: "Automação inteligente:\n\n• Cursinhos tradicionais: R$ 1.548/ano\n• Passarei Veterano: R$ 118,80/ano\n• ECONOMIA: R$ 1.429 (92%)\n\nComo?\n• 100% WhatsApp (sem app caro)\n• IA faz correções (sem professor humano)\n• Conteúdo automatizado (sem filmagens)\n• Infraestrutura enxuta (sem aluguel de espaço)\n\nRepassamos TODA economia para você.\n\nMesmo conteúdo, menor custo.\n\nAlém disso:\n• Plano Veterano inclui 90 redações/mês (vs 1-2 dos concorrentes)\n• Suporte mais rápido (30min vs 2 dias)\n• Você estuda onde já está (WhatsApp)"
     }
   ];
 

@@ -15,10 +15,10 @@ export function Pricing() {
       period: "/sempre",
       description: "Perfeito para testar a plataforma",
       features: [
-        "3 conteúdos por semana",
-        "5 questões comentadas/semana",
-        "Acesso ao painel web",
-        "Suporte por email",
+        "2 matérias por dia (60/mês)",
+        "2 correções de exercícios/dia",
+        "Suporte via WhatsApp (24h)",
+        "SEM correção de redação",
       ],
       cta: "Testar Grátis",
       highlight: false,
@@ -30,12 +30,13 @@ export function Pricing() {
       period: "/mês",
       description: "Para quem quer estudar sério",
       features: [
-        "Conteúdo diário no WhatsApp",
-        "Questões ilimitadas",
-        "Correção de redação ilimitada",
-        "Suporte prioritário",
+        "10 matérias por dia (300/mês)",
+        "10 correções de exercícios/dia",
+        "1 redação GRÁTIS/dia (30/mês)",
+        "Redações extras: R$ 1,90",
+        "Plano de aula personalizado",
         "Simulados mensais",
-        "Material em PDF",
+        "Suporte prioritário (2h)",
       ],
       cta: "Começar Teste Grátis",
       highlight: true,
@@ -46,20 +47,21 @@ export function Pricing() {
       name: "Veterano",
       price: "9,90",
       period: "/mês",
-      pricingDetail: "R$ 118,80/ano",
+      pricingDetail: "R$ 118,80/ano à vista",
       description: "Melhor custo-benefício",
       features: [
-        "Tudo do plano Calouro",
-        "23% de desconto",
-        "Acesso antecipado a recursos",
-        "Prioridade máxima no suporte",
-        "Bônus: Curso de redação",
-        "Garantia de 30 dias",
+        "30 matérias por dia (900/mês)",
+        "30 correções de exercícios/dia",
+        "3 redações GRÁTIS/dia (90/mês)",
+        "Redações extras: R$ 0,99 (50% OFF)",
+        "Simulados ilimitados",
+        "Suporte VIP (30min, 24/7)",
+        "Programa de afiliados (20%)",
       ],
       cta: "Começar Teste Grátis",
       highlight: false,
       popular: false,
-      savings: "Economize R$ 36/ano",
+      savings: "Economize 23%",
     },
   ];
 
@@ -69,15 +71,14 @@ export function Pricing() {
         <div className="text-center mb-16">
           <div className="inline-block mb-4">
             <span className="bg-[#18cb96]/10 text-[#18cb96] px-4 py-2 rounded-full text-sm font-semibold">
-              💰 Economize até 90%
+              💰 Economize até 92% vs concorrentes
             </span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             Escolha Seu Plano
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            O mesmo conteúdo dos cursinhos caros, por um preço que você pode
-            pagar
+            Mesmo conteúdo dos cursinhos de R$ 1.500/ano, por até 92% menos
           </p>
         </div>
 
@@ -156,7 +157,7 @@ export function Pricing() {
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-start">
                     <Check
-                      className={`w-5 h-5 mr-3 flex-shrink-0 ${
+                      className={`w-5 h-5 mr-3 flex-shrink-0 mt-0.5 ${
                         plan.highlight ? "text-white" : "text-[#18cb96]"
                       }`}
                     />

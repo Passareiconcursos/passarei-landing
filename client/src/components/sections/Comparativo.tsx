@@ -7,18 +7,18 @@ export function Comparativo() {
   };
 
   const features = [
-    { name: "Preço mensal", passarei: "R$ 12,90*", cursinhos: "R$ 200-500", livros: "R$ 150+" },
+    { name: "Preço anual", passarei: "R$ 118,80*", cursinhos: "R$ 1.548", livros: "R$ 150+" },
+    { name: "Custo/dia", passarei: "R$ 0,33", cursinhos: "R$ 4,24", livros: "Variável" },
+    { name: "Matérias/dia", passarei: "30 (WhatsApp)", cursinhos: "Via web", livros: "Ilimitado" },
+    { name: "Correções/dia", passarei: "30", cursinhos: "Limitado", livros: "x" },
+    { name: "Redação grátis/mês", passarei: "90", cursinhos: "1-2", livros: "x" },
+    { name: "Redação extra", passarei: "R$ 0,99", cursinhos: "R$ 5-10", livros: "x" },
     { name: "Estuda pelo WhatsApp", passarei: "check", cursinhos: "x", livros: "x" },
     { name: "Conteúdo personalizado", passarei: "IA adapta", cursinhos: "Igual p/ todos", livros: "Não" },
     { name: "Análise automática do edital", passarei: "check", cursinhos: "x", livros: "x" },
     { name: "Repetição espaçada científica", passarei: "Algoritmo", cursinhos: "Não", livros: "Manual" },
     { name: "Questões com IA explicando", passarei: "Detalhado", cursinhos: "warning", livros: "Gabarito só" },
-    { name: "Estuda em qualquer horário", passarei: "24/7", cursinhos: "warning", livros: "check" },
-    { name: "Progresso em tempo real", passarei: "Dashboard", cursinhos: "warning", livros: "x" },
-    { name: "Funciona offline", passarei: "x", cursinhos: "x", livros: "check" },
-    { name: "Suporte para dúvidas", passarei: "Ilimitado", cursinhos: "warning", livros: "x" },
-    { name: "Ajuste de dificuldade", passarei: "Automático", cursinhos: "Fixo", livros: "Fixo" },
-    { name: "Acompanha seu ritmo", passarei: "check", cursinhos: "Turma toda igual", livros: "x" },
+    { name: "Suporte", passarei: "30min (24/7)", cursinhos: "2 dias", livros: "x" },
   ];
 
   const getIcon = (value: string) => {
@@ -60,7 +60,7 @@ export function Comparativo() {
             Passarei vs. Cursinhos Tradicionais
           </h2>
           <p className="text-xl text-muted-foreground">
-            Veja por que somos a escolha inteligente
+            Economia de até R$ 1.429/ano (92%)
           </p>
         </div>
 
@@ -139,7 +139,7 @@ export function Comparativo() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground text-center mt-4">
-            *Plano Veterano anual
+            *Plano Veterano anual (R$ 118,80/ano)
           </p>
         </div>
 
@@ -150,7 +150,7 @@ export function Comparativo() {
             className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
             data-testid="button-comparativo-cta"
           >
-            💪 Quero a Preparação Inteligente
+            💪 Quero Economizar 92%
           </Button>
         </div>
       </div>
