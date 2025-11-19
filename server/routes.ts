@@ -1133,6 +1133,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // WEBHOOK WHATSAPP
+  // ============================================
+  const { handleIncomingWhatsApp } = await import('./whatsapp/webhook');
+  app.post('/webhook/whatsapp', handleIncomingWhatsApp);
+
   const httpServer = createServer(app);
   return httpServer;
 }

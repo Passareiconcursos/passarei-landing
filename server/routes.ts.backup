@@ -1,24 +1,24 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db } from "../db";
-import { 
-  leads, 
-  admins, 
-  adminSessions, 
-  users, 
-  subscriptions, 
+import {
+  leads,
+  admins,
+  adminSessions,
+  users,
+  subscriptions,
   content,
   categories,
   subcategories,
   subjects,
   materials,
-  questions
+  questions,
 } from "../db/schema";
-import { 
-  insertLeadSchema, 
+import {
+  insertLeadSchema,
   insertContentSchema,
   insertMaterialSchema,
-  insertQuestionSchema
+  insertQuestionSchema,
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { eq, and, count, desc, asc, like, or, ne, sql } from "drizzle-orm";
@@ -38,7 +38,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Validate request body
       const result = insertLeadSchema.safeParse(req.body);
-      
+
       if (!result.success) {
         const validationError = fromZodError(result.error);
         return res.status(400).json({
@@ -48,14 +48,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create lead in database
-      const [lead] = await db.insert(leads).values({
-        name: result.data.name,
-        email: result.data.email,
-        phone: result.data.phone,
-        examType: result.data.examType,
-        state: result.data.state,
-        acceptedWhatsApp: result.data.acceptedWhatsApp,
-      }).returning();
+      const [lead] = await db
+        .insert(leads)
+        .values({
+          name: result.data.name,
+          email: result.data.email,
+          phone: result.data.phone,
+          examType: result.data.examType,
+          state: result.data.state,
+          acceptedWhatsApp: result.data.acceptedWhatsApp,
+        })
+        .returning();
 
       return res.json({
         success: true,
@@ -88,17 +91,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper function to parse cookies
-  function parseCookies(cookieHeader: string | undefined): Record<string, string> {
+  function parseCookies(
+    cookieHeader: string | undefined,
+  ): Record<string, string> {
     if (!cookieHeader) return {};
-    return cookieHeader.split(';').reduce((cookies, cookie) => {
-      const [name, value] = cookie.trim().split('=');
-      cookies[name] = value;
-      return cookies;
-    }, {} as Record<string, string>);
+    return cookieHeader.split(";").reduce(
+      (cookies, cookie) => {
+        const [name, value] = cookie.trim().split("=");
+        cookies[name] = value;
+        return cookies;
+      },
+      {} as Record<string, string>,
+    );
   }
 
   // Add cookie parsing middleware for admin routes
-  app.use('/api/admin', (req, res, next) => {
+  app.use("/api/admin", (req, res, next) => {
     req.cookies = parseCookies(req.headers.cookie);
     next();
   });
@@ -106,23 +114,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to verify reCAPTCHA token
   async function verifyRecaptcha(token: string): Promise<boolean> {
     if (!token) return false;
-    
+
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-    
+
     if (!secretKey) {
       console.error("RECAPTCHA_SECRET_KEY not configured");
       return false;
     }
-    
+
     const verifyUrl = `https://www.google.com/recaptcha/api/siteverify`;
-    
+
     try {
       const response = await fetch(verifyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: `secret=${secretKey}&response=${token}`,
       });
-      
+
       const data = await response.json();
       return data.success && data.score >= 0.5; // Minimum score of 0.5
     } catch (error) {
@@ -198,13 +206,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!isValid) {
         // Increment login attempts
         const attempts = admin.loginAttempts + 1;
-        const lockedUntil = attempts >= 5 
-          ? new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
-          : null;
+        const lockedUntil =
+          attempts >= 5
+            ? new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+            : null;
 
         await db
           .update(admins)
-          .set({ 
+          .set({
             loginAttempts: attempts,
             lockedUntil,
           })
@@ -266,9 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (token) {
         // Delete session
-        await db
-          .delete(adminSessions)
-          .where(eq(adminSessions.token, token));
+        await db.delete(adminSessions).where(eq(adminSessions.token, token));
 
         // Log audit
         await logAuditAction(admin.id, "LOGOUT", "admin", admin.id, null, req);
@@ -323,8 +330,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select({ count: count() })
         .from(leads)
         .where(eq(leads.status, "CONVERTIDO"));
-      
-      // Get users statistics  
+
+      // Get users statistics
       const totalUsers = await db.select({ count: count() }).from(users);
       const activeUsers = await db
         .select({ count: count() })
@@ -342,15 +349,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select({ amount: subscriptions.amount })
         .from(subscriptions)
         .where(eq(subscriptions.status, "ACTIVE"));
-      
-      const mrr = activeSubscriptionsData.reduce((total, sub) => total + (sub.amount || 0), 0);
+
+      const mrr = activeSubscriptionsData.reduce(
+        (total, sub) => total + (sub.amount || 0),
+        0,
+      );
 
       // Calculate conversion rate
       const leadsCount = Number(totalLeads[0]?.count || 0);
       const conversionCount = Number(convertedLeads[0]?.count || 0);
-      const conversionRate = leadsCount > 0 
-        ? ((conversionCount / leadsCount) * 100).toFixed(1) 
-        : "0.0";
+      const conversionRate =
+        leadsCount > 0
+          ? ((conversionCount / leadsCount) * 100).toFixed(1)
+          : "0.0";
 
       return res.json({
         success: true,
@@ -375,14 +386,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/admin/leads - List leads with filters and pagination
   app.get("/api/admin/leads", requireAuth, async (req, res) => {
     try {
-      const { 
-        page = "1", 
-        limit = "10", 
-        status, 
-        examType, 
+      const {
+        page = "1",
+        limit = "10",
+        status,
+        examType,
         search,
         sortBy = "createdAt",
-        sortOrder = "desc"
+        sortOrder = "desc",
       } = req.query;
 
       const pageNum = parseInt(page as string);
@@ -391,22 +402,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Build where conditions
       const conditions = [];
-      
+
       if (status && status !== "ALL") {
         conditions.push(sql`${leads.status} = ${status}`);
       }
-      
+
       if (examType && examType !== "ALL") {
         conditions.push(sql`${leads.examType} = ${examType}`);
       }
-      
+
       if (search && typeof search === "string" && search.trim()) {
         conditions.push(
           or(
             like(leads.name, `%${search}%`),
             like(leads.email, `%${search}%`),
-            like(leads.phone, `%${search}%`)
-          )
+            like(leads.phone, `%${search}%`),
+          ),
         );
       }
 
@@ -455,7 +466,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { status } = req.body;
 
-      if (!status || !["NOVO", "CONTATADO", "QUALIFICADO", "CONVERTIDO"].includes(status)) {
+      if (
+        !status ||
+        !["NOVO", "CONTATADO", "QUALIFICADO", "CONVERTIDO"].includes(status)
+      ) {
         return res.status(400).json({
           success: false,
           error: "Status inválido.",
@@ -644,7 +658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/content", requireAuth, async (req, res) => {
     try {
       const admin = (req as any).admin;
-      
+
       // Parse query parameters for filters
       const {
         search,
@@ -666,43 +680,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Build WHERE conditions
       const conditions = [];
-      
+
       if (search) {
         conditions.push(
           or(
             like(content.title, `%${search}%`),
-            like(content.body, `%${search}%`)
-          )
+            like(content.body, `%${search}%`),
+          ),
         );
       }
-      
+
       if (subject) {
         conditions.push(eq(content.subject, subject as any));
       }
-      
+
       if (examType) {
         conditions.push(eq(content.examType, examType as any));
       }
-      
+
       if (sphere) {
         conditions.push(eq(content.sphere, sphere as any));
       }
-      
+
       if (state) {
         conditions.push(eq(content.state, state as string));
       }
-      
+
       if (status) {
         conditions.push(eq(content.status, status as any));
       }
-      
+
       if (generatedByAI !== undefined) {
         conditions.push(eq(content.generatedByAI, generatedByAI === "true"));
       }
 
       // Build query
       let query = db.select().from(content);
-      
+
       if (conditions.length > 0) {
         query = query.where(and(...conditions)) as any;
       }
@@ -716,7 +730,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: content.status,
       };
       const sortColumn = sortColumnMap[sortBy as string] || content.createdAt;
-      query = query.orderBy(sortOrder === "asc" ? asc(sortColumn) : desc(sortColumn)) as any;
+      query = query.orderBy(
+        sortOrder === "asc" ? asc(sortColumn) : desc(sortColumn),
+      ) as any;
 
       // Apply pagination
       const results = await query.limit(limitNum).offset(offset);
@@ -743,6 +759,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({
         success: false,
         error: "Erro ao buscar conteúdos.",
+      });
+    }
+  });
+
+  // GET /api/admin/content/list - Alias para listar (compatibilidade frontend)
+  app.get("/api/admin/content/list", requireAuth, async (req, res) => {
+    try {
+      const {
+        search = "",
+        subject = "",
+        examType = "",
+        status = "",
+        page = "1",
+        limit = "10",
+      } = req.query;
+
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const offset = (pageNum - 1) * limitNum;
+
+      let query = db
+        .select()
+        .from(content)
+        .limit(limitNum)
+        .offset(offset)
+        .orderBy(desc(content.createdAt));
+
+      if (search) {
+        query = query.where(like(content.title, `%${search}%`));
+      }
+      if (subject) {
+        query = query.where(eq(content.subject, subject as string));
+      }
+      if (examType) {
+        query = query.where(eq(content.examType, examType as string));
+      }
+      if (status) {
+        query = query.where(eq(content.status, status as any));
+      }
+
+      const contents = await query;
+
+      const [{ count }] = await db
+        .select({ count: sql<number>`cast(count(*) as int)` })
+        .from(content);
+
+      res.json({
+        success: true,
+        contents,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: count,
+          totalPages: Math.ceil(count / limitNum),
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: "Erro ao listar conteúdos",
       });
     }
   });
@@ -799,9 +875,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Prepare data, converting empty strings to null for FK fields
       const contentData = {
         ...data,
-        materialId: data.materialId || null,  // Convert empty string to null
-        state: data.state || null,             // Convert empty string to null
-        sphere: data.sphere || null,           // Convert empty string to null
+        materialId: data.materialId || null, // Convert empty string to null
+        state: data.state || null, // Convert empty string to null
+        sphere: data.sphere || null, // Convert empty string to null
         createdBy: admin.id,
         generatedByAI: false, // Manual creation
       };
@@ -813,7 +889,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .returning();
 
       // Log audit
-      await logAuditAction(admin.id, "CREATE", "content", newContent.id, null, req);
+      await logAuditAction(
+        admin.id,
+        "CREATE",
+        "content",
+        newContent.id,
+        null,
+        req,
+      );
 
       return res.json({
         success: true,
@@ -862,9 +945,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Prepare data, converting empty strings to null for FK fields
       const updateData = {
         ...result.data,
-        materialId: result.data.materialId || null,  // Convert empty string to null
-        state: result.data.state || null,             // Convert empty string to null
-        sphere: result.data.sphere || null,           // Convert empty string to null
+        materialId: result.data.materialId || null, // Convert empty string to null
+        state: result.data.state || null, // Convert empty string to null
+        sphere: result.data.sphere || null, // Convert empty string to null
         updatedAt: new Date(),
       };
 
@@ -882,7 +965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "content",
         id,
         { before: existingContent, after: updatedContent },
-        req
+        req,
       );
 
       return res.json({
@@ -922,7 +1005,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await db.delete(content).where(eq(content.id, id));
 
       // Log audit
-      await logAuditAction(admin.id, "DELETE", "content", id, { deleted: existingContent }, req);
+      await logAuditAction(
+        admin.id,
+        "DELETE",
+        "content",
+        id,
+        { deleted: existingContent },
+        req,
+      );
 
       return res.json({
         success: true,
@@ -939,8 +1029,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/admin/subjects - Get all subjects
   app.get("/api/admin/subjects", requireAuth, async (req, res) => {
     try {
-      const allSubjects = await db.select().from(subjects).orderBy(asc(subjects.name));
-      
+      const allSubjects = await db
+        .select()
+        .from(subjects)
+        .orderBy(asc(subjects.name));
+
       return res.json({
         success: true,
         subjects: allSubjects,
@@ -957,8 +1050,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/admin/materials - Get all materials
   app.get("/api/admin/materials", requireAuth, async (req, res) => {
     try {
-      const allMaterials = await db.select().from(materials).orderBy(desc(materials.uploadedAt));
-      
+      const allMaterials = await db
+        .select()
+        .from(materials)
+        .orderBy(desc(materials.uploadedAt));
+
       return res.json({
         success: true,
         materials: allMaterials,
@@ -998,7 +1094,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .returning();
 
       // Log audit
-      await logAuditAction(admin.id, "CREATE", "material", newMaterial.id, null, req);
+      await logAuditAction(
+        admin.id,
+        "CREATE",
+        "material",
+        newMaterial.id,
+        null,
+        req,
+      );
 
       return res.json({
         success: true,
@@ -1029,106 +1132,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-
+import { handleIncomingWhatsApp } from './whatsapp/webhook';
+  app.post("/webhook/whatsapp", handleIncomingWhatsApp);
   const httpServer = createServer(app);
   return httpServer;
 }
 
-// ============================================
-// ROTAS DE IA
-// ============================================
-
-app.post("/api/admin/ai/generate-content", async (req, res) => {
-  try {
-    const { subject, examType, topic } = req.body;
-
-    if (!subject || !examType || !topic) {
-      return res.status(400).json({ 
-        success: false,
-        error: "Campos obrigatórios: subject, examType, topic" 
-      });
-    }
-
-    console.log("🤖 Gerando conteúdo:", { subject, examType, topic });
-
-    const { generateContent } = await import("./ai-service");
-    const content = await generateContent({ subject, examType, topic });
-
-    console.log("✅ Conteúdo gerado:", content.title);
-
-    return res.json({ success: true, content });
-  } catch (error: any) {
-    console.error("❌ Erro ao gerar conteúdo:", error);
-    return res.status(500).json({ 
-      success: false,
-      error: "Erro ao gerar conteúdo", 
-      details: error.message 
-    });
-  }
-});
-
-app.post("/api/admin/ai/generate-questions", async (req, res) => {
-  try {
-    const { contentTitle, contentBody, subject } = req.body;
-
-    if (!contentTitle || !contentBody || !subject) {
-      return res.status(400).json({ 
-        success: false,
-        error: "Campos obrigatórios: contentTitle, contentBody, subject" 
-      });
-    }
-
-    console.log("🤖 Gerando questões para:", contentTitle);
-
-    const { generateQuestions } = await import("./ai-service");
-    const result = await generateQuestions({ contentTitle, contentBody, subject });
-
-    console.log("✅ Questões geradas:", result.questions.length);
-
-    return res.json({ success: true, questions: result.questions });
-  } catch (error: any) {
-    console.error("❌ Erro ao gerar questões:", error);
-    return res.status(500).json({ 
-      success: false,
-      error: "Erro ao gerar questões", 
-      details: error.message 
-    });
-  }
-});
-
-// Endpoint para salvar conteúdo gerado pela IA
-app.post("/api/admin/content", async (req, res) => {
-  try {
-    const { title, subject, examType, definition, keyPoints, example, tip, tags, status } = req.body;
-
-    // Pegar o admin ID da sessão (simplificado para teste)
-    const adminId = "admin-id-placeholder"; // TODO: pegar da sessão real
-
-    const newContent = await db.insert(content).values({
-      title,
-      subject,
-      examType,
-      sphere: "FEDERAL",
-      definition,
-      keyPoints,
-      example,
-      tip,
-      tags: tags || [],
-      body: `${definition}\n\n${keyPoints}\n\n${example}\n\n${tip}`,
-      status: status || "DRAFT",
-      generatedByAI: true,
-      createdBy: adminId,
-    }).returning();
-
-    console.log("✅ Conteúdo salvo no banco:", newContent[0].id);
-
-    return res.json({ success: true, content: newContent[0] });
-  } catch (error: any) {
-    console.error("❌ Erro ao salvar conteúdo:", error);
-    return res.status(500).json({ 
-      success: false,
-      error: "Erro ao salvar conteúdo", 
-      details: error.message 
-    });
-  }
-});
