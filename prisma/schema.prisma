@@ -1,0 +1,772 @@
+// Prisma Schema v2.0 - PASSAREI (INCREMENTAL)
+// Database: PostgreSQL
+// Data: 22/11/2025
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== PLANOS E ASSINATURAS ====================
+
+model Plan {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String   @db.Text
+  
+  priceMonthly  Decimal  @db.Decimal(10, 2)
+  priceYearly   Decimal? @db.Decimal(10, 2)
+  
+  dailyContentLimit    Int
+  dailyCorrectionLimit Int
+  dailyEssayLimit      Int
+  
+  features Json
+  
+  allowsAffiliate Boolean @default(false)
+  affiliateCommission Decimal? @db.Decimal(5, 2)
+  
+  isActive Boolean @default(true)
+  sortOrder Int @default(0)
+  
+  subscriptions Subscription[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([isActive])
+  @@map("Plan")
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      Plan     @relation(fields: [planId], references: [id])
+  
+  status    SubscriptionStatus @default(ACTIVE)
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  
+  paymentMethod String?
+  paymentId     String?
+  
+  autoRenew Boolean @default(true)
+  renewalDate DateTime?
+  
+  canceledAt DateTime?
+  cancelReason String?
+  
+  transactions Transaction[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, planId, startDate])
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+  @@index([endDate])
+  @@map("Subscription")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+  SUSPENDED
+  PENDING_PAYMENT
+}
+
+model Transaction {
+  id             String   @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  
+  amount      Decimal @db.Decimal(10, 2)
+  currency    String @default("BRL")
+  
+  gatewayId   String?
+  gatewayName String
+  
+  status      TransactionStatus @default(PENDING)
+  paidAt      DateTime?
+  
+  affiliateId String?
+  affiliate   User? @relation("AffiliateTransactions", fields: [affiliateId], references: [id])
+  
+  commissionAmount Decimal? @db.Decimal(10, 2)
+  commissionPaid   Boolean @default(false)
+  
+  metadata    Json?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([gatewayId])
+  @@index([affiliateId])
+}
+
+enum TransactionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REFUNDED
+  CANCELED
+}
+
+// ==================== USUÁRIOS ====================
+
+model User {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String?
+  email     String?  @unique
+  
+  isActive  Boolean  @default(true)
+  isBanned  Boolean  @default(false)
+  banReason String?
+  
+  isAffiliate     Boolean @default(false)
+  affiliateCode   String? @unique
+  referredBy      String?
+  referrer        User?   @relation("Referrals", fields: [referredBy], references: [affiliateCode])
+  referrals       User[]  @relation("Referrals")
+  
+  profile          UserProfile?
+  subscriptions    Subscription[]
+  studyPlans       StudyPlan[]
+  progress         UserProgress[]
+  questionAttempts QuestionAttempt[]
+  reviews          SpacedReview[]
+  interactions     Interaction[]
+  performanceStats PerformanceStats[]
+  notifications    Notification[]
+  studySessions    StudySession[]
+  essays           Essay[]
+  affiliateTransactions Transaction[] @relation("AffiliateTransactions")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phone])
+  @@index([email])
+  @@index([isAffiliate])
+  @@index([affiliateCode])
+  @@index([referredBy])
+  @@map("User")
+}
+
+model UserProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  cargoId         String?
+  cargo           Cargo?   @relation(fields: [cargoId], references: [id])
+  state           String?
+  examDate        DateTime?
+  editalUrl       String?
+  editalAnalyzed  Boolean  @default(false)
+  
+  availableTimeDaily Int
+  studyLevel         StudyLevel
+  
+  preferredSchedules Json
+  
+  strongSubjects Json?
+  weakSubjects   Json?
+  
+  allowNotifications Boolean @default(true)
+  allowMotivation    Boolean @default(true)
+  allowAudios        Boolean @default(false)
+  timezone           String  @default("America/Sao_Paulo")
+  
+  planJson Json?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([cargoId])
+}
+
+enum StudyLevel {
+  INICIANTE
+  INTERMEDIARIO
+  AVANCADO
+}
+
+// ==================== CARGOS ====================
+
+model Cargo {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?  @db.Text
+  
+  organization  String
+  state         String?
+  level         CargoLevel
+  
+  subjects CargoSubject[]
+  
+  editalUrl   String?
+  totalVagas  Int?
+  salario     Decimal? @db.Decimal(10, 2)
+  
+  isActive Boolean @default(true)
+  
+  userProfiles UserProfile[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([organization])
+  @@index([state])
+  @@index([level])
+}
+
+enum CargoLevel {
+  FUNDAMENTAL
+  MEDIO
+  SUPERIOR
+}
+
+// ==================== MATÉRIAS ====================
+
+model Subject {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?  @db.Text
+  category    SubjectCategory
+  
+  topics         Topic[]
+  contents       Content[]
+  questions      Question[]
+  cargoSubjects  CargoSubject[]
+  studyPlanItems StudyPlanItem[]
+  
+  isActive Boolean @default(true)
+  sortOrder Int @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([category])
+}
+
+enum SubjectCategory {
+  LINGUAGENS
+  MATEMATICA
+  CIENCIAS_HUMANAS
+  CIENCIAS_NATUREZA
+  DIREITO
+  INFORMATICA
+  CONHECIMENTOS_GERAIS
+  ESPECIFICAS
+}
+
+model CargoSubject {
+  id        String @id @default(cuid())
+  cargoId   String
+  cargo     Cargo  @relation(fields: [cargoId], references: [id], onDelete: Cascade)
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  
+  weight            Decimal? @db.Decimal(5, 2)
+  numberOfQuestions Int?
+  
+  @@unique([cargoId, subjectId])
+  @@index([cargoId])
+  @@index([subjectId])
+}
+
+model Topic {
+  id          String  @id @default(cuid())
+  subjectId   String
+  subject     Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String? @db.Text
+  sortOrder   Int     @default(0)
+  
+  contents  Content[]
+  questions Question[]
+  reviews   SpacedReview[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subjectId])
+}
+
+model Content {
+  id          String      @id @default(cuid())
+  subjectId   String
+  subject     Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  topicId     String?
+  topic       Topic?      @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  
+  title       String
+  textContent String      @db.Text
+  difficulty  Difficulty
+  
+  wordCount         Int
+  estimatedReadTime Int
+  
+  audioUrl      String?
+  audioDuration Int?
+  
+  isActive Boolean @default(true)
+  version  Int     @default(1)
+  
+  userProgress UserProgress[]
+  reviews      SpacedReview[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subjectId])
+  @@index([topicId])
+  @@index([difficulty])
+}
+
+enum Difficulty {
+  FACIL
+  MEDIO
+  DIFICIL
+  MUITO_DIFICIL
+}
+
+model Question {
+  id          String   @id @default(cuid())
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  topicId     String?
+  topic       Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  
+  statement     String       @db.Text
+  questionType  QuestionType
+  
+  alternatives  Json?
+  
+  correctAnswer String
+  
+  explanation       String @db.Text
+  wrongExplanations Json?
+  
+  difficulty Difficulty
+  examBoard  String?
+  examYear   Int?
+  examName   String?
+  
+  tags Json?
+  
+  isActive  Boolean @default(true)
+  timesUsed Int     @default(0)
+  
+  attempts QuestionAttempt[]
+  reviews  SpacedReview[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subjectId])
+  @@index([topicId])
+  @@index([difficulty])
+  @@index([examBoard])
+}
+
+enum QuestionType {
+  MULTIPLA_ESCOLHA
+  CERTO_ERRADO
+}
+
+model Essay {
+  id        String @id @default(cuid())
+  userId    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  theme     String
+  prompt    String @db.Text
+  
+  text      String @db.Text
+  wordCount Int
+  
+  correctedAt DateTime?
+  
+  score1 Int?
+  score2 Int?
+  score3 Int?
+  score4 Int?
+  score5 Int?
+  totalScore Int?
+  
+  feedback  String? @db.Text
+  
+  status EssayStatus @default(SUBMITTED)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum EssayStatus {
+  SUBMITTED
+  CORRECTED
+  PENDING
+}
+
+model UserProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contentId   String
+  content     Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  status       ProgressStatus
+  
+  viewCount    Int      @default(0)
+  lastViewedAt DateTime?
+  
+  quizAttempts Int @default(0)
+  quizCorrect  Int @default(0)
+  
+  needsReview    Boolean  @default(false)
+  nextReviewAt   DateTime?
+  reviewInterval Int?
+  easinessFactor Float    @default(2.5)
+  
+  hasDoubt Boolean @default(false)
+  notes    String? @db.Text
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, contentId])
+  @@index([userId])
+  @@index([contentId])
+  @@index([status])
+  @@index([needsReview])
+  @@index([nextReviewAt])
+}
+
+enum ProgressStatus {
+  NAO_INICIADO
+  EM_PROGRESSO
+  CONCLUIDO
+  DOMINADO
+}
+
+model QuestionAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId  String
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  
+  userAnswer String
+  isCorrect  Boolean
+  timeSpent  Int?
+  
+  attemptType   AttemptType
+  reviewAttempt Boolean     @default(false)
+  
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([questionId])
+  @@index([isCorrect])
+  @@index([attemptType])
+}
+
+enum AttemptType {
+  QUIZ_FIXACAO
+  QUESTAO_PRATICA
+  SIMULADO
+  REVISAO
+}
+
+model SpacedReview {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  contentId   String?
+  content     Content?  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  questionId  String?
+  question    Question? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  topicId     String?
+  topic       Topic?    @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  
+  scheduledFor DateTime
+  completedAt  DateTime?
+  
+  reviewNumber   Int   @default(1)
+  interval       Int   @default(1)
+  easinessFactor Float @default(2.5)
+  
+  quality       Int?
+  wasSuccessful Boolean?
+  
+  status ReviewStatus @default(PENDENTE)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([scheduledFor])
+  @@index([status])
+  @@index([contentId])
+  @@index([questionId])
+}
+
+enum ReviewStatus {
+  PENDENTE
+  CONCLUIDA
+  PULADA
+  CANCELADA
+}
+
+model StudyPlan {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String?  @db.Text
+  
+  basedOnEdital Boolean @default(false)
+  editalUrl     String?
+  
+  startDate DateTime
+  endDate   DateTime?
+  
+  isActive    Boolean @default(true)
+  isCompleted Boolean @default(false)
+  
+  items StudyPlanItem[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model StudyPlanItem {
+  id          String    @id @default(cuid())
+  studyPlanId String
+  studyPlan   StudyPlan @relation(fields: [studyPlanId], references: [id], onDelete: Cascade)
+  subjectId   String
+  subject     Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  
+  priority  Int @default(0)
+  sortOrder Int @default(0)
+  
+  weight            Decimal? @db.Decimal(5, 2)
+  numberOfQuestions Int?
+  
+  targetProgress  Int @default(100)
+  currentProgress Int @default(0)
+  
+  isCompleted Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studyPlanId])
+  @@index([subjectId])
+}
+
+model PerformanceStats {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  periodType  PeriodType
+  periodStart DateTime
+  periodEnd   DateTime
+  
+  daysActive        Int @default(0)
+  contentsStudied   Int @default(0)
+  questionsAnswered Int @default(0)
+  questionsCorrect  Int @default(0)
+  
+  accuracyRate Float @default(0)
+  
+  totalStudyTime Int @default(0)
+  
+  currentStreak Int @default(0)
+  maxStreak     Int @default(0)
+  
+  subjectStats Json?
+  
+  improvement Float?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, periodType, periodStart])
+  @@index([userId])
+  @@index([periodType])
+}
+
+enum PeriodType {
+  DIARIO
+  SEMANAL
+  MENSAL
+}
+
+model StudySession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  startTime DateTime @default(now())
+  endTime   DateTime?
+  duration  Int?
+  
+  contentsViewed    Int @default(0)
+  questionsAnswered Int @default(0)
+  questionsCorrect  Int @default(0)
+  
+  deviceInfo Json?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([startTime])
+}
+
+model Interaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  messageType MessageType
+  content     String      @db.Text
+  
+  intent     String?
+  confidence Float?
+  
+  contextData Json?
+  
+  responseTime Int?
+  
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([messageType])
+  @@index([timestamp])
+}
+
+enum MessageType {
+  USER_MESSAGE
+  BOT_RESPONSE
+  SYSTEM
+  CONTENT_DELIVERY
+  QUESTION_DELIVERY
+  REVIEW_PROMPT
+  MOTIVATION
+  REMINDER
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type    NotificationType
+  title   String
+  message String @db.Text
+  
+  scheduledFor DateTime
+  sentAt       DateTime?
+  
+  status NotificationStatus @default(PENDENTE)
+  
+  metadata Json?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([scheduledFor])
+  @@index([status])
+  @@index([type])
+}
+
+enum NotificationType {
+  CONTEUDO_DIARIO
+  QUESTAO_PRATICA
+  REVISAO_ESPACADA
+  LEMBRETE_ESTUDO
+  MOTIVACAO
+  RELATORIO_SEMANAL
+  RELATORIO_MENSAL
+  EDITAL_ATUALIZADO
+}
+
+enum NotificationStatus {
+  PENDENTE
+  ENVIADA
+  ENTREGUE
+  LIDA
+  FALHOU
+  CANCELADA
+}
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   @db.Text
+  description String?
+  
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+model UserFeedback {
+  id     String @id @default(cuid())
+  userId String
+  
+  type    FeedbackType
+  rating  Int?
+  comment String? @db.Text
+  
+  relatedContentId  String?
+  relatedQuestionId String?
+  
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+}
+
+enum FeedbackType {
+  CONTEUDO_QUALIDADE
+  QUESTAO_QUALIDADE
+  EXPLICACAO_CLARA
+  DIFICULDADE_ADEQUADA
+  EXPERIENCIA_GERAL
+  BUG_REPORT
+  SUGESTAO
+}
