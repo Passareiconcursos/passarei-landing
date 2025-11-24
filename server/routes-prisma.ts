@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import prisma from "../db/prisma";
-import { requireAuth, verifyPassword, createAdminSession, logAuditAction } from "./auth";
+import { verifyPassword } from "./auth";
+import { createAdminSessionPrisma, logAuditActionPrisma } from "./auth-prisma";
+import { requireAuthPrisma } from "./middleware-prisma";
 
 // ==================== ROTAS COM PRISMA ====================
 
@@ -120,8 +122,8 @@ export function registerPrismaRoutes(app: Express) {
         data: { updatedAt: new Date() }
       });
       
-      const token = await createAdminSession(admin.id, req);
-      await logAuditAction(admin.id, "LOGIN", "admin", admin.id, null, req);
+      const token = await createAdminSessionPrisma(admin.id, req);
+      await logAuditActionPrisma(admin.id, "LOGIN", "admin", admin.id, null, req);
       
       res.cookie("adminToken", token, {
         httpOnly: true,
@@ -149,7 +151,7 @@ export function registerPrismaRoutes(app: Express) {
   });
   
   // POST /api/admin/logout-v2
-  app.post("/api/admin/logout-v2", requireAuth, async (req, res) => {
+  app.post("/api/admin/logout-v2", requireAuthPrisma, async (req, res) => {
     try {
       const token = req.cookies?.adminToken;
       const admin = (req as any).admin;
@@ -159,7 +161,7 @@ export function registerPrismaRoutes(app: Express) {
           where: { token }
         });
         
-        await logAuditAction(admin.id, "LOGOUT", "admin", admin.id, null, req);
+        await logAuditActionPrisma(admin.id, "LOGOUT", "admin", admin.id, null, req);
       }
       
       res.clearCookie("adminToken");
@@ -177,7 +179,7 @@ export function registerPrismaRoutes(app: Express) {
   });
   
   // GET /api/admin/me-v2
-  app.get("/api/admin/me-v2", requireAuth, async (req, res) => {
+  app.get("/api/admin/me-v2", requireAuthPrisma, async (req, res) => {
     try {
       const adminData = (req as any).admin;
       
