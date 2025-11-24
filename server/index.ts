@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { registerAIRoutes } from "./ai-routes";
 import { registerEditalRoutes } from "./edital-routes";
+import { registerPrismaRoutes } from "./routes-prisma";
 import { setupVite, serveStatic, log } from "./vite";
 import { startTelegramBot } from "./telegram/bot";
 
@@ -44,6 +45,7 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
   
   registerAIRoutes(app);
+  registerPrismaRoutes(app);
   registerEditalRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

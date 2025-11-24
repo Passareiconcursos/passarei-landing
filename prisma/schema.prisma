@@ -770,3 +770,94 @@ enum FeedbackType {
   BUG_REPORT
   SUGESTAO
 }
+
+// ==================== LEADS E ADMINS ====================
+
+model Lead {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String
+  examType  String
+  state     String   @db.VarChar(2)
+  
+  status    LeadStatus @default(NOVO)
+  source    String?    @default("landing_page")
+  notes     String?    @db.Text
+  
+  assignedToId String?
+  assignedTo   Admin?  @relation(fields: [assignedToId], references: [id])
+  
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  
+  acceptedWhatsApp Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@index([assignedToId])
+}
+
+enum LeadStatus {
+  NOVO
+  CONTATADO
+  QUALIFICADO
+  CONVERTIDO
+  PERDIDO
+}
+
+model Admin {
+  id       String @id @default(cuid())
+  email    String @unique
+  password String
+  name     String
+  role     AdminRole @default(ADMIN)
+  isActive Boolean   @default(true)
+  
+  leads    Lead[]
+  sessions AdminSession[]
+  auditLogs AuditLog[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+enum AdminRole {
+  ADMIN
+  SUPER_ADMIN
+  VIEWER
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id       String @id @default(cuid())
+  adminId  String
+  admin    Admin  @relation(fields: [adminId], references: [id])
+  action   String
+  details  Json?
+  
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([createdAt])
+}
