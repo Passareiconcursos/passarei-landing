@@ -3,9 +3,26 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Cliente para uso público (frontend/API)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 0  // Desabilita realtime
+    }
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'supabase-js-node'
+    }
+  }
+})
 
-// Para uso server-side com service role (admin)
+// Cliente admin para operações privilegiadas
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 export const supabaseAdmin = supabaseServiceKey 
@@ -13,6 +30,11 @@ export const supabaseAdmin = supabaseServiceKey
       auth: {
         autoRefreshToken: false,
         persistSession: false
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 0  // Desabilita realtime
+        }
       }
     })
   : supabase
