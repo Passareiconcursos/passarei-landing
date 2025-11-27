@@ -1,9 +1,9 @@
-import 'dotenv/config';
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { registerAIRoutes } from "./ai-routes";
 import { registerEditalRoutes } from "./edital-routes";
-import { registerPrismaRoutes } from "./routes-prisma";
+// import { registerPrismaRoutes } from "./routes-prisma"; // DESABILITADO - usando Supabase
 import { registerSupabaseRoutes } from "./routes-supabase";
 import { setupVite, serveStatic, log } from "./vite";
 // import { startTelegramBot } from "./telegram/bot"; // DESABILITADO
@@ -44,9 +44,9 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
-  
+
   registerAIRoutes(app);
-  registerPrismaRoutes(app);
+  // registerPrismaRoutes(app); // DESABILITADO - usando Supabase
   registerSupabaseRoutes(app);
   registerEditalRoutes(app);
 
@@ -64,8 +64,8 @@ app.use((req, res, next) => {
   // } else {
   //   serveStatic(app);
   // }
-  
-  console.log('⚠️  Vite desabilitado - apenas API funcionando');
+
+  console.log("⚠️  Vite desabilitado - apenas API funcionando");
 
   // Telegram Bot desabilitado
   // startTelegramBot().catch(console.error);
