@@ -1,35 +1,49 @@
 import { supabaseHttpAdmin } from '../supabase-http'
 import { randomBytes } from 'crypto'
+import { nanoid } from 'nanoid'
 
 export async function createAdminSession(adminId: string): Promise<string> {
   const token = randomBytes(32).toString('hex')
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
   await supabaseHttpAdmin.from('AdminSession').insert({
+    id: nanoid(),
     adminId,
     token,
     expiresAt: expiresAt.toISOString(),
+    createdAt: new Date().toISOString(),
   })
 
   return token
 }
 
 export async function verifyAdminSession(token: string): Promise<any | null> {
-  const { data, error } = await supabaseHttpAdmin
+  // Buscar sessão
+  const { data: sessions, error: sessionError } = await supabaseHttpAdmin
     .from('AdminSession')
-    .select('*,admin:Admin(*)', { token })
+    .select('*', { token })
 
-  if (error || !data || data.length === 0) {
+  if (sessionError || !sessions || sessions.length === 0) {
     return null
   }
 
-  const session = data[0]
+  const session = sessions[0]
 
+  // Verificar expiração
   if (new Date(session.expiresAt) < new Date()) {
     return null
   }
 
-  return session.admin
+  // Buscar admin
+  const { data: admins, error: adminError } = await supabaseHttpAdmin
+    .from('Admin')
+    .select('*', { id: session.adminId })
+
+  if (adminError || !admins || admins.length === 0) {
+    return null
+  }
+
+  return admins[0]
 }
 
 export async function logAuditAction(
@@ -40,9 +54,11 @@ export async function logAuditAction(
   changes: any
 ): Promise<void> {
   await supabaseHttpAdmin.from('AuditLog').insert({
+    id: nanoid(),
     adminId,
     action: `${action} ${resourceType} ${resourceId}`,
     details: changes || null,
+    createdAt: new Date().toISOString(),
   })
 }
 

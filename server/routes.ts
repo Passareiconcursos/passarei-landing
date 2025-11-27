@@ -34,61 +34,61 @@ import {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/leads - Create a new lead
-  app.post("/api/leads", async (req, res) => {
-    try {
-      // Validate request body
-      const result = insertLeadSchema.safeParse(req.body);
-
-      if (!result.success) {
-        const validationError = fromZodError(result.error);
-        return res.status(400).json({
-          success: false,
-          error: validationError.message,
-        });
-      }
-
-      // Create lead in database
-      const [lead] = await db
-        .insert(leads)
-        .values({
-          name: result.data.name,
-          email: result.data.email,
-          phone: result.data.phone,
-          examType: result.data.examType,
-          state: result.data.state,
-          acceptedWhatsApp: result.data.acceptedWhatsApp,
-        })
-        .returning();
-
-      return res.json({
-        success: true,
-        leadId: lead.id,
-      });
-    } catch (error) {
-      console.error("Error creating lead:", error);
-      return res.status(500).json({
-        success: false,
-        error: "Erro ao processar cadastro. Tente novamente.",
-      });
-    }
-  });
+  //   app.post("/api/leads", async (req, res) => {
+  //     try {
+  //       // Validate request body
+  //       const result = insertLeadSchema.safeParse(req.body);
+  // 
+  //       if (!result.success) {
+  //         const validationError = fromZodError(result.error);
+  //         return res.status(400).json({
+  //           success: false,
+  //           error: validationError.message,
+  //         });
+  //       }
+  // 
+  //       // Create lead in database
+  //       const [lead] = await db
+  //         .insert(leads)
+  //         .values({
+  //           name: result.data.name,
+  //           email: result.data.email,
+  //           phone: result.data.phone,
+  //           examType: result.data.examType,
+  //           state: result.data.state,
+  //           acceptedWhatsApp: result.data.acceptedWhatsApp,
+  //         })
+  //         .returning();
+  // 
+  //       return res.json({
+  //         success: true,
+  //         leadId: lead.id,
+  //       });
+  //     } catch (error) {
+  //       console.error("Error creating lead:", error);
+  //       return res.status(500).json({
+  //         success: false,
+  //         error: "Erro ao processar cadastro. Tente novamente.",
+  //       });
+  //     }
+  //   });
 
   // GET /api/leads - Get all leads (for admin use later)
-  app.get("/api/leads", async (req, res) => {
-    try {
-      const allLeads = await db.select().from(leads);
-      return res.json({
-        success: true,
-        leads: allLeads,
-      });
-    } catch (error) {
-      console.error("Error fetching leads:", error);
-      return res.status(500).json({
-        success: false,
-        error: "Erro ao buscar leads.",
-      });
-    }
-  });
+  //   app.get("/api/leads", async (req, res) => {
+  //     try {
+  //       const allLeads = await db.select().from(leads);
+  //       return res.json({
+  //         success: true,
+  //         leads: allLeads,
+  //       });
+  //     } catch (error) {
+  //       console.error("Error fetching leads:", error);
+  //       return res.status(500).json({
+  //         success: false,
+  //         error: "Erro ao buscar leads.",
+  //       });
+  //     }
+  //   });
 
   // Helper function to parse cookies
   function parseCookies(
@@ -140,132 +140,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // POST /api/admin/login - Admin login
-  app.post("/api/admin/login", async (req, res) => {
-    try {
-      const { email, password, recaptchaToken } = req.body;
-
-      if (!email || !password) {
-        return res.status(400).json({
-          success: false,
-          error: "Email e senha são obrigatórios.",
-        });
-      }
-
-      // reCAPTCHA verification DISABLED for testing
-      // TODO: Re-enable in production after configuring RECAPTCHA_SECRET_KEY
-      /*
-      if (!recaptchaToken) {
-        return res.status(403).json({
-          success: false,
-          error: "Verificação de segurança obrigatória.",
-        });
-      }
-
-      const isHuman = await verifyRecaptcha(recaptchaToken);
-      if (!isHuman) {
-        return res.status(403).json({
-          success: false,
-          error: "Falha na verificação de segurança. Tente novamente.",
-        });
-      }
-      */
-
-      // Find admin by email
-      const [admin] = await db
-        .select()
-        .from(admins)
-        .where(eq(admins.email, email))
-        .limit(1);
-
-      if (!admin) {
-        return res.status(401).json({
-          success: false,
-          error: "Email ou senha inválidos.",
-        });
-      }
-
-      // Check if account is locked
-      if (admin.lockedUntil && admin.lockedUntil > new Date()) {
-        return res.status(403).json({
-          success: false,
-          error: "Conta temporariamente bloqueada. Tente novamente mais tarde.",
-        });
-      }
-
-      // Check if admin is active
-      if (!admin.isActive) {
-        return res.status(403).json({
-          success: false,
-          error: "Conta desativada. Contate o administrador.",
-        });
-      }
-
-      // Verify password
-      const isValid = await verifyPassword(password, admin.passwordHash);
-
-      if (!isValid) {
-        // Increment login attempts
-        const attempts = admin.loginAttempts + 1;
-        const lockedUntil =
-          attempts >= 5
-            ? new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
-            : null;
-
-        await db
-          .update(admins)
-          .set({
-            loginAttempts: attempts,
-            lockedUntil,
-          })
-          .where(eq(admins.id, admin.id));
-
-        return res.status(401).json({
-          success: false,
-          error: "Email ou senha inválidos.",
-        });
-      }
-
-      // Reset login attempts and update last login
-      await db
-        .update(admins)
-        .set({
-          loginAttempts: 0,
-          lockedUntil: null,
-          lastLoginAt: new Date(),
-        })
-        .where(eq(admins.id, admin.id));
-
-      // Create session
-      const token = await createAdminSession(admin.id, req);
-
-      // Log audit
-      await logAuditAction(admin.id, "LOGIN", "admin", admin.id, null, req);
-
-      // Set cookie
-      res.cookie("adminToken", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        sameSite: "lax",
-      });
-
-      return res.json({
-        success: true,
-        admin: {
-          id: admin.id,
-          email: admin.email,
-          name: admin.name,
-          role: admin.role,
-        },
-      });
-    } catch (error) {
-      console.error("Error during admin login:", error);
-      return res.status(500).json({
-        success: false,
-        error: "Erro ao processar login.",
-      });
-    }
-  });
+  //   app.post("/api/admin/login", async (req, res) => {
+  //     try {
+  //       const { email, password, recaptchaToken } = req.body;
+  // 
+  //       if (!email || !password) {
+  //         return res.status(400).json({
+  //           success: false,
+  //           error: "Email e senha são obrigatórios.",
+  //         });
+  //       }
+  // 
+  //       // reCAPTCHA verification DISABLED for testing
+  //       // TODO: Re-enable in production after configuring RECAPTCHA_SECRET_KEY
+  //       /*
+  //       if (!recaptchaToken) {
+  //         return res.status(403).json({
+  //           success: false,
+  //           error: "Verificação de segurança obrigatória.",
+  //         });
+  //       }
+  // 
+  //       const isHuman = await verifyRecaptcha(recaptchaToken);
+  //       if (!isHuman) {
+  //         return res.status(403).json({
+  //           success: false,
+  //           error: "Falha na verificação de segurança. Tente novamente.",
+  //         });
+  //       }
+  //       */
+  // 
+  //       // Find admin by email
+  //       const [admin] = await db
+  //         .select()
+  //         .from(admins)
+  //         .where(eq(admins.email, email))
+  //         .limit(1);
+  // 
+  //       if (!admin) {
+  //         return res.status(401).json({
+  //           success: false,
+  //           error: "Email ou senha inválidos.",
+  //         });
+  //       }
+  // 
+  //       // Check if account is locked
+  //       if (admin.lockedUntil && admin.lockedUntil > new Date()) {
+  //         return res.status(403).json({
+  //           success: false,
+  //           error: "Conta temporariamente bloqueada. Tente novamente mais tarde.",
+  //         });
+  //       }
+  // 
+  //       // Check if admin is active
+  //       if (!admin.isActive) {
+  //         return res.status(403).json({
+  //           success: false,
+  //           error: "Conta desativada. Contate o administrador.",
+  //         });
+  //       }
+  // 
+  //       // Verify password
+  //       const isValid = await verifyPassword(password, admin.passwordHash);
+  // 
+  //       if (!isValid) {
+  //         // Increment login attempts
+  //         const attempts = admin.loginAttempts + 1;
+  //         const lockedUntil =
+  //           attempts >= 5
+  //             ? new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+  //             : null;
+  // 
+  //         await db
+  //           .update(admins)
+  //           .set({
+  //             loginAttempts: attempts,
+  //             lockedUntil,
+  //           })
+  //           .where(eq(admins.id, admin.id));
+  // 
+  //         return res.status(401).json({
+  //           success: false,
+  //           error: "Email ou senha inválidos.",
+  //         });
+  //       }
+  // 
+  //       // Reset login attempts and update last login
+  //       await db
+  //         .update(admins)
+  //         .set({
+  //           loginAttempts: 0,
+  //           lockedUntil: null,
+  //           lastLoginAt: new Date(),
+  //         })
+  //         .where(eq(admins.id, admin.id));
+  // 
+  //       // Create session
+  //       const token = await createAdminSession(admin.id, req);
+  // 
+  //       // Log audit
+  //       await logAuditAction(admin.id, "LOGIN", "admin", admin.id, null, req);
+  // 
+  //       // Set cookie
+  //       res.cookie("adminToken", token, {
+  //         httpOnly: true,
+  //         secure: process.env.NODE_ENV === "production",
+  //         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  //         sameSite: "lax",
+  //       });
+  // 
+  //       return res.json({
+  //         success: true,
+  //         admin: {
+  //           id: admin.id,
+  //           email: admin.email,
+  //           name: admin.name,
+  //           role: admin.role,
+  //         },
+  //       });
+  //     } catch (error) {
+  //       console.error("Error during admin login:", error);
+  //       return res.status(500).json({
+  //         success: false,
+  //         error: "Erro ao processar login.",
+  //       });
+  //     }
+  //   });
 
   // POST /api/admin/logout - Admin logout
   app.post("/api/admin/logout", requireAuth, async (req, res) => {

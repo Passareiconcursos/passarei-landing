@@ -1,4 +1,5 @@
 import { supabaseHttp } from '../supabase-http'
+import { nanoid } from 'nanoid'
 
 export async function getAllLeads() {
   const { data, error } = await supabaseHttp.from('Lead').select('*')
@@ -16,10 +17,13 @@ export async function createLead(leadData: {
   acceptedWhatsApp?: boolean
 }) {
   const { data, error } = await supabaseHttp.from('Lead').insert({
+    id: nanoid(), // Gerar ID único
     ...leadData,
     acceptedWhatsApp: leadData.acceptedWhatsApp ?? false,
     status: 'NOVO',
-    source: 'landing_page'
+    source: 'landing_page',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   })
 
   if (error) {
