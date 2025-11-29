@@ -66,11 +66,11 @@ app.use((req, res, next) => {
   // }
 
   console.log("⚠️  Vite desabilitado - apenas API funcionando");
-
   // Telegram Bot desabilitado
   // startTelegramBot().catch(console.error);
-
   const port = parseInt(process.env.PORT || "5000", 10);
+  console.log("🚀 Tentando iniciar servidor na porta:", port);
+  console.log("🚀 PORT do ambiente:", process.env.PORT);
   server.listen(
     {
       port,
