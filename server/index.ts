@@ -58,14 +58,13 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // VITE TEMPORARIAMENTE DESABILITADO
-  // if (app.get("env") === "development") {
-  //   await setupVite(app, server);
-  // } else {
-  //   serveStatic(app);
-  // }
-
-  console.log("⚠️  Vite desabilitado - apenas API funcionando");
+  // Servir frontend
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+  console.log("✅ Frontend habilitado");
   // Telegram Bot desabilitado
   // startTelegramBot().catch(console.error);
   const port = parseInt(process.env.PORT || "5000", 10);
