@@ -3,10 +3,14 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 
 export function Hero() {
-  const scrollToForm = () => {
-    document
-      .getElementById("lead-form")
-      ?.scrollIntoView({ behavior: "smooth" });
+  const whatsappNumber = "5527992663806";
+  const whatsappMessage = encodeURIComponent(
+    "Olá! Quero começar meu teste grátis no Passarei! 🎯",
+  );
+  const whatsappLink = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
+
+  const openWhatsApp = () => {
+    window.open(whatsappLink, "_blank");
   };
 
   const scrollToHowItWorks = () => {
@@ -73,11 +77,11 @@ export function Hero() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
               <Button
                 size="lg"
-                onClick={scrollToForm}
-                className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                onClick={openWhatsApp}
+                className="bg-[#25D366] hover:bg-[#20BD5A] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
                 <span className="text-2xl mr-2">💚</span>
-                Começar Teste Grátis
+                Teste Grátis
               </Button>
 
               <Button

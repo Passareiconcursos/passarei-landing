@@ -2,10 +2,14 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Pricing() {
-  const scrollToForm = () => {
-    document
-      .getElementById("lead-form")
-      ?.scrollIntoView({ behavior: "smooth" });
+  const whatsappNumber = "5527992663806";
+  const whatsappMessage = encodeURIComponent(
+    "Olá! Quero começar meu teste grátis no Passarei! 🎯",
+  );
+  const whatsappLink = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
+
+  const openWhatsApp = () => {
+    window.open(whatsappLink, "_blank");
   };
 
   const plans = [
@@ -20,7 +24,7 @@ export function Pricing() {
         "Suporte via WhatsApp (24h)",
         "SEM correção de redação",
       ],
-      cta: "Testar Grátis",
+      cta: "Teste Grátis",
       highlight: false,
       popular: false,
     },
@@ -38,7 +42,7 @@ export function Pricing() {
         "Simulados mensais",
         "Suporte prioritário (2h)",
       ],
-      cta: "Começar Teste Grátis",
+      cta: "Teste Grátis",
       highlight: true,
       popular: true,
       badge: "MAIS POPULAR",
@@ -58,7 +62,7 @@ export function Pricing() {
         "Suporte VIP (30min, 24/7)",
         "Programa de afiliados (20%)",
       ],
-      cta: "Começar Teste Grátis",
+      cta: "Teste Grátis",
       highlight: false,
       popular: false,
       savings: "Economize 23%",
@@ -173,11 +177,11 @@ export function Pricing() {
               </ul>
 
               <Button
-                onClick={scrollToForm}
+                onClick={openWhatsApp}
                 className={`w-full py-6 rounded-xl font-semibold text-base transition-all ${
                   plan.highlight
                     ? "bg-white text-[#18cb96] hover:bg-gray-100 shadow-lg"
-                    : "bg-[#18cb96] text-white hover:bg-[#14b584] hover:scale-105"
+                    : "bg-[#25D366] text-white hover:bg-[#20BD5A] hover:scale-105"
                 }`}
               >
                 {plan.cta}
@@ -191,12 +195,11 @@ export function Pricing() {
             🔒 Garantia de 7 dias • Cancele quando quiser • Sem taxas escondidas
           </p>
           <Button
-            onClick={scrollToForm}
+            onClick={openWhatsApp}
             size="lg"
-            variant="outline"
-            className="border-2 border-[#18cb96] text-[#18cb96] hover:bg-[#18cb96] hover:text-white px-12 py-6 text-lg font-semibold rounded-xl transition-all"
+            className="bg-[#25D366] hover:bg-[#20BD5A] text-white px-12 py-6 text-lg font-semibold rounded-xl transition-all hover:scale-105"
           >
-            Testar Agora
+            💚 Começar Teste Grátis
           </Button>
         </div>
       </div>
