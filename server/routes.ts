@@ -38,7 +38,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //     try {
   //       // Validate request body
   //       const result = insertLeadSchema.safeParse(req.body);
-  // 
+  //
   //       if (!result.success) {
   //         const validationError = fromZodError(result.error);
   //         return res.status(400).json({
@@ -46,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //           error: validationError.message,
   //         });
   //       }
-  // 
+  //
   //       // Create lead in database
   //       const [lead] = await db
   //         .insert(leads)
@@ -59,7 +59,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //           acceptedWhatsApp: result.data.acceptedWhatsApp,
   //         })
   //         .returning();
-  // 
+  //
   //       return res.json({
   //         success: true,
   //         leadId: lead.id,
@@ -143,14 +143,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   app.post("/api/admin/login", async (req, res) => {
   //     try {
   //       const { email, password, recaptchaToken } = req.body;
-  // 
+  //
   //       if (!email || !password) {
   //         return res.status(400).json({
   //           success: false,
   //           error: "Email e senha são obrigatórios.",
   //         });
   //       }
-  // 
+  //
   //       // reCAPTCHA verification DISABLED for testing
   //       // TODO: Re-enable in production after configuring RECAPTCHA_SECRET_KEY
   //       /*
@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //           error: "Verificação de segurança obrigatória.",
   //         });
   //       }
-  // 
+  //
   //       const isHuman = await verifyRecaptcha(recaptchaToken);
   //       if (!isHuman) {
   //         return res.status(403).json({
@@ -169,21 +169,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //         });
   //       }
   //       */
-  // 
+  //
   //       // Find admin by email
   //       const [admin] = await db
   //         .select()
   //         .from(admins)
   //         .where(eq(admins.email, email))
   //         .limit(1);
-  // 
+  //
   //       if (!admin) {
   //         return res.status(401).json({
   //           success: false,
   //           error: "Email ou senha inválidos.",
   //         });
   //       }
-  // 
+  //
   //       // Check if account is locked
   //       if (admin.lockedUntil && admin.lockedUntil > new Date()) {
   //         return res.status(403).json({
@@ -191,7 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //           error: "Conta temporariamente bloqueada. Tente novamente mais tarde.",
   //         });
   //       }
-  // 
+  //
   //       // Check if admin is active
   //       if (!admin.isActive) {
   //         return res.status(403).json({
@@ -199,10 +199,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //           error: "Conta desativada. Contate o administrador.",
   //         });
   //       }
-  // 
+  //
   //       // Verify password
   //       const isValid = await verifyPassword(password, admin.passwordHash);
-  // 
+  //
   //       if (!isValid) {
   //         // Increment login attempts
   //         const attempts = admin.loginAttempts + 1;
@@ -210,7 +210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //           attempts >= 5
   //             ? new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
   //             : null;
-  // 
+  //
   //         await db
   //           .update(admins)
   //           .set({
@@ -218,13 +218,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //             lockedUntil,
   //           })
   //           .where(eq(admins.id, admin.id));
-  // 
+  //
   //         return res.status(401).json({
   //           success: false,
   //           error: "Email ou senha inválidos.",
   //         });
   //       }
-  // 
+  //
   //       // Reset login attempts and update last login
   //       await db
   //         .update(admins)
@@ -234,13 +234,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //           lastLoginAt: new Date(),
   //         })
   //         .where(eq(admins.id, admin.id));
-  // 
+  //
   //       // Create session
   //       const token = await createAdminSession(admin.id, req);
-  // 
+  //
   //       // Log audit
   //       await logAuditAction(admin.id, "LOGIN", "admin", admin.id, null, req);
-  // 
+  //
   //       // Set cookie
   //       res.cookie("adminToken", token, {
   //         httpOnly: true,
@@ -248,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   //         sameSite: "lax",
   //       });
-  // 
+  //
   //       return res.json({
   //         success: true,
   //         admin: {
@@ -1136,8 +1136,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
   // WEBHOOK WHATSAPP
   // ============================================
-  const { handleIncomingWhatsApp } = await import('./whatsapp/webhook');
-  app.post('/webhook/whatsapp', handleIncomingWhatsApp);
+  const { handleIncomingWhatsApp } = await import("./whatsapp/webhook");
+  // GET para verificação do Twilio
+  app.get("/webhook/whatsapp", (req, res) => {
+    res.type("text/xml");
+    res.send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+  });
+  app.post("/webhook/whatsapp", handleIncomingWhatsApp);
 
   const httpServer = createServer(app);
   return httpServer;
