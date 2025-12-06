@@ -2,6 +2,7 @@ import { startLearningSession } from "./learning-session";
 import TelegramBot from "node-telegram-bot-api";
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
+import { updateUserOnboarding } from "./database";
 
 // MAPEAMENTO ESTÁTICO COMO FALLBACK GARANTIDO
 const SUBJECT_FALLBACK: any = {
@@ -128,11 +129,15 @@ export async function startOnboarding(
 
   await bot.sendMessage(
     chatId,
-    `👋 *${name}*!\n\nBem-vindo ao *Passarei*! 🚀\n\nVamos criar seu plano personalizado em *8 perguntas*.\n\nPronto? 💪`,
+    `👋 *Olá, ${name}!*\n\n` +
+      `🎯 Bem-vindo ao *PASSAREI* - seu assistente de estudos para concursos!\n\n` +
+      `📚 Vou criar um plano personalizado para você em *8 perguntas rápidas*.\n\n` +
+      `🎁 *BÔNUS:* Você tem *3 questões GRÁTIS* hoje para testar!\n\n` +
+      `Vamos começar? 💪`,
     { parse_mode: "Markdown" },
   );
 
-  await new Promise((r) => setTimeout(r, 1500));
+  await new Promise((r) => setTimeout(r, 2000));
 
   const keyboard = {
     inline_keyboard: [
@@ -146,15 +151,15 @@ export async function startOnboarding(
       ],
       [
         { text: "🚒 CBM", callback_data: "onb_CBM" },
-        { text: "⚖️ PP_ESTADUAL", callback_data: "onb_PP_ESTADUAL" },
+        { text: "⚖️ PP Estadual", callback_data: "onb_PP_ESTADUAL" },
       ],
       [
-        { text: "🏛️ PL_ESTADUAL", callback_data: "onb_PL_ESTADUAL" },
+        { text: "🏛️ PL Estadual", callback_data: "onb_PL_ESTADUAL" },
         { text: "🛡️ GM", callback_data: "onb_GM" },
       ],
       [
-        { text: "⚖️ PP_FEDERAL", callback_data: "onb_PP_FEDERAL" },
-        { text: "🏛️ PL_FEDERAL", callback_data: "onb_PL_FEDERAL" },
+        { text: "⚖️ PP Federal", callback_data: "onb_PP_FEDERAL" },
+        { text: "🏛️ PL Federal", callback_data: "onb_PL_FEDERAL" },
       ],
     ],
   };
@@ -349,7 +354,6 @@ async function askFacilidades(
   chatId: number,
   examType: string,
 ) {
-  // USA FALLBACK GARANTIDO
   const subjectNames = SUBJECT_FALLBACK[examType] || SUBJECT_FALLBACK["PF"];
 
   const keyboard = {
@@ -375,7 +379,6 @@ async function askDificuldades(
   examType: string,
   facilidades: string[],
 ) {
-  // USA FALLBACK GARANTIDO E EXCLUI FACILIDADES
   const allSubjects = SUBJECT_FALLBACK[examType] || SUBJECT_FALLBACK["PF"];
   const filtered = allSubjects.filter((s: string) => !facilidades.includes(s));
 
@@ -438,15 +441,13 @@ async function finishOnboarding(
   data: any,
 ) {
   try {
-    await db.execute(sql`
-      UPDATE users 
-      SET exam_type = ${data.examType},
-          state = ${data.state},
-          cargo = ${data.cargo},
-          nivel_conhecimento = ${data.nivel},
-          onboarding_completed = true
-      WHERE telegram_id = ${telegramId}
-    `);
+    // Atualizar usuário no banco
+    await updateUserOnboarding(telegramId, {
+      examType: data.examType,
+      state: data.state,
+      cargo: data.cargo,
+      nivelConhecimento: data.nivel,
+    });
 
     onboardingStates.delete(telegramId);
 
@@ -464,7 +465,9 @@ async function finishOnboarding(
         `🎯 Focar em: *${data.dificuldades?.join(", ") || "Todas as matérias"}*\n` +
         `📅 Tempo: *${data.timeUntilExam}*\n` +
         `⏰ Horário de estudo: *${scheduleText}*\n\n` +
-        `⏳ *Criando seu plano de estudos personalizado...*`,
+        `━━━━━━━━━━━━━━━━\n\n` +
+        `🎁 *Você tem 3 questões GRÁTIS hoje!*\n\n` +
+        `⏳ Preparando sua primeira aula...`,
       { parse_mode: "Markdown" },
     );
 
@@ -473,10 +476,9 @@ async function finishOnboarding(
     await bot.sendMessage(
       chatId,
       `✅ *Plano de estudos criado!*\n\n` +
-        `🚀 *Preparando sua primeira aula...*\n\n` +
+        `🚀 *Preparando sua primeira questão...*\n\n` +
         `📚 Começaremos com: *${data.dificuldades?.[0] || "Direito Penal"}*\n\n` +
-        `Em instantes você receberá o primeiro conteúdo!\n\n` +
-        `Prepare-se! 💪`,
+        `Em instantes você receberá o primeiro conteúdo! 💪`,
       { parse_mode: "Markdown" },
     );
 
@@ -492,6 +494,10 @@ async function finishOnboarding(
     }, 3000);
   } catch (error) {
     console.error("Erro ao finalizar:", error);
+    await bot.sendMessage(
+      chatId,
+      `❌ Ocorreu um erro. Por favor, envie /start para recomeçar.`,
+    );
   }
 }
 
