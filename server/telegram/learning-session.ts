@@ -79,34 +79,52 @@ export async function startLearningSession(
 }
 
 async function getSmartContent(session: LearningSession) {
-  let result;
+  try {
+    let result;
 
-  if (session.usedContentIds.length > 0) {
-    result = await db.execute(sql`
-      SELECT * FROM "Content"
-      WHERE "examType" = ${session.examType}
-        AND "id" NOT IN (${sql.join(
-          session.usedContentIds.map((id) => sql`${id}`),
-          sql`, `,
-        )})
-      ORDER BY RANDOM()
-      LIMIT 1
+    // Buscar conteúdo que ainda não foi usado nesta sessão
+    if (session.usedContentIds.length > 0) {
+      result = await db.execute(sql`
+        SELECT * FROM "Content"
+        WHERE "isActive" = true
+          AND "id" NOT IN (${sql.join(
+            session.usedContentIds.map((id) => sql`${id}`),
+            sql`, `,
+          )})
+        ORDER BY RANDOM()
+        LIMIT 1
+      `);
+    } else {
+      result = await db.execute(sql`
+        SELECT * FROM "Content"
+        WHERE "isActive" = true
+        ORDER BY RANDOM()
+        LIMIT 1
+      `);
+    }
+
+    if (result.rows.length > 0) {
+      console.log(`✅ Conteúdo encontrado: ${result.rows[0].title}`);
+      return result.rows[0];
+    }
+
+    // Fallback: qualquer conteúdo
+    console.log(`⚠️ Buscando qualquer conteúdo...`);
+    const fallback = await db.execute(sql`
+      SELECT * FROM "Content" ORDER BY RANDOM() LIMIT 1
     `);
-  } else {
-    result = await db.execute(sql`
-      SELECT * FROM "Content"
-      WHERE "examType" = ${session.examType}
-      ORDER BY RANDOM()
-      LIMIT 1
-    `);
+
+    if (fallback.rows.length > 0) {
+      console.log(`✅ Fallback encontrado: ${fallback.rows[0].title}`);
+      return fallback.rows[0];
+    }
+
+    console.log(`❌ Nenhum conteúdo no banco`);
+    return null;
+  } catch (error) {
+    console.error(`❌ Erro ao buscar conteúdo:`, error);
+    return null;
   }
-
-  if (result.rows.length > 0) return result.rows[0];
-
-  const fallback = await db.execute(sql`
-    SELECT * FROM "Content" ORDER BY RANDOM() LIMIT 1
-  `);
-  return fallback.rows[0] || null;
 }
 
 async function sendNextContent(bot: TelegramBot, session: LearningSession) {
@@ -162,10 +180,18 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
   session.contentsSent++;
 
   const title = content.title || "Conteúdo";
-  const definition = content.definition || content.description || "Definição";
-  const keyPoints = content.keyPoints || "• Ponto 1\n• Ponto 2";
-  const example = content.example || "Exemplo prático";
-  const tip = content.tip || "Dica de prova";
+  const definition =
+    content.textContent ||
+    content.definition ||
+    content.description ||
+    "Definição não disponível";
+  const keyPoints =
+    content.keyPoints ||
+    content.textContent?.substring(0, 200) ||
+    "• Conceito importante";
+  const example =
+    content.example || "Aplicação prática do conceito em provas de concurso";
+  const tip = content.tip || "Fique atento a este tema, é frequente em provas!";
 
   await bot.sendMessage(
     session.chatId,
@@ -201,7 +227,8 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
 
 function generateMultipleChoice(content: any) {
   const title = content.title || "Conceito";
-  const def = content.definition || content.description || "";
+  const def =
+    content.textContent || content.definition || content.description || "";
   let correctAnswer = def.length > 80 ? def.substring(0, 77) + "..." : def;
 
   const wrongAnswers = [

@@ -214,8 +214,17 @@ export async function handleOnboardingCallback(bot: TelegramBot, query: any) {
         { parse_mode: "Markdown" },
       );
     } else {
-      state.data.state = "FEDERAL";
+      // Concurso Federal - mostrar confirmação
+      state.data.state = "NACIONAL";
       state.step = 3;
+
+      await bot.sendMessage(
+        chatId,
+        `*PERGUNTA 2/8* 🇧🇷\n\n📍 *Abrangência: NACIONAL*\n\nConcursos federais têm validade em todo o território brasileiro!`,
+        { parse_mode: "Markdown" },
+      );
+
+      await new Promise((r) => setTimeout(r, 1500));
       await askCargo(bot, chatId, examType);
     }
   } else if (data.startsWith("cargo_") && state.step === 3) {
