@@ -6,7 +6,7 @@ import { registerEditalRoutes } from "./edital-routes";
 // import { registerPrismaRoutes } from "./routes-prisma"; // DESABILITADO - usando Supabase
 import { registerSupabaseRoutes } from "./routes-supabase";
 import { setupVite, serveStatic, log } from "./vite";
-// import { startTelegramBot } from "./telegram/bot"; // DESABILITADO
+import { startTelegramBot } from "./telegram/bot";
 
 const app = express();
 app.use(express.json());
@@ -66,7 +66,7 @@ app.use((req, res, next) => {
   }
   console.log("✅ Frontend habilitado");
   // Telegram Bot desabilitado
-  // startTelegramBot().catch(console.error);
+  startTelegramBot().catch(console.error);
   const port = parseInt(process.env.PORT || "5000", 10);
   console.log("🚀 Tentando iniciar servidor na porta:", port);
   console.log("🚀 PORT do ambiente:", process.env.PORT);
