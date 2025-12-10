@@ -4,11 +4,13 @@ import { Send, Loader2, CheckCircle2, Trophy, Sparkles } from "lucide-react";
 // Tipos
 interface Message {
   id: string;
-  type: "bot" | "user" | "question" | "result";
+  type: "bot" | "user" | "question" | "options";
   content: string;
-  options?: string[];
+  options?: { id: string; label: string }[];
+  questionOptions?: string[];
   correctIndex?: number;
   timestamp: Date;
+  optionType?: "single" | "multi";
 }
 
 interface ChatState {
@@ -41,39 +43,37 @@ interface ChatState {
   score: number;
   sessionId: string;
   retryCount: number;
+  waitingForSelection: boolean;
 }
 
 // Dados dos concursos - COMPLETO
 const CONCURSOS = [
-  // Federal
-  { id: "PF", label: "PF - Polícia Federal", group: "Federal" },
-  { id: "PRF", label: "PRF - Polícia Rodoviária Federal", group: "Federal" },
+  { id: "PF", label: "🎯 PF - Polícia Federal", group: "Federal" },
+  { id: "PRF", label: "🚓 PRF - Polícia Rodoviária Federal", group: "Federal" },
   {
     id: "PP_FEDERAL",
-    label: "PP Federal - Polícia Penal Federal",
+    label: "🔒 PP Federal - Polícia Penal Federal",
     group: "Federal",
   },
   {
     id: "PL_FEDERAL",
-    label: "PL Federal - Polícia Legislativa Federal",
+    label: "🏛️ PL Federal - Polícia Legislativa Federal",
     group: "Federal",
   },
-  // Estadual
-  { id: "PM", label: "PM - Polícia Militar", group: "Estadual" },
-  { id: "PC", label: "PC - Polícia Civil", group: "Estadual" },
+  { id: "PM", label: "🚔 PM - Polícia Militar", group: "Estadual" },
+  { id: "PC", label: "🕵️ PC - Polícia Civil", group: "Estadual" },
   {
     id: "PP_ESTADUAL",
-    label: "PP - Polícia Penal Estadual",
+    label: "🔐 PP - Polícia Penal Estadual",
     group: "Estadual",
   },
   {
     id: "PL_ESTADUAL",
-    label: "PL - Polícia Legislativa Estadual",
+    label: "📜 PL - Polícia Legislativa Estadual",
     group: "Estadual",
   },
-  { id: "CBM", label: "CBM - Corpo de Bombeiros", group: "Estadual" },
-  // Municipal
-  { id: "GM", label: "GM - Guarda Municipal", group: "Municipal" },
+  { id: "CBM", label: "🚒 CBM - Corpo de Bombeiros", group: "Estadual" },
+  { id: "GM", label: "🛡️ GM - Guarda Municipal", group: "Municipal" },
 ];
 
 const ESTADOS = [
@@ -108,39 +108,39 @@ const ESTADOS = [
 
 const CARGOS: Record<string, { id: string; label: string }[]> = {
   PF: [
-    { id: "delegado", label: "Delegado" },
-    { id: "agente", label: "Agente" },
-    { id: "escrivao", label: "Escrivão" },
-    { id: "perito", label: "Perito" },
+    { id: "delegado", label: "👔 Delegado" },
+    { id: "agente", label: "🎯 Agente" },
+    { id: "escrivao", label: "📝 Escrivão" },
+    { id: "perito", label: "🔬 Perito" },
   ],
-  PRF: [{ id: "policial", label: "Policial Rodoviário Federal" }],
+  PRF: [{ id: "policial", label: "🚓 Policial Rodoviário Federal" }],
   PP_FEDERAL: [
-    { id: "agente", label: "Agente Federal de Execução Penal" },
-    { id: "especialista", label: "Especialista Federal de Execução Penal" },
+    { id: "agente", label: "🔒 Agente Federal de Execução Penal" },
+    { id: "especialista", label: "📋 Especialista Federal de Execução Penal" },
   ],
-  PL_FEDERAL: [{ id: "policial", label: "Policial Legislativo Federal" }],
+  PL_FEDERAL: [{ id: "policial", label: "🏛️ Policial Legislativo Federal" }],
   PM: [
-    { id: "soldado", label: "Soldado" },
-    { id: "oficial", label: "Oficial" },
+    { id: "soldado", label: "⭐ Soldado" },
+    { id: "oficial", label: "🎖️ Oficial" },
   ],
   PC: [
-    { id: "delegado", label: "Delegado" },
-    { id: "agente", label: "Agente/Investigador" },
-    { id: "escrivao", label: "Escrivão" },
-    { id: "perito", label: "Perito" },
+    { id: "delegado", label: "👔 Delegado" },
+    { id: "agente", label: "🕵️ Agente/Investigador" },
+    { id: "escrivao", label: "📝 Escrivão" },
+    { id: "perito", label: "🔬 Perito" },
   ],
   PP_ESTADUAL: [
-    { id: "agente", label: "Agente Penitenciário" },
-    { id: "tecnico", label: "Técnico Penitenciário" },
+    { id: "agente", label: "🔐 Agente Penitenciário" },
+    { id: "tecnico", label: "📋 Técnico Penitenciário" },
   ],
-  PL_ESTADUAL: [{ id: "policial", label: "Policial Legislativo" }],
+  PL_ESTADUAL: [{ id: "policial", label: "📜 Policial Legislativo" }],
   CBM: [
-    { id: "soldado", label: "Soldado" },
-    { id: "oficial", label: "Oficial" },
+    { id: "soldado", label: "⭐ Soldado" },
+    { id: "oficial", label: "🎖️ Oficial" },
   ],
   GM: [
-    { id: "guarda", label: "Guarda Municipal" },
-    { id: "inspetor", label: "Inspetor" },
+    { id: "guarda", label: "🛡️ Guarda Municipal" },
+    { id: "inspetor", label: "📋 Inspetor" },
   ],
 };
 
@@ -178,7 +178,7 @@ const HORARIO_ESTUDO = [
   { id: "flexivel", label: "🔄 Horários variados" },
 ];
 
-// Questões de exemplo
+// Questões
 const QUESTOES_EXEMPLO = [
   {
     pergunta:
@@ -253,6 +253,29 @@ const QUESTOES_EXEMPLO = [
   },
 ];
 
+// Domínios de email válidos
+const VALID_EMAIL_DOMAINS = [
+  "gmail.com",
+  "hotmail.com",
+  "outlook.com",
+  "yahoo.com",
+  "yahoo.com.br",
+  "icloud.com",
+  "live.com",
+  "msn.com",
+  "uol.com.br",
+  "bol.com.br",
+  "terra.com.br",
+  "globo.com",
+  "ig.com.br",
+  "oi.com.br",
+  "r7.com",
+  "zipmail.com.br",
+  "protonmail.com",
+  "mail.com",
+  "aol.com",
+];
+
 export function MiniChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -274,26 +297,21 @@ export function MiniChat() {
     score: 0,
     sessionId: "",
     retryCount: 0,
+    waitingForSelection: false,
   });
 
-  const [actualScore, setActualScore] = useState(0); // Score real separado
+  const [actualScore, setActualScore] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "end",
-      });
-    }
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   };
 
   useEffect(() => {
-    // Pequeno delay para garantir que o DOM atualizou
-    const timer = setTimeout(scrollToBottom, 100);
-    return () => clearTimeout(timer);
-  }, [messages]);
+    scrollToBottom();
+  }, [messages, selectedMaterias]);
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -319,14 +337,30 @@ export function MiniChat() {
 
   const addBotMessage = (
     content: string,
-    options?: string[],
-    correctIndex?: number,
+    options?: { id: string; label: string }[],
+    optionType?: "single" | "multi",
   ) => {
     const newMessage: Message = {
       id: Date.now().toString() + Math.random(),
-      type: options ? "question" : "bot",
+      type: options ? "options" : "bot",
       content,
       options,
+      optionType,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, newMessage]);
+  };
+
+  const addQuestionMessage = (
+    content: string,
+    questionOptions: string[],
+    correctIndex: number,
+  ) => {
+    const newMessage: Message = {
+      id: Date.now().toString() + Math.random(),
+      type: "question",
+      content,
+      questionOptions,
       correctIndex,
       timestamp: new Date(),
     };
@@ -353,8 +387,35 @@ export function MiniChat() {
   const wait = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
+  // Validação de email melhorada
   const isValidEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return false;
+
+    const domain = email.split("@")[1]?.toLowerCase();
+    if (!domain) return false;
+
+    // Verifica se é um domínio conhecido ou parece válido
+    if (VALID_EMAIL_DOMAINS.includes(domain)) return true;
+
+    // Verifica se tem pelo menos um ponto e extensão válida
+    const parts = domain.split(".");
+    if (parts.length < 2) return false;
+
+    const extension = parts[parts.length - 1];
+    const validExtensions = [
+      "com",
+      "com.br",
+      "br",
+      "net",
+      "org",
+      "edu",
+      "gov",
+      "io",
+      "co",
+    ];
+
+    return validExtensions.includes(extension) || extension.length >= 2;
   };
 
   const isValidEstado = (estado: string) => {
@@ -391,13 +452,24 @@ export function MiniChat() {
             addBotMessage(
               "📝 **PERGUNTA 1/8** 🎯\n\nQual concurso você está estudando?",
             );
-            setChatState((prev) => ({ ...prev, step: "onboarding_concurso" }));
+            setTimeout(() => {
+              addBotMessage(
+                "Escolha uma opção:",
+                CONCURSOS.map((c) => ({ id: c.id, label: c.label })),
+                "single",
+              );
+              setChatState((prev) => ({
+                ...prev,
+                step: "onboarding_concurso",
+                waitingForSelection: true,
+              }));
+            }, 500);
           }, 1000);
         });
       } else {
         simulateTyping(() => {
           addBotMessage(
-            "❌ E-mail inválido. Por favor, digite um e-mail válido:",
+            "❌ E-mail inválido. Por favor, digite um e-mail válido (ex: seunome@gmail.com):",
           );
         }, 500);
       }
@@ -412,41 +484,51 @@ export function MiniChat() {
             addBotMessage(
               "📝 **PERGUNTA 3/8** 👮\n\nQual cargo você pretende?",
             );
-            setChatState((prev) => ({ ...prev, step: "onboarding_cargo" }));
+            setTimeout(() => {
+              const cargos = CARGOS[chatState.concurso] || [];
+              addBotMessage(
+                "Escolha uma opção:",
+                cargos.map((c) => ({ id: c.id, label: c.label })),
+                "single",
+              );
+              setChatState((prev) => ({
+                ...prev,
+                step: "onboarding_cargo",
+                waitingForSelection: true,
+              }));
+            }, 500);
           }, 1000);
         });
       } else {
         simulateTyping(() => {
           addBotMessage(
-            "❌ Estado inválido. Digite a sigla do estado (ex: MG, SP, RJ):",
+            "❌ Estado inválido. Digite a sigla correta (ex: MG, SP, RJ):",
           );
         }, 500);
       }
     }
   };
 
-  const handleOptionSelect = async (
-    optionIndex: number,
-    optionValue: string,
-    optionId?: string,
-  ) => {
-    if (isTyping) return;
+  const handleOptionClick = async (optionId: string, optionLabel: string) => {
+    if (isTyping || !chatState.waitingForSelection) return;
 
     switch (chatState.step) {
       case "onboarding_concurso":
-        addUserMessage(optionValue);
-        const concursoSelecionado = CONCURSOS[optionIndex];
+        addUserMessage(optionLabel);
+        const concursoSelecionado = CONCURSOS.find((c) => c.id === optionId);
+        if (!concursoSelecionado) return;
+
         setChatState((prev) => ({
           ...prev,
-          concurso: concursoSelecionado.id,
+          concurso: optionId,
           concursoLabel: concursoSelecionado.label,
+          waitingForSelection: false,
         }));
 
-        // Verifica se é federal (não precisa de estado)
         const isFederal = concursoSelecionado.group === "Federal";
 
         simulateTyping(() => {
-          addBotMessage(`✅ ${optionValue}`);
+          addBotMessage(`✅ ${optionLabel}`);
           setTimeout(() => {
             if (isFederal) {
               setChatState((prev) => ({ ...prev, estado: "NACIONAL" }));
@@ -457,66 +539,108 @@ export function MiniChat() {
                 addBotMessage(
                   "📝 **PERGUNTA 3/8** 👮\n\nQual cargo você pretende?",
                 );
-                setChatState((prev) => ({ ...prev, step: "onboarding_cargo" }));
+                setTimeout(() => {
+                  const cargos = CARGOS[optionId] || [];
+                  addBotMessage(
+                    "Escolha uma opção:",
+                    cargos.map((c) => ({ id: c.id, label: c.label })),
+                    "single",
+                  );
+                  setChatState((prev) => ({
+                    ...prev,
+                    step: "onboarding_cargo",
+                    waitingForSelection: true,
+                  }));
+                }, 500);
               }, 1500);
             } else {
               addBotMessage(
-                "📝 **PERGUNTA 2/8** 📍\n\nDigite o estado (ex: MG, SP, RS):",
+                "📝 **PERGUNTA 2/8** 📍\n\nDigite a sigla do seu estado (ex: MG, SP, RJ):",
               );
-              setChatState((prev) => ({ ...prev, step: "onboarding_estado" }));
+              setChatState((prev) => ({
+                ...prev,
+                step: "onboarding_estado",
+                waitingForSelection: false,
+              }));
             }
           }, 1000);
         });
         break;
 
       case "onboarding_cargo":
-        addUserMessage(optionValue);
-        setChatState((prev) => ({ ...prev, cargo: optionValue }));
+        addUserMessage(optionLabel);
+        setChatState((prev) => ({
+          ...prev,
+          cargo: optionLabel,
+          waitingForSelection: false,
+        }));
 
         simulateTyping(() => {
-          addBotMessage(`✅ Cargo: **${optionValue}**`);
+          addBotMessage(`✅ Cargo: **${optionLabel}**`);
           setTimeout(() => {
             addBotMessage(
               "📝 **PERGUNTA 4/8** 📊\n\nQual seu nível de conhecimento nas matérias do concurso?",
             );
-            setChatState((prev) => ({ ...prev, step: "onboarding_nivel" }));
+            setTimeout(() => {
+              addBotMessage(
+                "Escolha uma opção:",
+                NIVEIS.map((n) => ({ id: n.id, label: n.label })),
+                "single",
+              );
+              setChatState((prev) => ({
+                ...prev,
+                step: "onboarding_nivel",
+                waitingForSelection: true,
+              }));
+            }, 500);
           }, 1000);
         });
         break;
 
       case "onboarding_nivel":
-        addUserMessage(optionValue);
-        setChatState((prev) => ({ ...prev, nivel: optionId || optionValue }));
+        addUserMessage(optionLabel);
+        setChatState((prev) => ({
+          ...prev,
+          nivel: optionId,
+          waitingForSelection: false,
+        }));
 
         simulateTyping(() => {
-          addBotMessage(`✅ Nível: **${optionValue}**`);
+          addBotMessage(`✅ Nível: **${optionLabel}**`);
           setTimeout(() => {
             addBotMessage(
-              "📝 **PERGUNTA 5/8** 💚\n\nEm qual área você **JÁ TEM FACILIDADE**?\n\n_(Pode escolher várias)_",
+              "📝 **PERGUNTA 5/8** 💚\n\nEm qual área você **JÁ TEM FACILIDADE**?\n\n_(Selecione uma ou mais e clique em Confirmar)_",
             );
-            setChatState((prev) => ({
-              ...prev,
-              step: "onboarding_facilidade",
-            }));
+            setTimeout(() => {
+              addBotMessage(
+                "Selecione as matérias:",
+                MATERIAS.map((m) => ({ id: m.id, label: m.label })),
+                "multi",
+              );
+              setChatState((prev) => ({
+                ...prev,
+                step: "onboarding_facilidade",
+                waitingForSelection: true,
+              }));
+            }, 500);
           }, 1000);
         });
         break;
 
       case "onboarding_facilidade":
-        // Toggle seleção
         if (optionId === "confirmar") {
           if (selectedMaterias.length === 0) {
             addBotMessage("⚠️ Selecione pelo menos uma matéria!");
             return;
           }
-          addUserMessage(
-            selectedMaterias
-              .map((m) => MATERIAS.find((mat) => mat.id === m)?.label)
-              .join(", "),
-          );
+          const labels = selectedMaterias
+            .map((m) => MATERIAS.find((mat) => mat.id === m)?.label)
+            .join(", ");
+          addUserMessage(labels);
           setChatState((prev) => ({
             ...prev,
             facilidade: [...selectedMaterias],
+            waitingForSelection: false,
           }));
           setSelectedMaterias([]);
 
@@ -524,15 +648,23 @@ export function MiniChat() {
             addBotMessage(`✅ Facilidades registradas!`);
             setTimeout(() => {
               addBotMessage(
-                "📝 **PERGUNTA 6/8** 🎯\n\nEm qual área você **TEM MAIS DIFICULDADE**?\n\nVamos focar mais tempo nela!\n\n_(Pode escolher várias)_",
+                "📝 **PERGUNTA 6/8** 🎯\n\nEm qual área você **TEM MAIS DIFICULDADE**?\n\nVamos focar mais tempo nela!\n\n_(Selecione uma ou mais e clique em Confirmar)_",
               );
-              setChatState((prev) => ({
-                ...prev,
-                step: "onboarding_dificuldade",
-              }));
+              setTimeout(() => {
+                addBotMessage(
+                  "Selecione as matérias:",
+                  MATERIAS.map((m) => ({ id: m.id, label: m.label })),
+                  "multi",
+                );
+                setChatState((prev) => ({
+                  ...prev,
+                  step: "onboarding_dificuldade",
+                  waitingForSelection: true,
+                }));
+              }, 500);
             }, 1000);
           });
-        } else if (optionId) {
+        } else {
           setSelectedMaterias((prev) =>
             prev.includes(optionId)
               ? prev.filter((m) => m !== optionId)
@@ -547,14 +679,14 @@ export function MiniChat() {
             addBotMessage("⚠️ Selecione pelo menos uma matéria!");
             return;
           }
-          addUserMessage(
-            selectedMaterias
-              .map((m) => MATERIAS.find((mat) => mat.id === m)?.label)
-              .join(", "),
-          );
+          const labels = selectedMaterias
+            .map((m) => MATERIAS.find((mat) => mat.id === m)?.label)
+            .join(", ");
+          addUserMessage(labels);
           setChatState((prev) => ({
             ...prev,
             dificuldade: [...selectedMaterias],
+            waitingForSelection: false,
           }));
           setSelectedMaterias([]);
 
@@ -564,10 +696,21 @@ export function MiniChat() {
               addBotMessage(
                 "📝 **PERGUNTA 7/8** 📅\n\nQuanto tempo você tem até a prova?",
               );
-              setChatState((prev) => ({ ...prev, step: "onboarding_tempo" }));
+              setTimeout(() => {
+                addBotMessage(
+                  "Escolha uma opção:",
+                  TEMPO_PROVA.map((t) => ({ id: t.id, label: t.label })),
+                  "single",
+                );
+                setChatState((prev) => ({
+                  ...prev,
+                  step: "onboarding_tempo",
+                  waitingForSelection: true,
+                }));
+              }, 500);
             }, 1000);
           });
-        } else if (optionId) {
+        } else {
           setSelectedMaterias((prev) =>
             prev.includes(optionId)
               ? prev.filter((m) => m !== optionId)
@@ -577,28 +720,41 @@ export function MiniChat() {
         break;
 
       case "onboarding_tempo":
-        addUserMessage(optionValue);
+        addUserMessage(optionLabel);
         setChatState((prev) => ({
           ...prev,
-          tempoProva: optionId || optionValue,
+          tempoProva: optionId,
+          waitingForSelection: false,
         }));
 
         simulateTyping(() => {
-          addBotMessage(`✅ Tempo até a prova: **${optionValue}**`);
+          addBotMessage(`✅ Tempo: **${optionLabel}**`);
           setTimeout(() => {
             addBotMessage(
               "📝 **PERGUNTA 8/8** ⏰\n\nQuando você **PREFERE ESTUDAR**?\n\nEnviaremos conteúdo automaticamente nesses horários!",
             );
-            setChatState((prev) => ({ ...prev, step: "onboarding_horario" }));
+            setTimeout(() => {
+              addBotMessage(
+                "Escolha uma opção:",
+                HORARIO_ESTUDO.map((h) => ({ id: h.id, label: h.label })),
+                "single",
+              );
+              setChatState((prev) => ({
+                ...prev,
+                step: "onboarding_horario",
+                waitingForSelection: true,
+              }));
+            }, 500);
           }, 1000);
         });
         break;
 
       case "onboarding_horario":
-        addUserMessage(optionValue);
+        addUserMessage(optionLabel);
         setChatState((prev) => ({
           ...prev,
-          horarioEstudo: optionId || optionValue,
+          horarioEstudo: optionId,
+          waitingForSelection: false,
         }));
 
         simulateTyping(() => {
@@ -606,9 +762,83 @@ export function MiniChat() {
         });
         break;
 
-      case "questions":
-        handleAnswerQuestion(optionIndex);
+      case "offer":
+        if (optionId === "veterano") {
+          window.location.href = "/checkout?plan=veterano";
+        } else if (optionId === "ppu") {
+          window.location.href = "/checkout?plan=ppu";
+        } else if (optionId === "telegram") {
+          window.open("https://t.me/PassareiBot", "_blank");
+        }
         break;
+    }
+  };
+
+  const handleQuestionAnswer = async (selectedIndex: number) => {
+    if (isTyping || chatState.step !== "questions") return;
+
+    const currentQ = QUESTOES_EXEMPLO[chatState.currentQuestion];
+    const isCorrect = selectedIndex === currentQ.correta;
+
+    addUserMessage(currentQ.opcoes[selectedIndex]);
+    setIsTyping(true);
+
+    await wait(1000);
+    setIsTyping(false);
+
+    if (isCorrect) {
+      setActualScore((prev) => prev + 1);
+      addBotMessage(`✅ **CORRETO!** 🎉\n\n${currentQ.explicacaoBreve}`);
+
+      await wait(8000);
+      addBotMessage("📚 Próxima questão chegando...");
+      await wait(4000);
+
+      const nextQuestion = chatState.currentQuestion + 1;
+      if (nextQuestion < 5) {
+        setChatState((prev) => ({
+          ...prev,
+          currentQuestion: nextQuestion,
+          retryCount: 0,
+        }));
+        showQuestion(nextQuestion);
+      } else {
+        finishQuiz();
+      }
+    } else {
+      const retryCount = chatState.retryCount;
+
+      if (retryCount === 0) {
+        addBotMessage(
+          `❌ **Incorreto!**\n\n💡 Dica: ${currentQ.explicacaoBreve}`,
+        );
+        await wait(12000);
+        addBotMessage(
+          "🔄 **Vamos tentar novamente?**\n\nReleia a questão com atenção:",
+        );
+        setChatState((prev) => ({ ...prev, retryCount: 1 }));
+        await wait(3000);
+        showQuestion(chatState.currentQuestion);
+      } else {
+        addBotMessage(
+          `❌ **Ainda não foi dessa vez...**\n\n✅ **Resposta correta:** ${currentQ.opcoes[currentQ.correta]}\n\n📚 **Explicação completa:**\n${currentQ.explicacaoDetalhada}`,
+        );
+        await wait(12000);
+
+        const nextQuestion = chatState.currentQuestion + 1;
+        if (nextQuestion < 5) {
+          addBotMessage("📚 Vamos para a próxima questão...");
+          await wait(4000);
+          setChatState((prev) => ({
+            ...prev,
+            currentQuestion: nextQuestion,
+            retryCount: 0,
+          }));
+          showQuestion(nextQuestion);
+        } else {
+          finishQuiz();
+        }
+      }
     }
   };
 
@@ -626,18 +856,9 @@ export function MiniChat() {
     addBotMessage("🎉 **PERFIL CRIADO COM SUCESSO!**");
 
     setTimeout(() => {
-      addBotMessage(`📋 **RESUMO DO SEU PLANO DE ESTUDOS:**
-
-🎯 Concurso: **${state.concursoLabel}**
-📍 Local: **${state.estado}**
-👮 Cargo: **${state.cargo}**
-📊 Nível: **${state.nivel}**
-💚 Facilidades: ${facilidadeLabels || "Nenhuma selecionada"}
-🎯 Focar em: ${dificuldadeLabels || "Nenhuma selecionada"}
-📅 Tempo: **${state.tempoProva}**
-⏰ Horário: **${state.horarioEstudo}**
-
-━━━━━━━━━━━━━━━━`);
+      addBotMessage(
+        `📋 **RESUMO DO SEU PLANO DE ESTUDOS:**\n\n🎯 Concurso: **${state.concursoLabel}**\n📍 Local: **${state.estado}**\n👮 Cargo: **${state.cargo}**\n📊 Nível: **${state.nivel}**\n💚 Facilidades: ${facilidadeLabels || "Nenhuma"}\n🎯 Focar em: ${dificuldadeLabels || "Nenhuma"}\n📅 Tempo: **${state.tempoProva}**\n⏰ Horário: **${state.horarioEstudo}**\n\n━━━━━━━━━━━━━━━━`,
+      );
 
       setTimeout(() => {
         addBotMessage(
@@ -670,103 +891,20 @@ export function MiniChat() {
 
   const showQuestion = (index: number) => {
     const question = QUESTOES_EXEMPLO[index];
+    const retryText = chatState.retryCount > 0 ? " _(2ª tentativa)_" : "";
+
     simulateTyping(() => {
-      addBotMessage(
-        `📝 **QUESTÃO ${index + 1}/5**\n\n${question.pergunta}`,
+      addQuestionMessage(
+        `📝 **QUESTÃO ${index + 1}/5**${retryText}\n\n${question.pergunta}`,
         question.opcoes,
         question.correta,
       );
     }, 1500);
   };
 
-  const handleAnswerQuestion = async (selectedIndex: number) => {
-    const currentQ = QUESTOES_EXEMPLO[chatState.currentQuestion];
-    const isCorrect = selectedIndex === currentQ.correta;
-
-    addUserMessage(currentQ.opcoes[selectedIndex]);
-    setIsTyping(true);
-
-    await wait(1000);
-    setIsTyping(false);
-
-    if (isCorrect) {
-      // ACERTOU
-      setActualScore((prev) => prev + 1);
-      addBotMessage(`✅ **CORRETO!** 🎉\n\n${currentQ.explicacaoBreve}`);
-
-      await wait(8000); // Aguarda 8 segundos
-
-      addBotMessage("📚 Próxima questão chegando...");
-
-      await wait(4000); // Aguarda 4 segundos
-
-      const nextQuestion = chatState.currentQuestion + 1;
-      if (nextQuestion < 5) {
-        setChatState((prev) => ({
-          ...prev,
-          currentQuestion: nextQuestion,
-          retryCount: 0,
-        }));
-        showQuestion(nextQuestion);
-      } else {
-        finishQuiz();
-      }
-    } else {
-      // ERROU
-      const retryCount = chatState.retryCount;
-
-      if (retryCount === 0) {
-        // Primeira tentativa errada - explicação breve + retry
-        addBotMessage(
-          `❌ **Incorreto!**\n\n💡 Dica: ${currentQ.explicacaoBreve}`,
-        );
-
-        await wait(12000); // Aguarda 12 segundos
-
-        addBotMessage(
-          "🔄 **Vamos tentar novamente?**\n\nReleia a questão com atenção:",
-        );
-        setChatState((prev) => ({ ...prev, retryCount: 1 }));
-
-        await wait(3000);
-
-        // Mostra a mesma questão novamente
-        addBotMessage(
-          `📝 **QUESTÃO ${chatState.currentQuestion + 1}/5** _(2ª tentativa)_\n\n${currentQ.pergunta}`,
-          currentQ.opcoes,
-          currentQ.correta,
-        );
-      } else {
-        // Segunda tentativa errada - explicação detalhada + próxima
-        addBotMessage(
-          `❌ **Ainda não foi dessa vez...**\n\n✅ **Resposta correta:** ${currentQ.opcoes[currentQ.correta]}\n\n📚 **Explicação completa:**\n${currentQ.explicacaoDetalhada}`,
-        );
-
-        await wait(12000); // Aguarda 12 segundos
-
-        const nextQuestion = chatState.currentQuestion + 1;
-        if (nextQuestion < 5) {
-          addBotMessage("📚 Vamos para a próxima questão...");
-
-          await wait(4000);
-
-          setChatState((prev) => ({
-            ...prev,
-            currentQuestion: nextQuestion,
-            retryCount: 0,
-          }));
-          showQuestion(nextQuestion);
-        } else {
-          finishQuiz();
-        }
-      }
-    }
-  };
-
   const finishQuiz = async () => {
     setChatState((prev) => ({ ...prev, step: "finished" }));
 
-    // Usa actualScore que foi incrementado corretamente
     const finalScore = actualScore;
     const percentage = Math.round((finalScore / 5) * 100);
 
@@ -789,243 +927,43 @@ export function MiniChat() {
     }
 
     await wait(1500);
-
     addBotMessage(
       `${emoji} **RESULTADO FINAL**\n\n📊 Você acertou **${finalScore}/5** questões (**${percentage}%**)\n\n${message}`,
     );
 
     await wait(3000);
-
     showOffer();
   };
 
   const showOffer = async () => {
-    setChatState((prev) => ({ ...prev, step: "offer" }));
+    setChatState((prev) => ({
+      ...prev,
+      step: "offer",
+      waitingForSelection: true,
+    }));
 
     addBotMessage(
       `💡 **O que você ganha com o Passarei:**\n\n✅ Questões personalizadas para **${chatState.concursoLabel}**\n✅ Revisão inteligente SM2 que reforça seus pontos fracos\n✅ Explicações detalhadas por IA\n✅ Estude onde quiser: Web ou Telegram`,
     );
 
-    await wait(4000);
-
-    addBotMessage(
-      `💰 **PLANO PAY-PER-USE**\n\nR$ 0,99 por questão\n• Pague só o que usar\n• Sem mensalidade\n• Ideal para testar`,
-    );
-
     await wait(3000);
 
     addBotMessage(
-      `⭐ **PLANO VETERANO** _(Mais popular)_\n\nR$ 49,90/mês\n• 10 questões por dia\n• Correção de redações com IA\n• Todas as apostilas\n• Revisão inteligente SM2\n• Suporte prioritário`,
+      "🎁 **Escolha como deseja continuar:**",
+      [
+        { id: "veterano", label: "⭐ Plano Veterano - R$ 49,90/mês" },
+        { id: "ppu", label: "💰 Pay-per-use - R$ 0,99/questão" },
+        { id: "telegram", label: "📱 Continuar no Telegram (grátis)" },
+      ],
+      "single",
     );
-
-    await wait(2000);
-  };
-
-  const handlePayment = (plan: "ppu" | "veterano") => {
-    window.location.href =
-      plan === "veterano" ? "/checkout?plan=veterano" : "/checkout?plan=ppu";
-  };
-
-  const handleTelegram = () => {
-    window.open("https://t.me/PassareiBot", "_blank");
-  };
-
-  const renderOptions = () => {
-    switch (chatState.step) {
-      case "onboarding_concurso":
-        return (
-          <div className="flex flex-col gap-1 p-2 max-h-[200px] overflow-y-auto">
-            <p className="text-xs text-gray-500 font-semibold px-2 py-1">
-              Federal
-            </p>
-            {CONCURSOS.filter((c) => c.group === "Federal").map(
-              (concurso, idx) => (
-                <button
-                  key={concurso.id}
-                  onClick={() =>
-                    handleOptionSelect(
-                      CONCURSOS.findIndex((c) => c.id === concurso.id),
-                      concurso.label,
-                      concurso.id,
-                    )
-                  }
-                  className="bg-white hover:bg-green-50 border border-gray-200 hover:border-[#18cb96] rounded-lg px-3 py-2 text-xs font-medium text-gray-700 transition-all text-left"
-                >
-                  {concurso.label}
-                </button>
-              ),
-            )}
-            <p className="text-xs text-gray-500 font-semibold px-2 py-1 mt-1">
-              Estadual
-            </p>
-            {CONCURSOS.filter((c) => c.group === "Estadual").map(
-              (concurso, idx) => (
-                <button
-                  key={concurso.id}
-                  onClick={() =>
-                    handleOptionSelect(
-                      CONCURSOS.findIndex((c) => c.id === concurso.id),
-                      concurso.label,
-                      concurso.id,
-                    )
-                  }
-                  className="bg-white hover:bg-green-50 border border-gray-200 hover:border-[#18cb96] rounded-lg px-3 py-2 text-xs font-medium text-gray-700 transition-all text-left"
-                >
-                  {concurso.label}
-                </button>
-              ),
-            )}
-            <p className="text-xs text-gray-500 font-semibold px-2 py-1 mt-1">
-              Municipal
-            </p>
-            {CONCURSOS.filter((c) => c.group === "Municipal").map(
-              (concurso, idx) => (
-                <button
-                  key={concurso.id}
-                  onClick={() =>
-                    handleOptionSelect(
-                      CONCURSOS.findIndex((c) => c.id === concurso.id),
-                      concurso.label,
-                      concurso.id,
-                    )
-                  }
-                  className="bg-white hover:bg-green-50 border border-gray-200 hover:border-[#18cb96] rounded-lg px-3 py-2 text-xs font-medium text-gray-700 transition-all text-left"
-                >
-                  {concurso.label}
-                </button>
-              ),
-            )}
-          </div>
-        );
-
-      case "onboarding_cargo":
-        const cargos = CARGOS[chatState.concurso] || [];
-        return (
-          <div className="flex flex-col gap-2 p-3">
-            {cargos.map((cargo, idx) => (
-              <button
-                key={cargo.id}
-                onClick={() => handleOptionSelect(idx, cargo.label, cargo.id)}
-                className="bg-white hover:bg-green-50 border border-gray-200 hover:border-[#18cb96] rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-all text-left"
-              >
-                {cargo.label}
-              </button>
-            ))}
-          </div>
-        );
-
-      case "onboarding_nivel":
-        return (
-          <div className="flex flex-col gap-2 p-3">
-            {NIVEIS.map((nivel, idx) => (
-              <button
-                key={nivel.id}
-                onClick={() => handleOptionSelect(idx, nivel.label, nivel.id)}
-                className="bg-white hover:bg-green-50 border border-gray-200 hover:border-[#18cb96] rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-all text-left"
-              >
-                {nivel.label}
-              </button>
-            ))}
-          </div>
-        );
-
-      case "onboarding_facilidade":
-      case "onboarding_dificuldade":
-        return (
-          <div className="flex flex-col gap-1 p-2">
-            <div className="grid grid-cols-2 gap-1">
-              {MATERIAS.map((materia) => (
-                <button
-                  key={materia.id}
-                  onClick={() =>
-                    handleOptionSelect(0, materia.label, materia.id)
-                  }
-                  className={`border rounded-lg px-2 py-1.5 text-xs font-medium transition-all text-left ${
-                    selectedMaterias.includes(materia.id)
-                      ? "bg-[#18cb96] text-white border-[#18cb96]"
-                      : "bg-white text-gray-700 border-gray-200 hover:border-[#18cb96]"
-                  }`}
-                >
-                  {materia.label}
-                </button>
-              ))}
-            </div>
-            {selectedMaterias.length > 0 && (
-              <button
-                onClick={() => handleOptionSelect(0, "Confirmar", "confirmar")}
-                className="mt-2 bg-[#18cb96] text-white rounded-lg px-4 py-2 text-sm font-bold hover:bg-[#14b584] transition-all"
-              >
-                ✓ Confirmar ({selectedMaterias.length} selecionadas)
-              </button>
-            )}
-          </div>
-        );
-
-      case "onboarding_tempo":
-        return (
-          <div className="flex flex-col gap-2 p-3">
-            {TEMPO_PROVA.map((tempo, idx) => (
-              <button
-                key={tempo.id}
-                onClick={() => handleOptionSelect(idx, tempo.label, tempo.id)}
-                className="bg-white hover:bg-green-50 border border-gray-200 hover:border-[#18cb96] rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-all text-left"
-              >
-                {tempo.label}
-              </button>
-            ))}
-          </div>
-        );
-
-      case "onboarding_horario":
-        return (
-          <div className="flex flex-col gap-2 p-3">
-            {HORARIO_ESTUDO.map((horario, idx) => (
-              <button
-                key={horario.id}
-                onClick={() =>
-                  handleOptionSelect(idx, horario.label, horario.id)
-                }
-                className="bg-white hover:bg-green-50 border border-gray-200 hover:border-[#18cb96] rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-all text-left"
-              >
-                {horario.label}
-              </button>
-            ))}
-          </div>
-        );
-
-      case "offer":
-        return (
-          <div className="flex flex-col gap-2 p-3">
-            <button
-              onClick={() => handlePayment("veterano")}
-              className="bg-[#18cb96] hover:bg-[#14b584] text-white rounded-lg px-4 py-3 text-sm font-bold transition-all flex items-center justify-center gap-2"
-            >
-              <Trophy className="w-4 h-4" />
-              Assinar Veterano - R$ 49,90/mês
-            </button>
-            <button
-              onClick={() => handlePayment("ppu")}
-              className="bg-white hover:bg-gray-50 border-2 border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-all"
-            >
-              💰 Comprar créditos - R$ 0,99/questão
-            </button>
-            <button
-              onClick={handleTelegram}
-              className="bg-[#0088cc] hover:bg-[#0077b5] text-white rounded-lg px-4 py-2 text-sm font-medium transition-all flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              📱 Continuar no Telegram
-            </button>
-          </div>
-        );
-
-      default:
-        return null;
-    }
   };
 
   const renderMessage = (message: Message) => {
-    const isBot = message.type === "bot" || message.type === "question";
+    const isBot =
+      message.type === "bot" ||
+      message.type === "options" ||
+      message.type === "question";
 
     return (
       <div
@@ -1033,7 +971,7 @@ export function MiniChat() {
         className={`flex ${isBot ? "justify-start" : "justify-end"} mb-3`}
       >
         <div
-          className={`max-w-[85%] rounded-2xl px-4 py-2.5 shadow-sm ${
+          className={`max-w-[90%] rounded-2xl px-4 py-2.5 shadow-sm ${
             isBot
               ? "bg-white border border-gray-100 rounded-tl-sm"
               : "bg-[#18cb96] text-white rounded-tr-sm"
@@ -1049,12 +987,43 @@ export function MiniChat() {
               )}
           </p>
 
-          {message.type === "question" && message.options && (
+          {/* Opções de seleção */}
+          {message.type === "options" && message.options && (
             <div className="mt-3 space-y-2">
-              {message.options.map((option, idx) => (
+              {message.options.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => handleOptionClick(option.id, option.label)}
+                  disabled={!chatState.waitingForSelection || isTyping}
+                  className={`w-full text-left border rounded-lg px-3 py-2 text-xs font-medium transition-all disabled:opacity-50 ${
+                    message.optionType === "multi" &&
+                    selectedMaterias.includes(option.id)
+                      ? "bg-[#18cb96] text-white border-[#18cb96]"
+                      : "bg-gray-50 hover:bg-green-50 border-gray-200 hover:border-[#18cb96] text-gray-700"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+              {message.optionType === "multi" && (
+                <button
+                  onClick={() => handleOptionClick("confirmar", "Confirmar")}
+                  disabled={selectedMaterias.length === 0 || isTyping}
+                  className="w-full bg-[#18cb96] text-white rounded-lg px-4 py-2 text-sm font-bold hover:bg-[#14b584] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                >
+                  ✓ Confirmar ({selectedMaterias.length} selecionadas)
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Opções de questão */}
+          {message.type === "question" && message.questionOptions && (
+            <div className="mt-3 space-y-2">
+              {message.questionOptions.map((option, idx) => (
                 <button
                   key={idx}
-                  onClick={() => handleOptionSelect(idx, option)}
+                  onClick={() => handleQuestionAnswer(idx)}
                   disabled={chatState.step !== "questions" || isTyping}
                   className="w-full text-left bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-[#18cb96] rounded-lg px-3 py-2 text-xs text-gray-700 transition-all disabled:opacity-50"
                 >
@@ -1075,19 +1044,21 @@ export function MiniChat() {
     );
   };
 
+  const showInput =
+    chatState.step === "email" ||
+    chatState.step === "welcome" ||
+    chatState.step === "onboarding_estado";
+
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="bg-gradient-to-b from-gray-900 to-gray-800 rounded-[2.5rem] p-3 shadow-2xl">
         <div
-          ref={chatContainerRef}
-          className="bg-gradient-to-b from-[#f0f4f0] to-[#e5ebe5] rounded-[2rem] overflow-hidden"
+          className="bg-gradient-to-b from-[#f0f4f0] to-[#e5ebe5] rounded-[2rem] overflow-hidden flex flex-col"
           style={{ height: "520px" }}
         >
           {/* Header */}
-          <div className="bg-[#18cb96] text-white px-4 py-3 flex items-center gap-3 shadow-md">
+          <div className="bg-[#18cb96] text-white px-4 py-3 flex items-center gap-3 shadow-md flex-shrink-0">
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
-              {/* LOGO: Substitua pela sua imagem */}
-              {/* <img src="/logo-icon.png" alt="Passarei" className="w-8 h-8 object-contain" /> */}
               <span className="text-[#18cb96] font-bold text-lg">P</span>
             </div>
             <div className="flex-1">
@@ -1102,8 +1073,8 @@ export function MiniChat() {
             </div>
           </div>
 
-          {/* Mensagens */}
-          <div className="h-[380px] overflow-y-auto p-4 space-y-1">
+          {/* Área de mensagens - SCROLL ÚNICO */}
+          <div className="flex-1 overflow-y-auto p-4">
             {messages.map(renderMessage)}
 
             {isTyping && (
@@ -1130,16 +1101,11 @@ export function MiniChat() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Opções dinâmicas */}
-          {renderOptions()}
-
-          {/* Input */}
-          {(chatState.step === "email" ||
-            chatState.step === "welcome" ||
-            chatState.step === "onboarding_estado") && (
+          {/* Input - só aparece quando necessário */}
+          {showInput && (
             <form
               onSubmit={handleSubmit}
-              className="p-3 bg-white border-t border-gray-200"
+              className="p-3 bg-white border-t border-gray-200 flex-shrink-0"
             >
               <div className="flex gap-2">
                 <input
@@ -1148,13 +1114,14 @@ export function MiniChat() {
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder={
                     chatState.step === "email"
-                      ? "Digite seu e-mail..."
+                      ? "seunome@email.com"
                       : chatState.step === "onboarding_estado"
-                        ? "Digite a sigla do estado (ex: MG)..."
+                        ? "Ex: MG, SP, RJ..."
                         : ""
                   }
                   className="flex-1 bg-gray-100 rounded-full px-4 py-2.5 text-sm text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#18cb96]"
                   disabled={isTyping || chatState.step === "welcome"}
+                  autoComplete="off"
                 />
                 <button
                   type="submit"
@@ -1183,7 +1150,7 @@ export function MiniChat() {
 
       {/* Badge de segurança - CORRIGIDO para visibilidade */}
       <div className="text-center mt-4">
-        <p className="text-xs text-gray-700 flex items-center justify-center gap-1 bg-white/80 rounded-full px-4 py-2 mx-auto w-fit shadow-sm">
+        <p className="text-xs text-gray-700 flex items-center justify-center gap-1 bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 mx-auto w-fit shadow-sm border border-gray-200">
           <CheckCircle2 className="w-3 h-3 text-green-600" />
           Seus dados estão seguros • Não enviamos spam
         </p>
