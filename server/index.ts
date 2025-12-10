@@ -5,6 +5,7 @@ import { registerAIRoutes } from "./ai-routes";
 import { registerEditalRoutes } from "./edital-routes";
 // import { registerPrismaRoutes } from "./routes-prisma"; // DESABILITADO - usando Supabase
 import { registerSupabaseRoutes } from "./routes-supabase";
+import { registerMiniChatRoutes } from "./minichat-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startTelegramBot } from "./telegram/bot";
 
@@ -49,7 +50,7 @@ app.use((req, res, next) => {
   // registerPrismaRoutes(app); // DESABILITADO - usando Supabase
   registerSupabaseRoutes(app);
   registerEditalRoutes(app);
-
+  registerMiniChatRoutes(app);
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
