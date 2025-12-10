@@ -281,7 +281,7 @@ export function Comparativo() {
             className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
             data-testid="button-comparativo-cta"
           >
-            💪 Quero Economizar 61.58%
+            💪 Quero Economizar 61%
           </Button>
         </div>
       </div>

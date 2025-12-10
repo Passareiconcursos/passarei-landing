@@ -21,6 +21,7 @@ export function Pricing() {
         "Explicações completas",
         "Use quando quiser",
         "Créditos não expiram",
+        "Pix ou Cartão de crédito",
       ],
       cta: "Começar Agora",
       highlight: false,
