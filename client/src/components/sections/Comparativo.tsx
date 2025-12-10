@@ -2,9 +2,9 @@ import { Check, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Comparativo() {
-  const scrollToForm = () => {
+  const scrollToCTA = () => {
     document
-      .getElementById("lead-form")
+      .getElementById("cta-final")
       ?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -23,25 +23,25 @@ export function Comparativo() {
     },
     {
       name: "Matérias/dia",
-      passarei: "30 (Telegram)",
+      passarei: "10 (Telegram)",
       cursinhos: "Via web",
       livros: "Ilimitado",
     },
     {
       name: "Correções/dia",
-      passarei: "30",
+      passarei: "10",
       cursinhos: "Limitado",
       livros: "x",
     },
     {
       name: "Redação grátis/mês",
-      passarei: "2",
+      passarei: "Incluído",
       cursinhos: "1-2",
       livros: "x",
     },
     {
       name: "Redação extra",
-      passarei: "R$ 0,99",
+      passarei: "Incluído",
       cursinhos: "R$ 5-10",
       livros: "x",
     },
@@ -65,7 +65,7 @@ export function Comparativo() {
     },
     {
       name: "Repetição espaçada científica",
-      passarei: "Algoritmo",
+      passarei: "Algoritmo SM2",
       cursinhos: "Não",
       livros: "Manual",
     },
@@ -77,7 +77,7 @@ export function Comparativo() {
     },
     {
       name: "Suporte",
-      passarei: "30min (24/7)",
+      passarei: "Prioritário",
       cursinhos: "2 dias",
       livros: "x",
     },
@@ -146,7 +146,7 @@ export function Comparativo() {
             Passarei vs. Cursinhos Tradicionais
           </h2>
           <p className="text-xl text-muted-foreground">
-            Economia de até R$ 960/ano (61.58%)
+            Economia de até R$ 960/ano (61%)
           </p>
         </div>
 
@@ -270,14 +270,14 @@ export function Comparativo() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground text-center mt-4">
-            *Plano Veterano anual (R$ 598.80/ano)
+            *Plano Veterano: R$ 49,90/mês
           </p>
         </div>
 
         <div className="text-center">
           <Button
             size="lg"
-            onClick={scrollToForm}
+            onClick={scrollToCTA}
             className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
             data-testid="button-comparativo-cta"
           >

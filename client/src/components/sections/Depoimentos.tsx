@@ -2,8 +2,10 @@ import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Depoimentos() {
-  const scrollToForm = () => {
-    document.getElementById("lead-form")?.scrollIntoView({ behavior: "smooth" });
+  const scrollToCTA = () => {
+    document
+      .getElementById("cta-final")
+      ?.scrollIntoView({ behavior: "smooth" });
   };
 
   const testimonials = [
@@ -15,7 +17,7 @@ export function Depoimentos() {
       location: "📍 São Paulo, SP",
       text: "Passei em 4º lugar geral na PM-SP depois de 2 anos tentando sem sucesso. O diferencial foi a repetição espaçada — nunca mais esqueci o que estudei. Recomendo demais!",
       initials: "CM",
-      color: "bg-blue-500"
+      color: "bg-blue-500",
     },
     {
       stars: 5,
@@ -23,9 +25,9 @@ export function Depoimentos() {
       age: 24,
       status: "📚 Estudante PC-RJ (prova em Mar/25)",
       location: "📍 Rio de Janeiro, RJ",
-      text: "Trabalho 8h/dia e achava impossível estudar. Com apenas 15 minutos no WhatsApp durante o almoço, melhorei 40% em Português em 1 mês. Incrível!",
+      text: "Trabalho 8h/dia e achava impossível estudar. Com apenas 15 minutos no Telegram durante o almoço, melhorei 40% em Português em 1 mês. Incrível!",
       initials: "JS",
-      color: "bg-green-500"
+      color: "bg-green-500",
     },
     {
       stars: 5,
@@ -33,10 +35,10 @@ export function Depoimentos() {
       age: 31,
       status: "✅ Aprovado PRF 2025 - Agente",
       location: "📍 Brasília, DF",
-      text: "Gastei R$ 5 mil em cursinhos sem resultado. Aqui por R$ 30/mês aprendi mais em 3 meses e fui aprovado na PRF. Melhor investimento que já fiz!",
+      text: "Gastei R$ 5 mil em cursinhos sem resultado. Aqui por R$ 49,90/mês aprendi mais em 3 meses e fui aprovado na PRF. Melhor investimento que já fiz!",
       initials: "RS",
-      color: "bg-purple-500"
-    }
+      color: "bg-purple-500",
+    },
   ];
 
   return (
@@ -53,7 +55,7 @@ export function Depoimentos() {
 
         <div className="grid md:grid-cols-3 gap-8 mb-12">
           {testimonials.map((testimonial, index) => (
-            <div 
+            <div
               key={index}
               className="bg-white rounded-2xl p-8 shadow-md hover:shadow-xl transition-all border border-gray-100 hover-elevate"
               data-testid={`card-depoimento-${index}`}
@@ -61,17 +63,24 @@ export function Depoimentos() {
               {/* Stars */}
               <div className="flex gap-1 mb-4">
                 {[...Array(testimonial.stars)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                  <Star
+                    key={i}
+                    className="w-5 h-5 fill-yellow-400 text-yellow-400"
+                  />
                 ))}
               </div>
 
               {/* Avatar */}
               <div className="flex items-center gap-3 mb-4">
-                <div className={`w-12 h-12 ${testimonial.color} rounded-full flex items-center justify-center text-white font-bold`}>
+                <div
+                  className={`w-12 h-12 ${testimonial.color} rounded-full flex items-center justify-center text-white font-bold`}
+                >
                   {testimonial.initials}
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">{testimonial.name}, {testimonial.age} anos</p>
+                  <p className="font-semibold text-foreground">
+                    {testimonial.name}, {testimonial.age} anos
+                  </p>
                 </div>
               </div>
 
@@ -82,7 +91,9 @@ export function Depoimentos() {
 
               {/* Status */}
               <div className="text-sm space-y-1">
-                <p className="text-foreground font-medium">{testimonial.status}</p>
+                <p className="text-foreground font-medium">
+                  {testimonial.status}
+                </p>
                 <p className="text-muted-foreground">{testimonial.location}</p>
               </div>
             </div>
@@ -97,19 +108,27 @@ export function Depoimentos() {
           <div className="grid md:grid-cols-4 gap-6 text-center">
             <div>
               <p className="text-3xl font-bold text-primary mb-2">87%</p>
-              <p className="text-sm text-muted-foreground">dos alunos melhoram em 30 dias</p>
+              <p className="text-sm text-muted-foreground">
+                dos alunos melhoram em 30 dias
+              </p>
             </div>
             <div>
               <p className="text-3xl font-bold text-primary mb-2">154</p>
-              <p className="text-sm text-muted-foreground">aprovações em 2025</p>
+              <p className="text-sm text-muted-foreground">
+                aprovações em 2025
+              </p>
             </div>
             <div>
               <p className="text-3xl font-bold text-primary mb-2">4.9/5</p>
-              <p className="text-sm text-muted-foreground">avaliação média (1.243 reviews)</p>
+              <p className="text-sm text-muted-foreground">
+                avaliação média (1.243 reviews)
+              </p>
             </div>
             <div>
               <p className="text-3xl font-bold text-primary mb-2">+2.847</p>
-              <p className="text-sm text-muted-foreground">candidatos estudando</p>
+              <p className="text-sm text-muted-foreground">
+                candidatos estudando
+              </p>
             </div>
           </div>
         </div>
@@ -117,7 +136,7 @@ export function Depoimentos() {
         <div className="text-center">
           <Button
             size="lg"
-            onClick={scrollToForm}
+            onClick={scrollToCTA}
             className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
             data-testid="button-depoimentos-cta"
           >
