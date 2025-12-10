@@ -4,24 +4,28 @@ export function Beneficios() {
   const benefits = [
     {
       icon: Zap,
-      title: "100% pelo WhatsApp",
-      description: "Estude onde você já está. Receba matérias, questões e correções direto no WhatsApp. Sem instalar apps, sem complicação. Simples como conversar com um amigo."
+      title: "100% pelo Telegram",
+      description:
+        "Estude onde você já está. Receba matérias, questões e correções direto no Telegram. Sem instalar apps, sem complicação. Simples como conversar com um amigo.",
     },
     {
       icon: Brain,
       title: "IA Personalizada",
-      description: "Nossa inteligência artificial analisa seu edital e cria um plano único para VOCÊ. Prioriza matérias com maior peso, adapta a dificuldade e evolui com seu progresso."
+      description:
+        "Nossa inteligência artificial analisa seu edital e cria um plano único para VOCÊ. Prioriza matérias com maior peso, adapta a dificuldade e evolui com seu progresso.",
     },
     {
       icon: Target,
       title: "Repetição Espaçada",
-      description: "Algoritmo SM-2 comprovado pela neurociência revisita conteúdos no momento exato para maximizar sua memória de longo prazo. Você nunca mais esquece o que estudou."
+      description:
+        "Algoritmo SM-2 comprovado pela neurociência revisita conteúdos no momento exato para maximizar sua memória de longo prazo. Você nunca mais esquece o que estudou.",
     },
     {
       icon: BarChart,
       title: "Acompanhamento em Tempo Real",
-      description: "Dashboard mostra seu progresso, pontos fortes e fracos. Estatísticas detalhadas de desempenho para você saber exatamente onde focar."
-    }
+      description:
+        "Dashboard mostra seu progresso, pontos fortes e fracos. Estatísticas detalhadas de desempenho para você saber exatamente onde focar.",
+    },
   ];
 
   return (

@@ -32,12 +32,12 @@ export function Pricing() {
       period: "/mês",
       description: "Acesso completo para aprovação",
       features: [
-        "10 questões por dia",
-        "Correção de redações com IA",
-        "Todas as apostilas inclusas",
+        "300 Questões por mês",
+        "Correção de 2 redações mês com IA",
+        "Todas as apostilas inclusas (Em breve)",
         "Revisão inteligente SM2",
         "Plano de estudos personalizado",
-        "Simulados ilimitados",
+        "Simulados Mensais",
         "Suporte prioritário",
       ],
       cta: "Assinar Agora",
@@ -48,7 +48,7 @@ export function Pricing() {
     {
       name: "Gratuito",
       price: "0",
-      period: "/sempre",
+      period: "/sem cadastro",
       description: "Teste a plataforma sem compromisso",
       features: [
         "5 questões grátis para testar",
