@@ -2,70 +2,64 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Pricing() {
-  const whatsappNumber = "5527992663806";
-  const whatsappMessage = encodeURIComponent(
-    "Olá! Quero começar meu teste grátis no Passarei! 🎯",
-  );
-  const whatsappLink = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
-
-  const openWhatsApp = () => {
-    window.open(whatsappLink, "_blank");
+  const scrollToCTA = () => {
+    document
+      .getElementById("cta-final")
+      ?.scrollIntoView({ behavior: "smooth" });
   };
 
   const plans = [
     {
-      name: "Gratuito",
-      price: "0",
-      period: "/sempre",
-      description: "Perfeito para testar a plataforma",
+      name: "Pay-per-use",
+      price: "0,99",
+      period: "/questão",
+      description: "Pague apenas o que usar",
       features: [
-        "2 matérias por dia (60/mês)",
-        "2 correções de exercícios/dia",
-        "Suporte via WhatsApp (24h)",
-        "SEM correção de redação",
+        "Sem mensalidade",
+        "Questões personalizadas por IA",
+        "Correção detalhada de cada alternativa",
+        "Explicações completas",
+        "Use quando quiser",
+        "Créditos não expiram",
       ],
-      cta: "Teste Grátis",
+      cta: "Começar Agora",
       highlight: false,
       popular: false,
     },
     {
-      name: "Calouro",
-      price: "12,90",
+      name: "Veterano",
+      price: "49,90",
       period: "/mês",
-      description: "Para quem quer estudar sério",
+      description: "Acesso completo para aprovação",
       features: [
-        "10 matérias por dia (300/mês)",
-        "10 correções de exercícios/dia",
-        "1 redação GRÁTIS/dia (30/mês)",
-        "Redações extras: R$ 1,90",
-        "Plano de aula personalizado",
-        "Simulados mensais",
-        "Suporte prioritário (2h)",
+        "10 questões por dia",
+        "Correção de redações com IA",
+        "Todas as apostilas inclusas",
+        "Revisão inteligente SM2",
+        "Plano de estudos personalizado",
+        "Simulados ilimitados",
+        "Suporte prioritário",
       ],
-      cta: "Teste Grátis",
+      cta: "Assinar Agora",
       highlight: true,
       popular: true,
       badge: "MAIS POPULAR",
     },
     {
-      name: "Veterano",
-      price: "9,90",
-      period: "/mês",
-      pricingDetail: "R$ 118,80/ano à vista",
-      description: "Melhor custo-benefício",
+      name: "Gratuito",
+      price: "0",
+      period: "/sempre",
+      description: "Teste a plataforma sem compromisso",
       features: [
-        "30 matérias por dia (900/mês)",
-        "30 correções de exercícios/dia",
-        "3 redações GRÁTIS/dia (90/mês)",
-        "Redações extras: R$ 0,99 (50% OFF)",
-        "Simulados ilimitados",
-        "Suporte VIP (30min, 24/7)",
-        "Programa de afiliados (20%)",
+        "5 questões grátis para testar",
+        "Onboarding personalizado",
+        "Acesso ao Telegram",
+        "Conheça a metodologia",
+        "Sem cartão de crédito",
       ],
-      cta: "Teste Grátis",
+      cta: "Testar Grátis",
       highlight: false,
       popular: false,
-      savings: "Economize 23%",
     },
   ];
 
@@ -75,14 +69,14 @@ export function Pricing() {
         <div className="text-center mb-16">
           <div className="inline-block mb-4">
             <span className="bg-[#18cb96]/10 text-[#18cb96] px-4 py-2 rounded-full text-sm font-semibold">
-              💰 Economize até 92% vs concorrentes
+              💰 Preços acessíveis para sua aprovação
             </span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             Escolha Seu Plano
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Mesmo conteúdo dos cursinhos de R$ 1.500/ano, por até 92% menos
+            Invista na sua aprovação com o melhor custo-benefício do mercado
           </p>
         </div>
 
@@ -100,14 +94,6 @@ export function Pricing() {
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                   <span className="bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-xs font-bold shadow-lg">
                     {plan.badge}
-                  </span>
-                </div>
-              )}
-
-              {plan.savings && (
-                <div className="absolute -top-4 right-4">
-                  <span className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                    {plan.savings}
                   </span>
                 </div>
               )}
@@ -146,15 +132,6 @@ export function Pricing() {
                     {plan.period}
                   </span>
                 </div>
-                {plan.pricingDetail && (
-                  <p
-                    className={`text-sm mt-1 ${
-                      plan.highlight ? "text-white/80" : "text-gray-500"
-                    }`}
-                  >
-                    {plan.pricingDetail}
-                  </p>
-                )}
               </div>
 
               <ul className="space-y-4 mb-8">
@@ -177,11 +154,11 @@ export function Pricing() {
               </ul>
 
               <Button
-                onClick={openWhatsApp}
+                onClick={scrollToCTA}
                 className={`w-full py-6 rounded-xl font-semibold text-base transition-all ${
                   plan.highlight
                     ? "bg-white text-[#18cb96] hover:bg-gray-100 shadow-lg"
-                    : "bg-[#25D366] text-white hover:bg-[#20BD5A] hover:scale-105"
+                    : "bg-[#18cb96] text-white hover:bg-[#14b584] hover:scale-105"
                 }`}
               >
                 {plan.cta}
@@ -195,11 +172,18 @@ export function Pricing() {
             🔒 Garantia de 7 dias • Cancele quando quiser • Sem taxas escondidas
           </p>
           <Button
-            onClick={openWhatsApp}
+            onClick={scrollToCTA}
             size="lg"
-            className="bg-[#25D366] hover:bg-[#20BD5A] text-white px-12 py-6 text-lg font-semibold rounded-xl transition-all hover:scale-105"
+            className="bg-[#0088cc] hover:bg-[#0077b5] text-white px-12 py-6 text-lg font-semibold rounded-xl transition-all hover:scale-105"
           >
-            💚 Começar Teste Grátis
+            <svg
+              viewBox="0 0 24 24"
+              className="w-6 h-6 mr-2"
+              fill="currentColor"
+            >
+              <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+            </svg>
+            Começar pelo Telegram
           </Button>
         </div>
       </div>

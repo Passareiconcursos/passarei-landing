@@ -36,7 +36,9 @@ export default function Landing() {
       <div id="faq">
         <FAQ />
       </div>
-      <CTAFinal />
+      <div id="cta-final">
+        <CTAFinal />
+      </div>
       <Footer />
     </div>
   );
