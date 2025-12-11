@@ -3,7 +3,6 @@ import fs from "fs";
 import path from "path";
 import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
-import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
 
 const viteLogger = createLogger();
@@ -15,11 +14,13 @@ export function log(message: string, source = "express") {
     second: "2-digit",
     hour12: true,
   });
-
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
 export async function setupVite(app: Express, server: Server) {
+  // Import dinâmico - só carrega em desenvolvimento
+  const viteConfig = (await import("../vite.config")).default;
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
@@ -41,9 +42,9 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   app.use(vite.middlewares);
+
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
-
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,
@@ -51,7 +52,6 @@ export async function setupVite(app: Express, server: Server) {
         "client",
         "index.html",
       );
-
       // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
@@ -69,20 +69,25 @@ export async function setupVite(app: Express, server: Server) {
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(import.meta.dirname, "public");
+
   if (!fs.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );
   }
+
   app.use(express.static(distPath));
+
   // fall through to index.html if the file doesn't exist
   // BUT ignore API routes and webhooks
   app.use("*", (req, res, next) => {
-    const path = req.originalUrl;
+    const urlPath = req.originalUrl;
+
     // Não interceptar rotas de API ou webhooks
-    if (path.startsWith("/api") || path.startsWith("/webhook")) {
+    if (urlPath.startsWith("/api") || urlPath.startsWith("/webhook")) {
       return next();
     }
+
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
