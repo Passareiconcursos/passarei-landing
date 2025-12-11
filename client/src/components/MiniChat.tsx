@@ -4,18 +4,20 @@ import { Send, Loader2, CheckCircle2, Trophy, Sparkles } from "lucide-react";
 // Tipos
 interface Message {
   id: string;
-  type: "bot" | "user" | "question" | "options";
+  type: "bot" | "user" | "question" | "options" | "offer-block";
   content: string;
   options?: { id: string; label: string }[];
   questionOptions?: string[];
   correctIndex?: number;
   timestamp: Date;
   optionType?: "single" | "multi";
+  offerType?: "benefits" | "ppu" | "veterano" | "telegram";
 }
 
 interface ChatState {
   step:
     | "welcome"
+    | "blocked"
     | "email"
     | "onboarding_concurso"
     | "onboarding_estado"
@@ -153,11 +155,11 @@ const NIVEIS = [
 
 const MATERIAS = [
   { id: "portugues", label: "📝 Português" },
-  { id: "matematica", label: "🔢 Matemática/Raciocínio Lógico" },
-  { id: "dir_constitucional", label: "⚖️ Direito Constitucional" },
-  { id: "dir_penal", label: "🔒 Direito Penal" },
-  { id: "dir_processual_penal", label: "📋 Direito Processual Penal" },
-  { id: "dir_administrativo", label: "🏛️ Direito Administrativo" },
+  { id: "matematica", label: "🔢 Matemática" },
+  { id: "dir_constitucional", label: "⚖️ Dir. Constitucional" },
+  { id: "dir_penal", label: "🔒 Dir. Penal" },
+  { id: "dir_processual_penal", label: "📋 Dir. Proc. Penal" },
+  { id: "dir_administrativo", label: "🏛️ Dir. Administrativo" },
   { id: "informatica", label: "💻 Informática" },
   { id: "atualidades", label: "🌍 Atualidades" },
 ];
@@ -192,7 +194,7 @@ const QUESTOES_EXEMPLO = [
     correta: 0,
     explicacaoBreve: "O princípio da legalidade está no Art. 5º, II da CF/88.",
     explicacaoDetalhada:
-      "O princípio da legalidade (Art. 5º, II, CF/88) é um dos pilares do Estado Democrático de Direito. Ele garante que nenhum cidadão será obrigado a fazer ou deixar de fazer algo, exceto se houver uma lei determinando. Para particulares: tudo que não é proibido, é permitido. Para a Administração Pública: só pode fazer o que a lei autoriza.",
+      "O princípio da legalidade (Art. 5º, II, CF/88) é um dos pilares do Estado Democrático de Direito. Ele garante que nenhum cidadão será obrigado a fazer ou deixar de fazer algo, exceto se houver uma lei determinando.",
   },
   {
     pergunta:
@@ -206,7 +208,7 @@ const QUESTOES_EXEMPLO = [
     correta: 2,
     explicacaoBreve: "Flagrante exige imediatidade. 48h depois não configura.",
     explicacaoDetalhada:
-      "O Art. 302 do CPP define as hipóteses de flagrante delito: I - está cometendo; II - acaba de cometer; III - é perseguido logo após; IV - é encontrado LOGO DEPOIS com instrumentos. A expressão 'logo depois' exige imediatidade temporal. 48 horas depois quebra esse requisito, não configurando flagrante.",
+      "O Art. 302 do CPP define as hipóteses de flagrante delito. A expressão 'logo depois' exige imediatidade temporal. 48 horas depois quebra esse requisito.",
   },
   {
     pergunta:
@@ -221,7 +223,7 @@ const QUESTOES_EXEMPLO = [
     explicacaoBreve:
       "Atributos: Discricionariedade, Autoexecutoriedade, Coercibilidade (DAC).",
     explicacaoDetalhada:
-      "O Poder de Polícia possui 3 atributos clássicos (DAC): 1) DISCRICIONARIEDADE: margem de escolha quanto ao momento e meio de atuação; 2) AUTOEXECUTORIEDADE: executar decisões sem ordem judicial; 3) COERCIBILIDADE: impor medidas pela força se necessário. Memorize: DAC = Discricionariedade, Autoexecutoriedade, Coercibilidade.",
+      "O Poder de Polícia possui 3 atributos clássicos (DAC): Discricionariedade, Autoexecutoriedade e Coercibilidade.",
   },
   {
     pergunta: "A legítima defesa, como excludente de ilicitude, requer:",
@@ -235,7 +237,7 @@ const QUESTOES_EXEMPLO = [
     explicacaoBreve:
       "Legítima defesa: agressão injusta + atual/iminente + meios moderados.",
     explicacaoDetalhada:
-      "O Art. 25 do Código Penal define legítima defesa. Requisitos: 1) Agressão INJUSTA (ilícita); 2) ATUAL ou IMINENTE (não futura nem passada); 3) A direito PRÓPRIO ou de TERCEIRO; 4) Uso MODERADO dos meios NECESSÁRIOS. O excesso é punível! Não existe legítima defesa contra agressão futura ou usando meios desproporcionais.",
+      "O Art. 25 do Código Penal define legítima defesa: agressão injusta, atual ou iminente, usando moderadamente os meios necessários.",
   },
   {
     pergunta: "O Habeas Corpus é remédio constitucional que protege:",
@@ -249,7 +251,7 @@ const QUESTOES_EXEMPLO = [
     explicacaoBreve:
       "HC protege o direito de locomoção (ir, vir e permanecer).",
     explicacaoDetalhada:
-      "O Habeas Corpus (Art. 5º, LXVIII, CF) protege o direito de LOCOMOÇÃO - ir, vir e permanecer. Pode ser: PREVENTIVO (ameaça de prisão) ou LIBERATÓRIO/REPRESSIVO (já está preso). É GRATUITO e não precisa de advogado. Os outros remédios: Habeas Data (informações pessoais), Mandado de Segurança (direito líquido e certo), Ação Popular (patrimônio público).",
+      "O Habeas Corpus (Art. 5º, LXVIII, CF) protege o direito de LOCOMOÇÃO - ir, vir e permanecer.",
   },
 ];
 
@@ -276,11 +278,48 @@ const VALID_EMAIL_DOMAINS = [
   "aol.com",
 ];
 
+// Funções de bloqueio por IP/localStorage
+const BLOCK_KEY = "passarei_test_completed";
+const BLOCK_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 dias em ms
+
+const isUserBlocked = (): boolean => {
+  try {
+    const blockData = localStorage.getItem(BLOCK_KEY);
+    if (!blockData) return false;
+
+    const { timestamp } = JSON.parse(blockData);
+    const now = Date.now();
+
+    if (now - timestamp > BLOCK_DURATION) {
+      localStorage.removeItem(BLOCK_KEY);
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const blockUser = () => {
+  try {
+    localStorage.setItem(
+      BLOCK_KEY,
+      JSON.stringify({
+        timestamp: Date.now(),
+      }),
+    );
+  } catch {
+    console.error("Erro ao salvar bloqueio");
+  }
+};
+
 export function MiniChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [selectedMaterias, setSelectedMaterias] = useState<string[]>([]);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [chatState, setChatState] = useState<ChatState>({
     step: "welcome",
     email: "",
@@ -313,8 +352,21 @@ export function MiniChat() {
     scrollToBottom();
   }, [messages, selectedMaterias]);
 
+  // Verificar bloqueio ao iniciar
   useEffect(() => {
-    if (messages.length === 0) {
+    if (isUserBlocked()) {
+      setIsBlocked(true);
+      setChatState((prev) => ({ ...prev, step: "blocked" }));
+      addBotMessage("👋 Olá! Você já utilizou suas **5 questões grátis**.");
+      setTimeout(() => {
+        addBotMessage(
+          "🎯 Para continuar estudando, escolha um de nossos planos:",
+        );
+        setTimeout(() => {
+          showOfferForBlocked();
+        }, 1000);
+      }, 1500);
+    } else if (messages.length === 0) {
       setTimeout(() => {
         addBotMessage("👋 Olá! Eu sou o Assistente Passarei!");
         setTimeout(() => {
@@ -346,6 +398,20 @@ export function MiniChat() {
       content,
       options,
       optionType,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, newMessage]);
+  };
+
+  const addOfferBlock = (
+    offerType: "benefits" | "ppu" | "veterano" | "telegram",
+    content: string,
+  ) => {
+    const newMessage: Message = {
+      id: Date.now().toString() + Math.random(),
+      type: "offer-block",
+      content,
+      offerType,
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, newMessage]);
@@ -387,7 +453,6 @@ export function MiniChat() {
   const wait = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Validação de email melhorada
   const isValidEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return false;
@@ -395,17 +460,14 @@ export function MiniChat() {
     const domain = email.split("@")[1]?.toLowerCase();
     if (!domain) return false;
 
-    // Verifica se é um domínio conhecido ou parece válido
     if (VALID_EMAIL_DOMAINS.includes(domain)) return true;
 
-    // Verifica se tem pelo menos um ponto e extensão válida
     const parts = domain.split(".");
     if (parts.length < 2) return false;
 
     const extension = parts[parts.length - 1];
     const validExtensions = [
       "com",
-      "com.br",
       "br",
       "net",
       "org",
@@ -424,7 +486,7 @@ export function MiniChat() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isTyping) return;
+    if (!inputValue.trim() || isTyping || isBlocked) return;
 
     const userInput = inputValue.trim();
     setInputValue("");
@@ -609,7 +671,7 @@ export function MiniChat() {
           addBotMessage(`✅ Nível: **${optionLabel}**`);
           setTimeout(() => {
             addBotMessage(
-              "📝 **PERGUNTA 5/8** 💚\n\nEm qual área você **JÁ TEM FACILIDADE**?\n\n_(Selecione uma ou mais e clique em Confirmar)_",
+              "📝 **PERGUNTA 5/8** 💚\n\nEm qual área você **JÁ TEM FACILIDADE**?\n\n_(Toque para selecionar, toque novamente para desmarcar)_",
             );
             setTimeout(() => {
               addBotMessage(
@@ -648,7 +710,7 @@ export function MiniChat() {
             addBotMessage(`✅ Facilidades registradas!`);
             setTimeout(() => {
               addBotMessage(
-                "📝 **PERGUNTA 6/8** 🎯\n\nEm qual área você **TEM MAIS DIFICULDADE**?\n\nVamos focar mais tempo nela!\n\n_(Selecione uma ou mais e clique em Confirmar)_",
+                "📝 **PERGUNTA 6/8** 🎯\n\nEm qual área você **TEM MAIS DIFICULDADE**?\n\nVamos focar mais tempo nela!\n\n_(Toque para selecionar, toque novamente para desmarcar)_",
               );
               setTimeout(() => {
                 addBotMessage(
@@ -761,16 +823,6 @@ export function MiniChat() {
           showResumo();
         });
         break;
-
-      case "offer":
-        if (optionId === "veterano") {
-          window.location.href = "/checkout?plan=veterano";
-        } else if (optionId === "ppu") {
-          window.location.href = "/checkout?plan=ppu";
-        } else if (optionId === "telegram") {
-          window.open("https://t.me/PassareiBot", "_blank");
-        }
-        break;
     }
   };
 
@@ -821,7 +873,7 @@ export function MiniChat() {
         showQuestion(chatState.currentQuestion);
       } else {
         addBotMessage(
-          `❌ **Ainda não foi dessa vez...**\n\n✅ **Resposta correta:** ${currentQ.opcoes[currentQ.correta]}\n\n📚 **Explicação completa:**\n${currentQ.explicacaoDetalhada}`,
+          `❌ **Ainda não foi dessa vez...**\n\n✅ **Resposta correta:** ${currentQ.opcoes[currentQ.correta]}\n\n📚 **Explicação:**\n${currentQ.explicacaoDetalhada}`,
         );
         await wait(12000);
 
@@ -905,6 +957,9 @@ export function MiniChat() {
   const finishQuiz = async () => {
     setChatState((prev) => ({ ...prev, step: "finished" }));
 
+    // Bloquear usuário após completar o teste
+    blockUser();
+
     const finalScore = actualScore;
     const percentage = Math.round((finalScore / 5) * 100);
 
@@ -935,6 +990,22 @@ export function MiniChat() {
     showOffer();
   };
 
+  const showOfferForBlocked = async () => {
+    setChatState((prev) => ({
+      ...prev,
+      step: "offer",
+      waitingForSelection: true,
+    }));
+
+    addOfferBlock("benefits", "");
+    await wait(2000);
+    addOfferBlock("ppu", "");
+    await wait(1500);
+    addOfferBlock("veterano", "");
+    await wait(1500);
+    addOfferBlock("telegram", "");
+  };
+
   const showOffer = async () => {
     setChatState((prev) => ({
       ...prev,
@@ -942,24 +1013,148 @@ export function MiniChat() {
       waitingForSelection: true,
     }));
 
-    addBotMessage(
-      `💡 **O que você ganha com o Passarei:**\n\n✅ Questões personalizadas para **${chatState.concursoLabel}**\n✅ Revisão inteligente SM2 que reforça seus pontos fracos\n✅ Explicações detalhadas por IA\n✅ Estude onde quiser: Web ou Telegram`,
-    );
-
+    addOfferBlock("benefits", "");
     await wait(3000);
+    addOfferBlock("ppu", "");
+    await wait(2000);
+    addOfferBlock("veterano", "");
+    await wait(2000);
+    addOfferBlock("telegram", "");
+  };
 
-    addBotMessage(
-      "🎁 **Escolha como deseja continuar:**",
-      [
-        { id: "veterano", label: "⭐ Plano Veterano - R$ 49,90/mês" },
-        { id: "ppu", label: "💰 Pay-per-use - R$ 0,99/questão" },
-        { id: "telegram", label: "📱 Continuar no Telegram (grátis)" },
-      ],
-      "single",
-    );
+  const handlePayment = (plan: "ppu" | "veterano") => {
+    window.location.href =
+      plan === "veterano" ? "/checkout?plan=veterano" : "/checkout?plan=ppu";
+  };
+
+  const handleTelegram = () => {
+    window.open("https://t.me/PassareiBot", "_blank");
+  };
+
+  const renderOfferBlock = (message: Message) => {
+    switch (message.offerType) {
+      case "benefits":
+        return (
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-2xl p-4 mb-3">
+            <p className="text-sm font-bold text-gray-800 mb-3">
+              💡 O que você ganha com o Passarei:
+            </p>
+            <ul className="text-xs text-gray-700 space-y-2">
+              <li className="flex items-start gap-2">
+                <span className="text-green-500">✓</span>
+                Questões personalizadas para seu concurso
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-500">✓</span>
+                Revisão inteligente SM2 que reforça pontos fracos
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-500">✓</span>
+                Explicações detalhadas por IA
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-500">✓</span>
+                Estude onde quiser: Web ou Telegram
+              </li>
+            </ul>
+          </div>
+        );
+
+      case "ppu":
+        return (
+          <div className="bg-white border-2 border-gray-200 rounded-2xl p-4 mb-3 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">💰</span>
+              <p className="font-bold text-gray-800">PLANO PAY-PER-USE</p>
+            </div>
+            <p className="text-2xl font-bold text-[#18cb96] mb-2">
+              R$ 0,99{" "}
+              <span className="text-sm font-normal text-gray-500">
+                por questão
+              </span>
+            </p>
+            <ul className="text-xs text-gray-600 space-y-1 mb-3">
+              <li>• Pague apenas o que usar</li>
+              <li>• Sem mensalidade</li>
+              <li>• Créditos não expiram</li>
+            </ul>
+            <button
+              onClick={() => handlePayment("ppu")}
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2.5 px-4 rounded-xl transition-all text-sm"
+            >
+              💳 Comprar Créditos
+            </button>
+          </div>
+        );
+
+      case "veterano":
+        return (
+          <div className="bg-gradient-to-br from-[#18cb96] to-[#14b584] rounded-2xl p-4 mb-3 shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⭐</span>
+                <p className="font-bold text-white">PLANO VETERANO</p>
+              </div>
+              <span className="bg-yellow-400 text-gray-900 text-xs font-bold px-2 py-1 rounded-full">
+                POPULAR
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-white mb-2">
+              R$ 49,90{" "}
+              <span className="text-sm font-normal text-white/80">/mês</span>
+            </p>
+            <ul className="text-xs text-white/90 space-y-1 mb-3">
+              <li>• 10 questões por dia</li>
+              <li>• Correção de redações com IA</li>
+              <li>• Todas as apostilas inclusas</li>
+              <li>• Revisão inteligente SM2</li>
+              <li>• Suporte prioritário</li>
+            </ul>
+            <button
+              onClick={() => handlePayment("veterano")}
+              className="w-full bg-white hover:bg-gray-100 text-[#18cb96] font-bold py-2.5 px-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+            >
+              <Trophy className="w-4 h-4" />
+              Assinar Agora
+            </button>
+          </div>
+        );
+
+      case "telegram":
+        return (
+          <div className="bg-[#0088cc] rounded-2xl p-4 shadow-md">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">📱</span>
+              <p className="font-bold text-white">Prefere o Telegram?</p>
+            </div>
+            <p className="text-xs text-white/80 mb-3">
+              Continue estudando gratuitamente pelo nosso bot
+            </p>
+            <button
+              onClick={handleTelegram}
+              className="w-full bg-white hover:bg-gray-100 text-[#0088cc] font-bold py-2.5 px-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Continuar no Telegram
+            </button>
+          </div>
+        );
+
+      default:
+        return null;
+    }
   };
 
   const renderMessage = (message: Message) => {
+    // Render offer blocks differently
+    if (message.type === "offer-block") {
+      return (
+        <div key={message.id} className="flex justify-start mb-2">
+          <div className="max-w-[95%]">{renderOfferBlock(message)}</div>
+        </div>
+      );
+    }
+
     const isBot =
       message.type === "bot" ||
       message.type === "options" ||
@@ -990,26 +1185,43 @@ export function MiniChat() {
           {/* Opções de seleção */}
           {message.type === "options" && message.options && (
             <div className="mt-3 space-y-2">
-              {message.options.map((option) => (
-                <button
-                  key={option.id}
-                  onClick={() => handleOptionClick(option.id, option.label)}
-                  disabled={!chatState.waitingForSelection || isTyping}
-                  className={`w-full text-left border rounded-lg px-3 py-2 text-xs font-medium transition-all disabled:opacity-50 ${
-                    message.optionType === "multi" &&
-                    selectedMaterias.includes(option.id)
-                      ? "bg-[#18cb96] text-white border-[#18cb96]"
-                      : "bg-gray-50 hover:bg-green-50 border-gray-200 hover:border-[#18cb96] text-gray-700"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+              {message.options.map((option) => {
+                const isSelected = selectedMaterias.includes(option.id);
+                return (
+                  <button
+                    key={option.id}
+                    onClick={() => handleOptionClick(option.id, option.label)}
+                    disabled={!chatState.waitingForSelection || isTyping}
+                    className={`w-full text-left border rounded-lg px-3 py-2 text-xs font-medium transition-all disabled:opacity-50 ${
+                      message.optionType === "multi" && isSelected
+                        ? "bg-[#18cb96] text-white border-[#18cb96] shadow-md"
+                        : "bg-gray-50 hover:bg-green-50 border-gray-200 hover:border-[#18cb96] text-gray-700"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {message.optionType === "multi" && (
+                        <span
+                          className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                            isSelected
+                              ? "bg-white border-white"
+                              : "border-gray-400"
+                          }`}
+                        >
+                          {isSelected && (
+                            <span className="text-[#18cb96] text-xs">✓</span>
+                          )}
+                        </span>
+                      )}
+                      {option.label}
+                    </span>
+                  </button>
+                );
+              })}
               {message.optionType === "multi" && (
                 <button
                   onClick={() => handleOptionClick("confirmar", "Confirmar")}
                   disabled={selectedMaterias.length === 0 || isTyping}
-                  className="w-full bg-[#18cb96] text-white rounded-lg px-4 py-2 text-sm font-bold hover:bg-[#14b584] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                  className="w-full bg-[#18cb96] text-white rounded-lg px-4 py-2.5 text-sm font-bold hover:bg-[#14b584] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2 shadow-md"
                 >
                   ✓ Confirmar ({selectedMaterias.length} selecionadas)
                 </button>
@@ -1102,7 +1314,7 @@ export function MiniChat() {
           </div>
 
           {/* Input - só aparece quando necessário */}
-          {showInput && (
+          {showInput && !isBlocked && (
             <form
               onSubmit={handleSubmit}
               className="p-3 bg-white border-t border-gray-200 flex-shrink-0"
@@ -1148,7 +1360,7 @@ export function MiniChat() {
         </div>
       </div>
 
-      {/* Badge de segurança - CORRIGIDO para visibilidade */}
+      {/* Badge de segurança */}
       <div className="text-center mt-4">
         <p className="text-xs text-gray-700 flex items-center justify-center gap-1 bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 mx-auto w-fit shadow-sm border border-gray-200">
           <CheckCircle2 className="w-3 h-3 text-green-600" />
