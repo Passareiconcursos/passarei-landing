@@ -14,12 +14,21 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
-  // Import dinâmico - só carrega em desenvolvimento
-  const { createServer: createViteServer, createLogger } = await import("vite");
-  const { default: viteConfig } = await import("../vite.config");
+  // Import dinâmico para não quebrar o build de produção
+  const vite = await import("vite");
   const { nanoid } = await import("nanoid");
 
-  const viteLogger = createLogger();
+  const viteLogger = vite.createLogger();
+
+  // Carregar config manualmente para evitar problemas de import
+  const viteConfig = {
+    plugins: [],
+    resolve: {
+      alias: {
+        "@": path.resolve(process.cwd(), "client", "src"),
+      },
+    },
+  };
 
   const serverOptions = {
     middlewareMode: true,
@@ -27,9 +36,9 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
-  const vite = await createViteServer({
+  const viteServer = await vite.createServer({
     ...viteConfig,
-    configFile: false,
+    configFile: path.resolve(process.cwd(), "vite.config.ts"),
     customLogger: {
       ...viteLogger,
       error: (msg, options) => {
@@ -41,27 +50,25 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
-  app.use(vite.middlewares);
+  app.use(viteServer.middlewares);
 
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
       const clientTemplate = path.resolve(
-        import.meta.dirname,
-        "..",
+        process.cwd(),
         "client",
         "index.html",
       );
-      // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
-      const page = await vite.transformIndexHtml(url, template);
+      const page = await viteServer.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
+      viteServer.ssrFixStacktrace(e as Error);
       next(e);
     }
   });
@@ -78,12 +85,9 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  // BUT ignore API routes and webhooks
   app.use("*", (req, res, next) => {
     const urlPath = req.originalUrl;
 
-    // Não interceptar rotas de API ou webhooks
     if (urlPath.startsWith("/api") || urlPath.startsWith("/webhook")) {
       return next();
     }
