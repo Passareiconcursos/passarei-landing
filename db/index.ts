@@ -1,6 +1,10 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
+import dns from "dns";
+
+// Forçar IPv4
+dns.setDefaultResultOrder("ipv4first");
 
 console.log("🔍 Verificando DATABASE_URL...");
 console.log("🔍 DATABASE_URL existe:", !!process.env.DATABASE_URL);
@@ -15,7 +19,6 @@ console.log("✅ DATABASE_URL encontrada, conectando ao banco...");
 
 const connectionString = process.env.DATABASE_URL;
 
-// Conexão PostgreSQL padrão (sem WebSocket)
 const client = postgres(connectionString, {
   max: 10,
   idle_timeout: 20,
