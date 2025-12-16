@@ -61,8 +61,10 @@ app.use((req, res, next) => {
   }
   console.log("✅ Frontend habilitado");
 
-  // Telegram Bot
-//   startTelegramBot().catch(console.error);
+  // Telegram Bot - só roda no Railway
+  if (process.env.RAILWAY_ENVIRONMENT) {
+    startTelegramBot().catch(console.error);
+  }
 
   const port = parseInt(process.env.PORT || "5000", 10);
   console.log("🚀 Tentando iniciar servidor na porta:", port);
