@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 // ============================================
 // CONSTANTES DO MODELO DE NEGÓCIO
 // ============================================
-const FREE_QUESTIONS_FIRST_DAY = 3; // Questões grátis no primeiro dia
+const FREE_QUESTIONS_FIRST_DAY = 5; // Questões grátis no primeiro dia
 const PRICE_PER_QUESTION = 0.99; // R$ 0,99 por questão
 const VETERANO_DAILY_LIMIT = 10; // 10 questões/dia para Veterano
 
@@ -221,29 +221,30 @@ export async function checkQuestionAccess(
 // MENSAGEM DE SEM CRÉDITOS
 // ============================================
 function getNoCreditsMessage(currentCredits: number): string {
-  return `🔒 *CRÉDITOS INSUFICIENTES*
+  return `🎯 *SUAS QUESTÕES GRÁTIS ACABARAM!*
 
 ━━━━━━━━━━━━━━━━
 
-💰 Seu saldo: R$ ${currentCredits.toFixed(2)}
-💳 Custo por questão: R$ ${PRICE_PER_QUESTION.toFixed(2)}
+Você aproveitou bem o teste! Agora escolha como continuar:
 
 ━━━━━━━━━━━━━━━━
 
-*OPÇÕES PARA CONTINUAR:*
+💳 *PAY-PER-USE*
+R$ 0,99 por questão
+Sem mensalidade, pague só o que usar
 
-1️⃣ *Pay-per-use*
-   R$ 0,99 por questão
-   Compre créditos via PIX
-
-2️⃣ *Plano Veterano* ⭐
-   R$ 49,90/mês
-   10 questões/dia + 2 redações grátis
-   Acesso a TODAS as apostilas
+⭐ *PLANO VETERANO* (RECOMENDADO)
+R$ 49,90/mês
+✅ 10 questões personalizadas/dia
+✅ Correção de redações com IA
+✅ Todas as apostilas inclusas
+✅ Revisão inteligente SM2
 
 ━━━━━━━━━━━━━━━━
 
-_62% mais barato que a concorrência!_`;
+_62% mais barato que a concorrência!_
+
+👇 Clique abaixo para continuar estudando:`;
 }
 
 // ============================================
