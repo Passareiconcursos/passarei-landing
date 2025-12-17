@@ -20,7 +20,7 @@ export async function getRandomContent(examType: string) {
       LIMIT 1
     `);
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       console.log(
         `⚠️  Nenhum conteúdo para ${examType}, retornando qualquer um`,
       );
@@ -31,10 +31,10 @@ export async function getRandomContent(examType: string) {
         LIMIT 1
       `);
 
-      return fallback.rows[0] || null;
+      return fallback[0] || null;
     }
 
-    return result.rows[0];
+    return result[0];
   } catch (error) {
     console.error("❌ Erro ao buscar conteúdo:", error);
     return null;
@@ -50,8 +50,8 @@ export async function createOrGetUser(telegramId: string, name: string) {
       SELECT * FROM "User" WHERE "telegramId" = ${telegramId}
     `);
 
-    if (existing.rows.length > 0) {
-      return existing.rows[0];
+    if (existing.length > 0) {
+      return existing[0];
     }
 
     const today = new Date().toISOString().split("T")[0];
@@ -95,7 +95,7 @@ export async function createOrGetUser(telegramId: string, name: string) {
     `);
 
     console.log(`✅ Novo usuário criado: ${name} (${telegramId})`);
-    return result.rows[0];
+    return result[0];
   } catch (error) {
     console.error("❌ Erro ao criar usuário:", error);
     return null;
@@ -134,7 +134,7 @@ export async function checkQuestionAccess(
       WHERE "telegramId" = ${telegramId}
     `);
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return {
         canAccess: false,
         reason: "no_credits",
@@ -142,7 +142,7 @@ export async function checkQuestionAccess(
       };
     }
 
-    const user = result.rows[0] as any;
+    const user = result[0] as any;
     const today = new Date().toISOString().split("T")[0];
     const firstDay = user.firstInteractionDate
       ? new Date(user.firstInteractionDate).toISOString().split("T")[0]
@@ -333,11 +333,11 @@ export async function getUserBalance(
       WHERE "telegramId" = ${telegramId}
     `);
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return { credits: 0, plan: "FREE", questionsToday: 0 };
     }
 
-    const user = result.rows[0] as any;
+    const user = result[0] as any;
     return {
       credits: parseFloat(user.credits) || 0,
       plan: user.plan || "FREE",
