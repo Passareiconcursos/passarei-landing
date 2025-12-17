@@ -103,9 +103,9 @@ async function getSmartContent(session: LearningSession) {
       `);
     }
 
-    if (result.rows.length > 0) {
-      console.log(`✅ Conteúdo encontrado: ${result.rows[0].title}`);
-      return result.rows[0];
+    if (result.length > 0) {
+      console.log(`✅ Conteúdo encontrado: ${result[0].title}`);
+      return result[0];
     }
 
     // Fallback: qualquer conteúdo
@@ -114,9 +114,9 @@ async function getSmartContent(session: LearningSession) {
       SELECT * FROM "Content" ORDER BY RANDOM() LIMIT 1
     `);
 
-    if (fallback.rows.length > 0) {
-      console.log(`✅ Fallback encontrado: ${fallback.rows[0].title}`);
-      return fallback.rows[0];
+    if (fallback.length > 0) {
+      console.log(`✅ Fallback encontrado: ${fallback[0].title}`);
+      return fallback[0];
     }
 
     console.log(`❌ Nenhum conteúdo no banco`);
@@ -284,8 +284,8 @@ export async function handleLearningCallback(
       SELECT "credits", "plan", "dailyContentCount", "totalQuestionsAnswered"
       FROM "User" WHERE "telegramId" = ${telegramId}
     `);
-    if (result.rows.length > 0) {
-      const user = result.rows[0] as any;
+    if (result.length > 0) {
+      const user = result[0] as any;
       await bot.sendMessage(
         chatId,
         `💰 *SALDO*\n\n💳 R$ ${(parseFloat(user.credits) || 0).toFixed(2)}\n📦 ${user.plan || "FREE"}\n📊 Hoje: ${user.dailyContentCount || 0}\n🎯 Total: ${user.totalQuestionsAnswered || 0}`,
