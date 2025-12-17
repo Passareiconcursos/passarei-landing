@@ -1,4 +1,5 @@
 import TelegramBot from "node-telegram-bot-api";
+import { generateEnhancedContent, generateExplanation } from "./ai-service";
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
 import {
@@ -185,13 +186,13 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
     content.definition ||
     content.description ||
     "Definição não disponível";
-  const keyPoints =
-    content.keyPoints ||
-    content.textContent?.substring(0, 200) ||
-    "• Conceito importante";
-  const example =
-    content.example || "Aplicação prática do conceito em provas de concurso";
-  const tip = content.tip || "Fique atento a este tema, é frequente em provas!";
+
+  // Gerar conteúdo enriquecido com IA
+  await bot.sendMessage(session.chatId, `⏳ _Preparando conteúdo personalizado..._`, { parse_mode: "Markdown" });
+  const enhanced = await generateEnhancedContent(title, definition, session.examType);
+  const keyPoints = enhanced.keyPoints;
+  const example = enhanced.example;
+  const tip = enhanced.tip;
 
   await bot.sendMessage(
     session.chatId,
@@ -310,6 +311,15 @@ export async function handleLearningCallback(
       await bot.sendMessage(session.chatId, `✅ *${fb.title}*\n\n${fb.msg}`, {
         parse_mode: "Markdown",
       });
+      // Gerar explicação com IA
+      const explanation = await generateExplanation(
+        session.currentContent.title,
+        session.currentContent.textContent || "",
+        session.currentQuestion.options[answerIdx],
+        session.currentQuestion.correctAnswer,
+        true
+      );
+      await bot.sendMessage(session.chatId, `💡 ${explanation.explanation}`, { parse_mode: "Markdown" });
     } else {
       session.wrongAnswers++;
       const fb =
@@ -319,6 +329,15 @@ export async function handleLearningCallback(
         `❌ *${fb.title}*\n\n${fb.msg}\n\n✅ Correta: ${session.currentQuestion.correctAnswer}`,
         { parse_mode: "Markdown" },
       );
+      // Gerar explicação com IA
+      const explanation = await generateExplanation(
+        session.currentContent.title,
+        session.currentContent.textContent || "",
+        session.currentQuestion.options[answerIdx],
+        session.currentQuestion.correctAnswer,
+        false
+      );
+      await bot.sendMessage(session.chatId, `📚 ${explanation.explanation}`, { parse_mode: "Markdown" });
     }
 
     await new Promise((r) => setTimeout(r, 2000));
