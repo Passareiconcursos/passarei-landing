@@ -6,7 +6,7 @@ import { sql } from "drizzle-orm";
 // ============================================
 const FREE_QUESTIONS_FIRST_DAY = 5; // Questões grátis no primeiro dia
 const PRICE_PER_QUESTION = 0.99; // R$ 0,99 por questão
-const VETERANO_DAILY_LIMIT = 10; // 10 questões/dia para Veterano
+const VETERANO_DAILY_LIMIT = 10; // 300 questões/mês para Veterano
 
 // ============================================
 // BUSCAR CONTEÚDO
@@ -231,12 +231,12 @@ Você aproveitou bem o teste! Agora escolha como continuar:
 
 💳 *PAY-PER-USE*
 R$ 0,99 por questão
-Sem mensalidade, pague só o que usar
+Depósito mínimo R$ 5,00 via PIX
 
 ⭐ *PLANO VETERANO* (RECOMENDADO)
 R$ 49,90/mês
-✅ 10 questões personalizadas/dia
-✅ Correção de redações com IA
+✅ 300 questões personalizadas/mês
+✅ 2 correções de redação/mês com IA
 ✅ Todas as apostilas inclusas
 ✅ Revisão inteligente SM2
 

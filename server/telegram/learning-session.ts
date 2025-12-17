@@ -326,11 +326,10 @@ export async function handleLearningCallback(
     const keyboard = {
       inline_keyboard: [
         [{ text: "✅ Próxima questão", callback_data: "next_question" }],
-        [{ text: "⏸️ Parar por hoje", callback_data: "stop_session" }],
       ],
     };
 
-    await bot.sendMessage(session.chatId, "O que deseja fazer?", {
+    await bot.sendMessage(session.chatId, "Pronto para a próxima questão?", {
       reply_markup: keyboard,
     });
     session.currentStep = "waiting_doubt";
