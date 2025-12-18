@@ -256,3 +256,95 @@ router.post('/webhooks/subscription', async (req: Request, res: Response) => {
 });
 
 export default router;
+
+// ============================================
+// PROCESSAR PAGAMENTO DO BRICK
+// ============================================
+
+router.post('/process-brick', async (req: Request, res: Response) => {
+  try {
+    const { token, payment_method_id, installments, telegramId, packageId, payer } = req.body;
+
+    if (!token || !telegramId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Dados de pagamento incompletos' 
+      });
+    }
+
+    // Encontrar valor do pacote
+    const pkg = CREDIT_PACKAGES.find(p => p.id === packageId);
+    const amount = pkg ? pkg.amount : (packageId === 'veterano' ? 49.90 : 5);
+
+    // Processar pagamento via API do Mercado Pago
+    const response = await fetch('https://api.mercadopago.com/v1/payments', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': `${telegramId}-${Date.now()}`,
+      },
+      body: JSON.stringify({
+        token,
+        transaction_amount: amount,
+        installments: installments || 1,
+        payment_method_id,
+        payer: {
+          email: payer?.email || 'cliente@passarei.com.br',
+        },
+        external_reference: `${telegramId}|${packageId}|${Date.now()}`,
+      }),
+    });
+
+    const paymentData = await response.json();
+    console.log('📩 Resposta do pagamento:', paymentData.status, paymentData.id);
+
+    if (paymentData.status === 'approved') {
+      // Atualizar usuário no banco
+      if (packageId === 'veterano') {
+        await db.execute(sql`
+          UPDATE "User" 
+          SET "plan" = 'VETERANO',
+              "planExpiresAt" = NOW() + INTERVAL '30 days',
+              "updatedAt" = NOW()
+          WHERE "telegramId" = ${telegramId}
+        `);
+        console.log(`✅ Plano Veterano ativado para ${telegramId}`);
+      } else {
+        const credits = amount;
+        await db.execute(sql`
+          UPDATE "User" 
+          SET "credits" = COALESCE("credits", 0) + ${credits},
+              "updatedAt" = NOW()
+          WHERE "telegramId" = ${telegramId}
+        `);
+        console.log(`✅ ${credits} créditos adicionados para ${telegramId}`);
+      }
+
+      return res.json({
+        success: true,
+        status: 'approved',
+        paymentId: paymentData.id,
+      });
+    } else if (paymentData.status === 'pending' || paymentData.status === 'in_process') {
+      return res.json({
+        success: true,
+        status: 'pending',
+        paymentId: paymentData.id,
+        message: 'Pagamento em processamento',
+      });
+    } else {
+      return res.json({
+        success: false,
+        status: paymentData.status,
+        error: paymentData.message || 'Pagamento não aprovado',
+      });
+    }
+  } catch (error: any) {
+    console.error('❌ Erro ao processar pagamento:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});

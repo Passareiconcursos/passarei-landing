@@ -1,4 +1,5 @@
 import { Switch, Route } from "wouter";
+import Checkout from "./pages/Checkout";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/educ/content" component={EducContent} />
       <Route path="/educ/notifications" component={EducNotifications} />
       <Route path="/educ/settings" component={EducSettings} />
+      <Route path="/checkout" component={Checkout} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearch } from "wouter";
 
 declare global {
   interface Window {
@@ -15,7 +15,8 @@ const PACKAGES = {
 };
 
 export default function Checkout() {
-  const [searchParams] = useSearchParams();
+  const search = window.location.search;
+  const searchParams = new URLSearchParams(search);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
