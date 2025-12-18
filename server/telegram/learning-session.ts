@@ -258,22 +258,41 @@ export async function handleLearningCallback(
   const session = activeSessions.get(telegramId);
   const data = query.data;
   const chatId = query.message?.chat.id;
-
   if (data === "buy_credits") {
     await bot.answerCallbackQuery(query.id);
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: "💰 R$ 5 (5 questões)", callback_data: "pay_credits_5" }],
+        [{ text: "💰 R$ 10 (10 questões)", callback_data: "pay_credits_10" }],
+        [{ text: "💰 R$ 20 (20 questões)", callback_data: "pay_credits_20" }],
+        [{ text: "🔙 Voltar", callback_data: "back_to_menu" }],
+      ],
+    };
     await bot.sendMessage(
       chatId,
-      `💳 *COMPRAR CRÉDITOS*\n\n• R$ 5 = 5 questões\n• R$ 10 = 10 questões\n• R$ 20 = 20 questões\n\n🔜 Em breve via PIX!`,
+      `💳 *COMPRAR CRÉDITOS*\n\nEscolha o pacote:\n\n• R$ 5,00 = 5 questões\n• R$ 10,00 = 10 questões\n• R$ 20,00 = 20 questões\n\n_Pagamento via PIX ou Cartão_`,
+      { parse_mode: "Markdown", reply_markup: keyboard },
+    );
+    return true;
+  }
+  if (data.startsWith("pay_credits_")) {
+    await bot.answerCallbackQuery(query.id);
+    const amount = data.replace("pay_credits_", "");
+    const packageId = `credits_${amount}`;
+    const appUrl = process.env.APP_URL || "https://passarei.com.br";
+    await bot.sendMessage(
+      chatId,
+      `✅ *Clique no link para pagar R$ ${amount},00:*\n\n🔗 ${appUrl}/checkout?pkg=${packageId}\&user=${telegramId}\n\n_Após o pagamento, seus créditos serão adicionados automaticamente._`,
       { parse_mode: "Markdown" },
     );
     return true;
   }
-
   if (data === "buy_veterano") {
     await bot.answerCallbackQuery(query.id);
+    const appUrl = process.env.APP_URL || "https://passarei.com.br";
     await bot.sendMessage(
       chatId,
-      `⭐ *PLANO VETERANO*\n\nR$ 49,90/mês\n✅ 10 questões/dia\n✅ 2 redações grátis\n✅ Todas apostilas\n\n🔜 Em breve!`,
+      `⭐ *PLANO VETERANO*\n\nR$ 49,90/mês\n\n✅ 300 questões personalizadas/mês\n✅ 2 correções de redação/mês com IA\n✅ Todas as apostilas inclusas\n✅ Revisão inteligente SM2\n\n🔗 Clique para assinar:\n${appUrl}/checkout?pkg=veterano\&user=${telegramId}\n\n_62% mais barato que a concorrência!_`,
       { parse_mode: "Markdown" },
     );
     return true;
