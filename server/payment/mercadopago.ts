@@ -159,3 +159,97 @@ export async function processPaymentWebhook(paymentId: string) {
     throw error;
   }
 }
+
+// ============================================
+// ASSINATURAS (PLANO VETERANO RECORRENTE)
+// ============================================
+
+interface CreateSubscriptionParams {
+  telegramId: string;
+  email: string;
+  payerName?: string;
+}
+
+// Criar assinatura recorrente do Plano Veterano
+export async function createVeteranoSubscription(params: CreateSubscriptionParams) {
+  const { telegramId, email, payerName } = params;
+  const baseUrl = process.env.APP_URL || 'https://passarei.com.br';
+
+  try {
+    const response = await fetch('https://api.mercadopago.com/preapproval', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        reason: 'Passarei - Plano Veterano',
+        auto_recurring: {
+          frequency: 1,
+          frequency_type: 'months',
+          transaction_amount: 49.90,
+          currency_id: 'BRL',
+        },
+        back_url: `${baseUrl}/assinatura/sucesso`,
+        external_reference: `${telegramId}|veterano_sub|${Date.now()}`,
+        payer_email: email,
+        status: 'pending',
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (data.id) {
+      return {
+        success: true,
+        subscriptionId: data.id,
+        initPoint: data.init_point,
+        status: data.status,
+      };
+    } else {
+      throw new Error(data.message || 'Erro ao criar assinatura');
+    }
+  } catch (error) {
+    console.error('❌ Erro ao criar assinatura:', error);
+    throw error;
+  }
+}
+
+// Verificar status da assinatura
+export async function getSubscriptionStatus(subscriptionId: string) {
+  try {
+    const response = await fetch(`https://api.mercadopago.com/preapproval/${subscriptionId}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+      },
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('❌ Erro ao verificar assinatura:', error);
+    throw error;
+  }
+}
+
+// Cancelar assinatura
+export async function cancelSubscription(subscriptionId: string) {
+  try {
+    const response = await fetch(`https://api.mercadopago.com/preapproval/${subscriptionId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        status: 'cancelled',
+      }),
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('❌ Erro ao cancelar assinatura:', error);
+    throw error;
+  }
+}

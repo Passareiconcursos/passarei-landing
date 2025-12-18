@@ -3,6 +3,9 @@ import {
   createPaymentPreference, 
   createVeteranoPreference, 
   processPaymentWebhook,
+  createVeteranoSubscription,
+  getSubscriptionStatus,
+  cancelSubscription,
   CREDIT_PACKAGES 
 } from './mercadopago';
 import { db } from '../../db';
@@ -47,7 +50,6 @@ router.post('/create-payment', async (req: Request, res: Response) => {
       email,
     });
 
-    // Usar sandbox em teste, produção depois
     const paymentUrl = process.env.NODE_ENV === 'production' 
       ? preference.initPoint 
       : preference.sandboxInitPoint;
@@ -66,7 +68,7 @@ router.post('/create-payment', async (req: Request, res: Response) => {
   }
 });
 
-// Criar pagamento para Plano Veterano
+// Criar pagamento para Plano Veterano (único)
 router.post('/create-veterano', async (req: Request, res: Response) => {
   try {
     const { telegramId, email } = req.body;
@@ -115,9 +117,7 @@ router.post('/webhooks/mercadopago', async (req: Request, res: Response) => {
         const result = await processPaymentWebhook(String(paymentId));
         
         if (result.success && result.telegramId) {
-          // Atualizar créditos do usuário
           if (result.packageId === 'veterano') {
-            // Ativar plano Veterano
             await db.execute(sql`
               UPDATE "User" 
               SET "plan" = 'VETERANO',
@@ -127,7 +127,6 @@ router.post('/webhooks/mercadopago', async (req: Request, res: Response) => {
             `);
             console.log(`✅ Plano Veterano ativado para ${result.telegramId}`);
           } else {
-            // Adicionar créditos
             const credits = result.amount || 0;
             await db.execute(sql`
               UPDATE "User" 
@@ -159,6 +158,100 @@ router.get('/status/:paymentId', async (req: Request, res: Response) => {
       success: false, 
       error: error.message 
     });
+  }
+});
+
+// ============================================
+// ASSINATURAS (PLANO VETERANO RECORRENTE)
+// ============================================
+
+// Criar assinatura do Plano Veterano
+router.post('/create-subscription', async (req: Request, res: Response) => {
+  try {
+    const { telegramId, email } = req.body;
+
+    if (!telegramId || !email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'telegramId e email são obrigatórios' 
+      });
+    }
+
+    const subscription = await createVeteranoSubscription({
+      telegramId,
+      email,
+    });
+
+    res.json({
+      success: true,
+      subscriptionId: subscription.subscriptionId,
+      paymentUrl: subscription.initPoint,
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao criar assinatura:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+// Verificar status da assinatura
+router.get('/subscription/:subscriptionId', async (req: Request, res: Response) => {
+  try {
+    const { subscriptionId } = req.params;
+    const status = await getSubscriptionStatus(subscriptionId);
+    res.json({ success: true, ...status });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Cancelar assinatura
+router.post('/subscription/:subscriptionId/cancel', async (req: Request, res: Response) => {
+  try {
+    const { subscriptionId } = req.params;
+    const result = await cancelSubscription(subscriptionId);
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Webhook para assinaturas
+router.post('/webhooks/subscription', async (req: Request, res: Response) => {
+  try {
+    const { type, data } = req.body;
+    
+    console.log('📩 Webhook de assinatura:', type, data);
+
+    if (type === 'subscription_preapproval') {
+      const subscriptionId = data?.id;
+      
+      if (subscriptionId) {
+        const subscription = await getSubscriptionStatus(String(subscriptionId));
+        
+        if (subscription.status === 'authorized') {
+          const externalRef = subscription.external_reference || '';
+          const [telegramId] = externalRef.split('|');
+          
+          await db.execute(sql`
+            UPDATE "User" 
+            SET "plan" = 'VETERANO',
+                "planExpiresAt" = NOW() + INTERVAL '30 days',
+                "updatedAt" = NOW()
+            WHERE "telegramId" = ${telegramId}
+          `);
+          
+          console.log(`✅ Assinatura Veterano ativada para ${telegramId}`);
+        }
+      }
+    }
+
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('❌ Erro no webhook de assinatura:', error);
+    res.status(500).send('Error');
   }
 });
 
