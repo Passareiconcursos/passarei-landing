@@ -265,7 +265,7 @@ router.post('/process-brick', async (req: Request, res: Response) => {
   try {
     const { token, payment_method_id, installments, telegramId, packageId, payer } = req.body;
 
-    if (!token || !telegramId) {
+    if (!telegramId) {
       return res.status(400).json({ 
         success: false, 
         error: 'Dados de pagamento incompletos' 
