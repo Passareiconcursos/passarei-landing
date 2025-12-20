@@ -40,14 +40,41 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Inicializa o servidor e as rotas base
   const server = await registerRoutes(app);
+
+  // Registra as funcionalidades do Passarei
   registerAIRoutes(app);
-  // registerPrismaRoutes(app); // DESABILITADO - usando Supabase
   registerSupabaseRoutes(app);
   registerEditalRoutes(app);
   registerMiniChatRoutes(app);
   app.use("/api/payment", paymentRoutes);
 
+  // --- BLOCO DE SEO (A NOVIDADE) ---
+  app.get("/robots.txt", (_req, res) => {
+    res.type("text/plain");
+    res.send(`User-agent: *
+Allow: /
+Sitemap: https://www.passarei.com.br/sitemap.xml`);
+  });
+
+  app.get("/sitemap.xml", async (_req, res) => {
+    res.set("Content-Type", "application/xml");
+    const today = new Date().toISOString().split("T")[0];
+    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://www.passarei.com.br/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>`;
+    res.send(sitemap);
+  });
+  // --- FIM DO BLOCO DE SEO ---
+
+  // Tratamento de erros (O "guarda-costas" do código)
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";

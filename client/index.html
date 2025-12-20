@@ -1,85 +1,144 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
   <head>
+    <!-- Google Tag Manager -->
+    <script>
+      (function (w, d, s, l, i) {
+        w[l] = w[l] || [];
+        w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+        var f = d.getElementsByTagName(s)[0],
+          j = d.createElement(s),
+          dl = l != "dataLayer" ? "&l=" + l : "";
+        j.async = true;
+        j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
+        f.parentNode.insertBefore(j, f);
+      })(window, document, "script", "dataLayer", "GTM-K6JP849X");
+    </script>
+    <!-- End Google Tag Manager -->
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>Passarei - Seu preparador pessoal para concursos policiais</title>
-    <meta name="description" content="Assistente inteligente para concursos policiais via WhatsApp. Conteúdo personalizado, repetição espaçada e aprovação garantida. Comece grátis!" />
-    <meta name="keywords" content="concurso policial, PM, PC, PRF, PF, estudos, WhatsApp, IA, passarei, preparação concursos" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1"
+    />
+    <title>Passarei | Sua Aprovação em Concursos Policiais com IA</title>
+    <meta
+      name="description"
+      content="Prepare-se para PM, PC e PRF com o método Passarei. Questões reais, conteúdo personalizado via Telegram e algoritmo SM2 de repetição espaçada. Comece agora!"
+    />
+    <link rel="canonical" href="https://www.passarei.com.br/" />
+    <meta
+      name="keywords"
+      content="concurso policial, PM, PC, PRF, PF, estudos, WhatsApp, IA, passarei, preparação concursos"
+    />
     <meta name="author" content="Passarei" />
     <meta name="robots" content="index, follow" />
     <meta name="googlebot" content="index, follow" />
-    
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://passarei.com.br/" />
-    <meta property="og:title" content="Passarei - Seu preparador pessoal para concursos policiais" />
-    <meta property="og:description" content="IA que envia o conteúdo certo, na hora certa — direto no WhatsApp" />
+    <meta
+      property="og:title"
+      content="Passarei - Seu preparador pessoal para concursos policiais"
+    />
+    <meta
+      property="og:description"
+      content="IA que envia o conteúdo certo, na hora certa — direto no WhatsApp"
+    />
     <meta property="og:image" content="https://passarei.com.br/og-image.jpg" />
     <meta property="og:locale" content="pt_BR" />
-    
+
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="https://passarei.com.br/" />
     <meta name="twitter:title" content="Passarei - Concursos Policiais" />
-    <meta name="twitter:description" content="Seu preparador pessoal via WhatsApp" />
-    <meta name="twitter:image" content="https://passarei.com.br/twitter-image.jpg" />
-    
+    <meta
+      name="twitter:description"
+      content="Seu preparador pessoal via WhatsApp"
+    />
+    <meta
+      name="twitter:image"
+      content="https://passarei.com.br/twitter-image.jpg"
+    />
+
     <!-- Geo Tags -->
     <meta name="geo.region" content="BR-ES" />
     <meta name="geo.placename" content="Vitória" />
     <meta name="geo.position" content="-20.3155;-40.3128" />
-    
+
     <!-- Favicons -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="/android-chrome-192x192.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="512x512"
+      href="/android-chrome-512x512.png"
+    />
     <meta name="theme-color" content="#18cb96" />
-    
+
     <!-- Preconnect -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+
     <!-- Google reCAPTCHA v3 -->
     <script src="https://www.google.com/recaptcha/api.js?render=6LfS8_QrAAAAAKa3k6W4o73hyFHM2qxllhbXU18K"></script>
-    
+
     <!-- Schema.org JSON-LD -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "EducationalOrganization",
-      "name": "Passarei",
-      "description": "Assistente inteligente para concursos policiais via WhatsApp",
-      "url": "https://passarei.com.br",
-      "logo": "https://passarei.com.br/logo.png",
-      "sameAs": [
-        "https://www.instagram.com/passareiconcursos/",
-        "https://www.facebook.com/profile.php?id=61582389145624",
-        "https://www.tiktok.com/@passareiconcursos",
-        "https://www.youtube.com/channel/UCrz9WwaBwcSEj_splYFsrMg",
-        "https://www.linkedin.com/company/passarei-concursos"
-      ],
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Vitória",
-        "addressRegion": "ES",
-        "addressCountry": "BR"
-      },
-      "contactPoint": {
-        "@type": "ContactPoint",
-        "telephone": "+55-27-99999-9999",
-        "contactType": "Customer Support",
-        "email": "suporte@passarei.com.br",
-        "availableLanguage": "Portuguese"
+      {
+        "@context": "https://schema.org",
+        "@type": "EducationalOrganization",
+        "name": "Passarei",
+        "description": "Assistente inteligente para concursos policiais via WhatsApp",
+        "url": "https://passarei.com.br",
+        "logo": "https://passarei.com.br/logo.png",
+        "sameAs": [
+          "https://www.instagram.com/passareiconcursos/",
+          "https://www.facebook.com/profile.php?id=61582389145624",
+          "https://www.tiktok.com/@passareiconcursos",
+          "https://www.youtube.com/channel/UCrz9WwaBwcSEj_splYFsrMg",
+          "https://www.linkedin.com/company/passarei-concursos"
+        ],
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Vitória",
+          "addressRegion": "ES",
+          "addressCountry": "BR"
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+55-27-99999-9999",
+          "contactType": "Customer Support",
+          "email": "suporte@passarei.com.br",
+          "availableLanguage": "Portuguese"
+        }
       }
-    }
     </script>
   </head>
   <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript
+      ><iframe
+        src="https://www.googletagmanager.com/ns.html?id=GTM-K6JP849X"
+        height="0"
+        width="0"
+        style="display: none; visibility: hidden"
+      ></iframe
+    ></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

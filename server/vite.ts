@@ -14,13 +14,18 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
-  // Import dinâmico para não quebrar o build de produção
+  // Importação simplificada para evitar conflitos de cache do Replit
   const vite = await import("vite");
   const { nanoid } = await import("nanoid");
 
-  const viteLogger = vite.createLogger();
+  // Captura as funções de qualquer lugar (default ou root)
+  const createServer = vite.createServer || (vite as any).default?.createServer;
+  const createLogger = vite.createLogger || (vite as any).default?.createLogger;
 
-  // Carregar config manualmente para evitar problemas de import
+  // Se o ambiente estiver muito restrito, usamos o logger padrão do console
+  const viteLogger =
+    typeof createLogger === "function" ? createLogger() : console;
+
   const viteConfig = {
     plugins: [],
     resolve: {
@@ -30,23 +35,24 @@ export async function setupVite(app: Express, server: Server) {
     },
   };
 
-  const serverOptions = {
-    middlewareMode: true,
-    hmr: { server },
-    allowedHosts: true as const,
-  };
+  // Se não conseguirmos criar o servidor Vite, o app não quebra, mas avisamos
+  if (typeof createServer !== "function") {
+    log(
+      "Aviso: Ambiente de desenvolvimento limitado. Servindo arquivos estáticos.",
+      "vite",
+    );
+    return;
+  }
 
-  const viteServer = await vite.createServer({
+  const viteServer = await createServer({
     ...viteConfig,
     configFile: path.resolve(process.cwd(), "vite.config.ts"),
-    customLogger: {
-      ...viteLogger,
-      error: (msg, options) => {
-        viteLogger.error(msg, options);
-        process.exit(1);
-      },
+    customLogger: viteLogger as any,
+    server: {
+      middlewareMode: true,
+      hmr: { server },
+      allowedHosts: true,
     },
-    server: serverOptions,
     appType: "custom",
   });
 
@@ -61,10 +67,12 @@ export async function setupVite(app: Express, server: Server) {
         "index.html",
       );
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
+
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
+
       const page = await viteServer.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
@@ -75,23 +83,19 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
+  const distPath = path.resolve(process.cwd(), "dist", "public");
 
   if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
+    // Se não houver build, servimos a pasta public raiz como fallback
+    app.use(express.static(path.resolve(process.cwd(), "public")));
+    return;
   }
 
   app.use(express.static(distPath));
-
   app.use("*", (req, res, next) => {
     const urlPath = req.originalUrl;
-
-    if (urlPath.startsWith("/api") || urlPath.startsWith("/webhook")) {
+    if (urlPath.startsWith("/api") || urlPath.startsWith("/webhook"))
       return next();
-    }
-
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

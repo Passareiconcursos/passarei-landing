@@ -495,7 +495,13 @@ export function MiniChat() {
     if (chatState.step === "email") {
       if (isValidEmail(userInput)) {
         setChatState((prev) => ({ ...prev, email: userInput }));
-
+        // Adicione isto para notificar o Google Tag Manager
+        (window as any).dataLayer = (window as any).dataLayer || [];
+        (window as any).dataLayer.push({
+          event: "onboarding_step",
+          step_number: currentStep, // ou a variável que indica a fase atual
+          step_name: "Pergunta Onboarding",
+        });
         try {
           await fetch("/api/minichat/start", {
             method: "POST",
@@ -573,7 +579,13 @@ export function MiniChat() {
 
   const handleOptionClick = async (optionId: string, optionLabel: string) => {
     if (isTyping || !chatState.waitingForSelection) return;
-
+    // Adicione isto para notificar o Google Tag Manager
+    (window as any).dataLayer = (window as any).dataLayer || [];
+    (window as any).dataLayer.push({
+      event: "onboarding_step",
+      step_number: currentStep, // ou a variável que indica a fase atual
+      step_name: "Pergunta Onboarding",
+    });
     switch (chatState.step) {
       case "onboarding_concurso":
         addUserMessage(optionLabel);
@@ -985,7 +997,13 @@ export function MiniChat() {
     addBotMessage(
       `${emoji} **RESULTADO FINAL**\n\n📊 Você acertou **${finalScore}/5** questões (**${percentage}%**)\n\n${message}`,
     );
-
+    // Adicione isto para notificar o Google Tag Manager
+    (window as any).dataLayer = (window as any).dataLayer || [];
+    (window as any).dataLayer.push({
+      event: "onboarding_step",
+      step_number: currentStep, // ou a variável que indica a fase atual
+      step_name: "Pergunta Onboarding",
+    });
     await wait(3000);
     showOffer();
   };
