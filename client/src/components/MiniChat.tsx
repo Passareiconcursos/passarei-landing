@@ -180,6 +180,7 @@ const HORARIO_ESTUDO = [
   { id: "flexivel", label: "🔄 Horários variados" },
 ];
 
+// Questões
 const QUESTOES_EXEMPLO = [
   {
     pergunta:
@@ -254,18 +255,46 @@ const QUESTOES_EXEMPLO = [
   },
 ];
 
+// Domínios de email válidos
+const VALID_EMAIL_DOMAINS = [
+  "gmail.com",
+  "hotmail.com",
+  "outlook.com",
+  "yahoo.com",
+  "yahoo.com.br",
+  "icloud.com",
+  "live.com",
+  "msn.com",
+  "uol.com.br",
+  "bol.com.br",
+  "terra.com.br",
+  "globo.com",
+  "ig.com.br",
+  "oi.com.br",
+  "r7.com",
+  "zipmail.com.br",
+  "protonmail.com",
+  "mail.com",
+  "aol.com",
+];
+
+// Funções de bloqueio por IP/localStorage
 const BLOCK_KEY = "passarei_test_completed";
-const BLOCK_DURATION = 30 * 24 * 60 * 60 * 1000;
+const BLOCK_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 dias em ms
 
 const isUserBlocked = (): boolean => {
   try {
     const blockData = localStorage.getItem(BLOCK_KEY);
     if (!blockData) return false;
+
     const { timestamp } = JSON.parse(blockData);
-    if (Date.now() - timestamp > BLOCK_DURATION) {
+    const now = Date.now();
+
+    if (now - timestamp > BLOCK_DURATION) {
       localStorage.removeItem(BLOCK_KEY);
       return false;
     }
+
     return true;
   } catch {
     return false;
@@ -274,7 +303,12 @@ const isUserBlocked = (): boolean => {
 
 const blockUser = () => {
   try {
-    localStorage.setItem(BLOCK_KEY, JSON.stringify({ timestamp: Date.now() }));
+    localStorage.setItem(
+      BLOCK_KEY,
+      JSON.stringify({
+        timestamp: Date.now(),
+      }),
+    );
   } catch {
     console.error("Erro ao salvar bloqueio");
   }
@@ -318,6 +352,7 @@ export function MiniChat() {
     scrollToBottom();
   }, [messages, selectedMaterias]);
 
+  // Verificar bloqueio ao iniciar
   useEffect(() => {
     if (isUserBlocked()) {
       setIsBlocked(true);
@@ -418,8 +453,36 @@ export function MiniChat() {
   const wait = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
-  const isValidEmail = (email: string) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return false;
+
+    const domain = email.split("@")[1]?.toLowerCase();
+    if (!domain) return false;
+
+    if (VALID_EMAIL_DOMAINS.includes(domain)) return true;
+
+    const parts = domain.split(".");
+    if (parts.length < 2) return false;
+
+    const extension = parts[parts.length - 1];
+    const validExtensions = [
+      "com",
+      "br",
+      "net",
+      "org",
+      "edu",
+      "gov",
+      "io",
+      "co",
+    ];
+
+    return validExtensions.includes(extension) || extension.length >= 2;
+  };
+
+  const isValidEstado = (estado: string) => {
+    return ESTADOS.includes(estado.toUpperCase());
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -432,13 +495,13 @@ export function MiniChat() {
     if (chatState.step === "email") {
       if (isValidEmail(userInput)) {
         setChatState((prev) => ({ ...prev, email: userInput }));
-        // GTM FIX: Usando chatState.step
+        // Adicione isto para notificar o Google Tag Manager
         (window as any).dataLayer = (window as any).dataLayer || [];
         (window as any).dataLayer.push({
           event: "onboarding_step",
-          step_name: chatState.step,
+          step_number: currentStep, // ou a variável que indica a fase atual
+          step_name: "Pergunta Onboarding",
         });
-
         try {
           await fetch("/api/minichat/start", {
             method: "POST",
@@ -474,14 +537,15 @@ export function MiniChat() {
       } else {
         simulateTyping(() => {
           addBotMessage(
-            "❌ E-mail inválido. Por favor, digite um e-mail válido:",
+            "❌ E-mail inválido. Por favor, digite um e-mail válido (ex: seunome@gmail.com):",
           );
         }, 500);
       }
     } else if (chatState.step === "onboarding_estado") {
-      const estadoUpper = userInput.toUpperCase();
-      if (ESTADOS.includes(estadoUpper)) {
+      if (isValidEstado(userInput)) {
+        const estadoUpper = userInput.toUpperCase();
         setChatState((prev) => ({ ...prev, estado: estadoUpper }));
+
         simulateTyping(() => {
           addBotMessage(`✅ Estado: **${estadoUpper}**`);
           setTimeout(() => {
@@ -515,29 +579,32 @@ export function MiniChat() {
 
   const handleOptionClick = async (optionId: string, optionLabel: string) => {
     if (isTyping || !chatState.waitingForSelection) return;
-
-    // GTM FIX: Usando chatState.step
+    // Adicione isto para notificar o Google Tag Manager
     (window as any).dataLayer = (window as any).dataLayer || [];
     (window as any).dataLayer.push({
       event: "onboarding_step",
-      step_name: chatState.step,
+      step_number: currentStep, // ou a variável que indica a fase atual
+      step_name: "Pergunta Onboarding",
     });
-
     switch (chatState.step) {
       case "onboarding_concurso":
         addUserMessage(optionLabel);
-        const conc = CONCURSOS.find((c) => c.id === optionId);
-        if (!conc) return;
+        const concursoSelecionado = CONCURSOS.find((c) => c.id === optionId);
+        if (!concursoSelecionado) return;
+
         setChatState((prev) => ({
           ...prev,
           concurso: optionId,
-          concursoLabel: conc.label,
+          concursoLabel: concursoSelecionado.label,
           waitingForSelection: false,
         }));
+
+        const isFederal = concursoSelecionado.group === "Federal";
+
         simulateTyping(() => {
           addBotMessage(`✅ ${optionLabel}`);
           setTimeout(() => {
-            if (conc.group === "Federal") {
+            if (isFederal) {
               setChatState((prev) => ({ ...prev, estado: "NACIONAL" }));
               addBotMessage(
                 "📝 **PERGUNTA 2/8** 📍\n\n🇧🇷 **Abrangência: NACIONAL**\n\nConcursos federais têm validade em todo o território brasileiro!",
@@ -581,6 +648,7 @@ export function MiniChat() {
           cargo: optionLabel,
           waitingForSelection: false,
         }));
+
         simulateTyping(() => {
           addBotMessage(`✅ Cargo: **${optionLabel}**`);
           setTimeout(() => {
@@ -607,14 +675,15 @@ export function MiniChat() {
         addUserMessage(optionLabel);
         setChatState((prev) => ({
           ...prev,
-          nivel: optionLabel,
+          nivel: optionId,
           waitingForSelection: false,
         }));
+
         simulateTyping(() => {
           addBotMessage(`✅ Nível: **${optionLabel}**`);
           setTimeout(() => {
             addBotMessage(
-              "📝 **PERGUNTA 5/8** 💚\n\nEm qual área você **JÁ TEM FACILIDADE**?",
+              "📝 **PERGUNTA 5/8** 💚\n\nEm qual área você **JÁ TEM FACILIDADE**?\n\n_(Toque para selecionar, toque novamente para desmarcar)_",
             );
             setTimeout(() => {
               addBotMessage(
@@ -648,11 +717,12 @@ export function MiniChat() {
             waitingForSelection: false,
           }));
           setSelectedMaterias([]);
+
           simulateTyping(() => {
             addBotMessage(`✅ Facilidades registradas!`);
             setTimeout(() => {
               addBotMessage(
-                "📝 **PERGUNTA 6/8** 🎯\n\nEm qual área você **TEM MAIS DIFICULDADE**?",
+                "📝 **PERGUNTA 6/8** 🎯\n\nEm qual área você **TEM MAIS DIFICULDADE**?\n\nVamos focar mais tempo nela!\n\n_(Toque para selecionar, toque novamente para desmarcar)_",
               );
               setTimeout(() => {
                 addBotMessage(
@@ -693,6 +763,7 @@ export function MiniChat() {
             waitingForSelection: false,
           }));
           setSelectedMaterias([]);
+
           simulateTyping(() => {
             addBotMessage(`✅ Vamos focar nessas áreas!`);
             setTimeout(() => {
@@ -726,14 +797,15 @@ export function MiniChat() {
         addUserMessage(optionLabel);
         setChatState((prev) => ({
           ...prev,
-          tempoProva: optionLabel,
+          tempoProva: optionId,
           waitingForSelection: false,
         }));
+
         simulateTyping(() => {
           addBotMessage(`✅ Tempo: **${optionLabel}**`);
           setTimeout(() => {
             addBotMessage(
-              "📝 **PERGUNTA 8/8** ⏰\n\nQuando você **PREFERE ESTUDAR**?",
+              "📝 **PERGUNTA 8/8** ⏰\n\nQuando você **PREFERE ESTUDAR**?\n\nEnviaremos conteúdo automaticamente nesses horários!",
             );
             setTimeout(() => {
               addBotMessage(
@@ -755,9 +827,10 @@ export function MiniChat() {
         addUserMessage(optionLabel);
         setChatState((prev) => ({
           ...prev,
-          horarioEstudo: optionLabel,
+          horarioEstudo: optionId,
           waitingForSelection: false,
         }));
+
         simulateTyping(() => {
           showResumo();
         });
@@ -765,21 +838,92 @@ export function MiniChat() {
     }
   };
 
+  const handleQuestionAnswer = async (selectedIndex: number) => {
+    if (isTyping || chatState.step !== "questions") return;
+
+    const currentQ = QUESTOES_EXEMPLO[chatState.currentQuestion];
+    const isCorrect = selectedIndex === currentQ.correta;
+
+    addUserMessage(currentQ.opcoes[selectedIndex]);
+    setIsTyping(true);
+
+    await wait(1000);
+    setIsTyping(false);
+
+    if (isCorrect) {
+      setActualScore((prev) => prev + 1);
+      addBotMessage(`✅ **CORRETO!** 🎉\n\n${currentQ.explicacaoBreve}`);
+
+      await wait(8000);
+      addBotMessage("📚 Próxima questão chegando...");
+      await wait(4000);
+
+      const nextQuestion = chatState.currentQuestion + 1;
+      if (nextQuestion < 5) {
+        setChatState((prev) => ({
+          ...prev,
+          currentQuestion: nextQuestion,
+          retryCount: 0,
+        }));
+        showQuestion(nextQuestion);
+      } else {
+        finishQuiz();
+      }
+    } else {
+      const retryCount = chatState.retryCount;
+
+      if (retryCount === 0) {
+        addBotMessage(
+          `❌ **Incorreto!**\n\n💡 Dica: ${currentQ.explicacaoBreve}`,
+        );
+        await wait(12000);
+        addBotMessage(
+          "🔄 **Vamos tentar novamente?**\n\nReleia a questão com atenção:",
+        );
+        setChatState((prev) => ({ ...prev, retryCount: 1 }));
+        await wait(3000);
+        showQuestion(chatState.currentQuestion);
+      } else {
+        addBotMessage(
+          `❌ **Ainda não foi dessa vez...**\n\n✅ **Resposta correta:** ${currentQ.opcoes[currentQ.correta]}\n\n📚 **Explicação:**\n${currentQ.explicacaoDetalhada}`,
+        );
+        await wait(12000);
+
+        const nextQuestion = chatState.currentQuestion + 1;
+        if (nextQuestion < 5) {
+          addBotMessage("📚 Vamos para a próxima questão...");
+          await wait(4000);
+          setChatState((prev) => ({
+            ...prev,
+            currentQuestion: nextQuestion,
+            retryCount: 0,
+          }));
+          showQuestion(nextQuestion);
+        } else {
+          finishQuiz();
+        }
+      }
+    }
+  };
+
   const showResumo = () => {
     setChatState((prev) => ({ ...prev, step: "resumo" }));
-    const s = chatState;
-    const fac = s.facilidade
+
+    const state = chatState;
+    const facilidadeLabels = state.facilidade
       .map((f) => MATERIAS.find((m) => m.id === f)?.label || f)
       .join(", ");
-    const dif = s.dificuldade
+    const dificuldadeLabels = state.dificuldade
       .map((d) => MATERIAS.find((m) => m.id === d)?.label || d)
       .join(", ");
 
     addBotMessage("🎉 **PERFIL CRIADO COM SUCESSO!**");
+
     setTimeout(() => {
       addBotMessage(
-        `📋 **RESUMO DO SEU PLANO DE ESTUDOS:**\n\n🎯 Concurso: **${s.concursoLabel}**\n📍 Local: **${s.estado}**\n👮 Cargo: **${s.cargo}**\n📊 Nível: **${s.nivel}**\n💚 Facilidades: ${fac || "Nenhuma"}\n🎯 Focar em: ${dif || "Nenhuma"}\n📅 Tempo: **${s.tempoProva}**\n⏰ Horário: **${s.horarioEstudo}**\n\n━━━━━━━━━━━━━━━━`,
+        `📋 **RESUMO DO SEU PLANO DE ESTUDOS:**\n\n🎯 Concurso: **${state.concursoLabel}**\n📍 Local: **${state.estado}**\n👮 Cargo: **${state.cargo}**\n📊 Nível: **${state.nivel}**\n💚 Facilidades: ${facilidadeLabels || "Nenhuma"}\n🎯 Focar em: ${dificuldadeLabels || "Nenhuma"}\n📅 Tempo: **${state.tempoProva}**\n⏰ Horário: **${state.horarioEstudo}**\n\n━━━━━━━━━━━━━━━━`,
       );
+
       setTimeout(() => {
         addBotMessage(
           "🎁 Você tem **5 questões GRÁTIS** agora!\n\n⏳ Preparando suas questões personalizadas...",
@@ -799,7 +943,11 @@ export function MiniChat() {
       retryCount: 0,
     }));
     setActualScore(0);
-    addBotMessage("🚀 **Começando suas questões!**");
+
+    addBotMessage(
+      "🚀 **Começando suas questões!**\n\n📚 Leia com atenção e escolha a alternativa correta.",
+    );
+
     setTimeout(() => {
       showQuestion(0);
     }, 2000);
@@ -807,91 +955,57 @@ export function MiniChat() {
 
   const showQuestion = (index: number) => {
     const question = QUESTOES_EXEMPLO[index];
+    const retryText = chatState.retryCount > 0 ? " _(2ª tentativa)_" : "";
+
     simulateTyping(() => {
       addQuestionMessage(
-        `📝 **QUESTÃO ${index + 1}/5**\n\n${question.pergunta}`,
+        `📝 **QUESTÃO ${index + 1}/5**${retryText}\n\n${question.pergunta}`,
         question.opcoes,
         question.correta,
       );
     }, 1500);
   };
 
-  const handleQuestionAnswer = async (selectedIndex: number) => {
-    if (isTyping || chatState.step !== "questions") return;
-    const currentQ = QUESTOES_EXEMPLO[chatState.currentQuestion];
-    const isCorrect = selectedIndex === currentQ.correta;
-    addUserMessage(currentQ.opcoes[selectedIndex]);
-    setIsTyping(true);
-    await wait(1000);
-    setIsTyping(false);
-
-    if (isCorrect) {
-      setActualScore((prev) => prev + 1);
-      addBotMessage(`✅ **CORRETO!** 🎉\n\n${currentQ.explicacaoBreve}`);
-      await wait(4000);
-      const next = chatState.currentQuestion + 1;
-      if (next < 5) {
-        setChatState((p) => ({ ...p, currentQuestion: next, retryCount: 0 }));
-        showQuestion(next);
-      } else {
-        finishQuiz();
-      }
-    } else {
-      if (chatState.retryCount === 0) {
-        addBotMessage(
-          `❌ **Incorreto!**\n\n💡 Dica: ${currentQ.explicacaoBreve}`,
-        );
-        setChatState((p) => ({ ...p, retryCount: 1 }));
-        await wait(3000);
-        showQuestion(chatState.currentQuestion);
-      } else {
-        addBotMessage(
-          `❌ **Ainda não...**\n\n✅ Resposta: ${currentQ.opcoes[currentQ.correta]}\n\n📚 Explicação: ${currentQ.explicacaoDetalhada}`,
-        );
-        await wait(6000);
-        const next = chatState.currentQuestion + 1;
-        if (next < 5) {
-          setChatState((p) => ({ ...p, currentQuestion: next, retryCount: 0 }));
-          showQuestion(next);
-        } else {
-          finishQuiz();
-        }
-      }
-    }
-  };
-
   const finishQuiz = async () => {
     setChatState((prev) => ({ ...prev, step: "finished" }));
+
+    // Bloquear usuário após completar o teste
     blockUser();
+
     const finalScore = actualScore;
     const percentage = Math.round((finalScore / 5) * 100);
 
+    let emoji = "🎉";
+    let message = "";
+
+    if (percentage >= 80) {
+      emoji = "🏆";
+      message = "Excelente! Você está muito bem preparado!";
+    } else if (percentage >= 60) {
+      emoji = "👏";
+      message = "Muito bom! Continue assim!";
+    } else if (percentage >= 40) {
+      emoji = "💪";
+      message = "Bom começo! Com o Passarei você vai evoluir rapidamente!";
+    } else {
+      emoji = "📚";
+      message =
+        "Não desanime! Todo expert já foi iniciante. Vamos juntos nessa jornada!";
+    }
+
+    await wait(1500);
+    addBotMessage(
+      `${emoji} **RESULTADO FINAL**\n\n📊 Você acertou **${finalScore}/5** questões (**${percentage}%**)\n\n${message}`,
+    );
+    // Adicione isto para notificar o Google Tag Manager
     (window as any).dataLayer = (window as any).dataLayer || [];
     (window as any).dataLayer.push({
-      event: "quiz_completed",
-      score: finalScore,
+      event: "onboarding_step",
+      step_number: currentStep, // ou a variável que indica a fase atual
+      step_name: "Pergunta Onboarding",
     });
-
-    addBotMessage(
-      `🏆 **RESULTADO FINAL**\n\n📊 Você acertou **${finalScore}/5** (${percentage}%)`,
-    );
     await wait(3000);
     showOffer();
-  };
-
-  const showOffer = async () => {
-    setChatState((prev) => ({
-      ...prev,
-      step: "offer",
-      waitingForSelection: true,
-    }));
-    addOfferBlock("benefits", "");
-    await wait(2000);
-    addOfferBlock("ppu", "");
-    await wait(1500);
-    addOfferBlock("veterano", "");
-    await wait(1500);
-    addOfferBlock("telegram", "");
   };
 
   const showOfferForBlocked = async () => {
@@ -900,6 +1014,7 @@ export function MiniChat() {
       step: "offer",
       waitingForSelection: true,
     }));
+
     addOfferBlock("benefits", "");
     await wait(2000);
     addOfferBlock("ppu", "");
@@ -909,125 +1024,369 @@ export function MiniChat() {
     addOfferBlock("telegram", "");
   };
 
-  return (
-    <div className="flex flex-col h-[600px] bg-white rounded-xl shadow-2xl overflow-hidden border border-gray-200">
-      <div className="bg-[#18cb96] p-4 text-white font-bold flex justify-between items-center shadow-md">
-        <div className="flex items-center gap-2">
-          <Sparkles size={20} />
-          <span>ASSISTENTE PASSAREI</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-          <span className="text-[10px] opacity-80 uppercase tracking-widest">
-            IA Ativa
-          </span>
-        </div>
-      </div>
+  const showOffer = async () => {
+    setChatState((prev) => ({
+      ...prev,
+      step: "offer",
+      waitingForSelection: true,
+    }));
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#f8fafc]">
-        {messages.map((m) => (
-          <div
-            key={m.id}
-            className={`flex ${m.type === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[90%] p-4 rounded-2xl shadow-sm ${m.type === "user" ? "bg-[#18cb96] text-white rounded-tr-none" : "bg-white text-gray-800 border border-gray-100 rounded-tl-none"}`}
-            >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                {m.content}
-              </p>
+    addOfferBlock("benefits", "");
+    await wait(3000);
+    addOfferBlock("ppu", "");
+    await wait(2000);
+    addOfferBlock("veterano", "");
+    await wait(2000);
+    addOfferBlock("telegram", "");
+  };
 
-              {m.type === "options" && m.options && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {m.options.map((opt) => (
-                    <button
-                      key={opt.id}
-                      onClick={() => handleOptionClick(opt.id, opt.label)}
-                      className={`text-xs px-4 py-2.5 rounded-xl border transition-all font-medium ${selectedMaterias.includes(opt.id) ? "bg-[#18cb96] text-white border-[#18cb96]" : "bg-gray-50 text-gray-700 border-gray-200 hover:border-[#18cb96]"}`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                  {m.optionType === "multi" && (
-                    <button
-                      onClick={() =>
-                        handleOptionClick("confirmar", "Confirmar")
-                      }
-                      className="text-xs px-6 py-2.5 rounded-xl bg-gray-800 text-white w-full mt-2 font-bold"
-                    >
-                      Confirmar Escolhas
-                    </button>
-                  )}
-                </div>
-              )}
+  const handlePayment = (plan: "ppu" | "veterano") => {
+    window.location.href =
+      plan === "veterano" ? "/checkout?plan=veterano" : "/checkout?plan=ppu";
+  };
 
-              {m.type === "question" && m.questionOptions && (
-                <div className="mt-4 space-y-2">
-                  {m.questionOptions.map((opt, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleQuestionAnswer(i)}
-                      className="w-full text-left text-xs p-4 rounded-xl border border-gray-200 bg-gray-50 hover:bg-green-50 transition-all"
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              )}
+  const handleTelegram = () => {
+    window.open("https://t.me/PassareiBot", "_blank");
+  };
 
-              {m.type === "offer-block" && (
-                <div className="mt-3">
-                  <button
-                    onClick={() => (window.location.href = "/checkout")}
-                    className="w-full bg-[#18cb96] text-white py-4 rounded-xl font-black text-sm shadow-lg uppercase tracking-tight"
-                  >
-                    {m.offerType === "telegram"
-                      ? "Entrar no Grupo VIP Telegram 📱"
-                      : "Liberar Meu Plano de Estudos 🚀"}
-                  </button>
-                </div>
-              )}
-            </div>
+  const renderOfferBlock = (message: Message) => {
+    switch (message.offerType) {
+      case "benefits":
+        return (
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-2xl p-4 mb-3">
+            <p className="text-sm font-bold text-gray-800 mb-3">
+              💡 O que você ganha com o Passarei:
+            </p>
+            <ul className="text-xs text-gray-700 space-y-2">
+              <li className="flex items-start gap-2">
+                <span className="text-green-500">✓</span>
+                Questões personalizadas para seu concurso
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-500">✓</span>
+                Revisão inteligente SM2 que reforça pontos fracos
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-500">✓</span>
+                Explicações detalhadas por IA
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-500">✓</span>
+                Estude onde quiser: Web ou Telegram
+              </li>
+            </ul>
           </div>
-        ))}
-        {isTyping && (
-          <div className="flex justify-start">
-            <div className="bg-white border p-3 rounded-2xl rounded-tl-none flex gap-1 items-center shadow-sm">
-              <Loader2 size={14} className="animate-spin text-[#18cb96]" />
-              <span className="text-[10px] text-gray-400 font-medium">
-                Digitando...
+        );
+
+      case "ppu":
+        return (
+          <div className="bg-white border-2 border-gray-200 rounded-2xl p-4 mb-3 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">💰</span>
+              <p className="font-bold text-gray-800">PLANO PAY-PER-USE</p>
+            </div>
+            <p className="text-2xl font-bold text-[#18cb96] mb-2">
+              R$ 0,99{" "}
+              <span className="text-sm font-normal text-gray-500">
+                por questão
+              </span>
+            </p>
+            <ul className="text-xs text-gray-600 space-y-1 mb-3">
+              <li>• Pague apenas o que usar</li>
+              <li>• Sem mensalidade</li>
+              <li>• Créditos não expiram</li>
+            </ul>
+            <button
+              onClick={() => handlePayment("ppu")}
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2.5 px-4 rounded-xl transition-all text-sm"
+            >
+              💳 Comprar Créditos
+            </button>
+          </div>
+        );
+
+      case "veterano":
+        return (
+          <div className="bg-gradient-to-br from-[#18cb96] to-[#14b584] rounded-2xl p-4 mb-3 shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⭐</span>
+                <p className="font-bold text-white">PLANO VETERANO</p>
+              </div>
+              <span className="bg-yellow-400 text-gray-900 text-xs font-bold px-2 py-1 rounded-full">
+                POPULAR
               </span>
             </div>
+            <p className="text-2xl font-bold text-white mb-2">
+              R$ 49,90{" "}
+              <span className="text-sm font-normal text-white/80">/mês</span>
+            </p>
+            <ul className="text-xs text-white/90 space-y-1 mb-3">
+              <li>• 10 questões por dia</li>
+              <li>• Correção de redações com IA</li>
+              <li>• Todas as apostilas inclusas</li>
+              <li>• Revisão inteligente SM2</li>
+              <li>• Suporte prioritário</li>
+            </ul>
+            <button
+              onClick={() => handlePayment("veterano")}
+              className="w-full bg-white hover:bg-gray-100 text-[#18cb96] font-bold py-2.5 px-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+            >
+              <Trophy className="w-4 h-4" />
+              Assinar Agora
+            </button>
           </div>
-        )}
-        <div ref={messagesEndRef} />
+        );
+
+      case "telegram":
+        return (
+          <div className="bg-[#0088cc] rounded-2xl p-4 shadow-md">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">📱</span>
+              <p className="font-bold text-white">Prefere o Telegram?</p>
+            </div>
+            <p className="text-xs text-white/80 mb-3">
+              Continue estudando gratuitamente pelo nosso bot
+            </p>
+            <button
+              onClick={handleTelegram}
+              className="w-full bg-white hover:bg-gray-100 text-[#0088cc] font-bold py-2.5 px-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Continuar no Telegram
+            </button>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const renderMessage = (message: Message) => {
+    // Render offer blocks differently
+    if (message.type === "offer-block") {
+      return (
+        <div key={message.id} className="flex justify-start mb-2">
+          <div className="max-w-[95%]">{renderOfferBlock(message)}</div>
+        </div>
+      );
+    }
+
+    const isBot =
+      message.type === "bot" ||
+      message.type === "options" ||
+      message.type === "question";
+
+    return (
+      <div
+        key={message.id}
+        className={`flex ${isBot ? "justify-start" : "justify-end"} mb-3`}
+      >
+        <div
+          className={`max-w-[90%] rounded-2xl px-4 py-2.5 shadow-sm ${
+            isBot
+              ? "bg-white border border-gray-100 rounded-tl-sm"
+              : "bg-[#18cb96] text-white rounded-tr-sm"
+          }`}
+        >
+          <p
+            className={`text-sm whitespace-pre-line leading-relaxed ${isBot ? "text-gray-800" : "text-white"}`}
+          >
+            {message.content
+              .split("**")
+              .map((part, i) =>
+                i % 2 === 1 ? <strong key={i}>{part}</strong> : part,
+              )}
+          </p>
+
+          {/* Opções de seleção */}
+          {message.type === "options" && message.options && (
+            <div className="mt-3 space-y-2">
+              {message.options.map((option) => {
+                const isSelected = selectedMaterias.includes(option.id);
+                return (
+                  <button
+                    key={option.id}
+                    onClick={() => handleOptionClick(option.id, option.label)}
+                    disabled={!chatState.waitingForSelection || isTyping}
+                    className={`w-full text-left border rounded-lg px-3 py-2 text-xs font-medium transition-all disabled:opacity-50 ${
+                      message.optionType === "multi" && isSelected
+                        ? "bg-[#18cb96] text-white border-[#18cb96] shadow-md"
+                        : "bg-gray-50 hover:bg-green-50 border-gray-200 hover:border-[#18cb96] text-gray-700"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {message.optionType === "multi" && (
+                        <span
+                          className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                            isSelected
+                              ? "bg-white border-white"
+                              : "border-gray-400"
+                          }`}
+                        >
+                          {isSelected && (
+                            <span className="text-[#18cb96] text-xs">✓</span>
+                          )}
+                        </span>
+                      )}
+                      {option.label}
+                    </span>
+                  </button>
+                );
+              })}
+              {message.optionType === "multi" && (
+                <button
+                  onClick={() => handleOptionClick("confirmar", "Confirmar")}
+                  disabled={selectedMaterias.length === 0 || isTyping}
+                  className="w-full bg-[#18cb96] text-white rounded-lg px-4 py-2.5 text-sm font-bold hover:bg-[#14b584] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2 shadow-md"
+                >
+                  ✓ Confirmar ({selectedMaterias.length} selecionadas)
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Opções de questão */}
+          {message.type === "question" && message.questionOptions && (
+            <div className="mt-3 space-y-2">
+              {message.questionOptions.map((option, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleQuestionAnswer(idx)}
+                  disabled={chatState.step !== "questions" || isTyping}
+                  className="w-full text-left bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-[#18cb96] rounded-lg px-3 py-2 text-xs text-gray-700 transition-all disabled:opacity-50"
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <p className="text-[10px] text-gray-400 text-right mt-1">
+            {message.timestamp.toLocaleTimeString("pt-BR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  const showInput =
+    chatState.step === "email" ||
+    chatState.step === "welcome" ||
+    chatState.step === "onboarding_estado";
+
+  return (
+    <div className="w-full max-w-md mx-auto">
+      <div className="bg-gradient-to-b from-gray-900 to-gray-800 rounded-[2.5rem] p-3 shadow-2xl">
+        <div
+          className="bg-gradient-to-b from-[#f0f4f0] to-[#e5ebe5] rounded-[2rem] overflow-hidden flex flex-col"
+          style={{ height: "520px" }}
+        >
+          {/* Header */}
+          <div className="bg-[#18cb96] text-white px-4 py-3 flex items-center gap-3 shadow-md flex-shrink-0">
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+              <span className="text-[#18cb96] font-bold text-lg">P</span>
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-base">PASSAREI</p>
+              <p className="text-xs opacity-90 flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
+                online agora
+              </p>
+            </div>
+            <div className="text-xs bg-white/20 px-2 py-1 rounded-full">
+              🎁 5 grátis
+            </div>
+          </div>
+
+          {/* Área de mensagens - SCROLL ÚNICO */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {messages.map(renderMessage)}
+
+            {isTyping && (
+              <div className="flex justify-start mb-3">
+                <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                  <div className="flex gap-1">
+                    <span
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0ms" }}
+                    />
+                    <span
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "150ms" }}
+                    />
+                    <span
+                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "300ms" }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input - só aparece quando necessário */}
+          {showInput && !isBlocked && (
+            <form
+              onSubmit={handleSubmit}
+              className="p-3 bg-white border-t border-gray-200 flex-shrink-0"
+            >
+              <div className="flex gap-2">
+                <input
+                  type={chatState.step === "email" ? "email" : "text"}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder={
+                    chatState.step === "email"
+                      ? "seunome@email.com"
+                      : chatState.step === "onboarding_estado"
+                        ? "Ex: MG, SP, RJ..."
+                        : ""
+                  }
+                  className="flex-1 bg-gray-100 rounded-full px-4 py-2.5 text-sm text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#18cb96]"
+                  disabled={isTyping || chatState.step === "welcome"}
+                  autoComplete="off"
+                />
+                <button
+                  type="submit"
+                  disabled={
+                    !inputValue.trim() ||
+                    isTyping ||
+                    chatState.step === "welcome"
+                  }
+                  className="bg-[#18cb96] hover:bg-[#14b584] disabled:bg-gray-300 text-white rounded-full p-2.5 transition-all"
+                >
+                  {isTyping ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Send className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+
+        <div className="flex justify-center mt-2">
+          <div className="w-32 h-1 bg-white/30 rounded-full" />
+        </div>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="p-4 border-t bg-white flex gap-2 items-center"
-      >
-        <input
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          placeholder={
-            chatState.waitingForSelection
-              ? "Selecione uma opção..."
-              : "Responda aqui..."
-          }
-          disabled={chatState.waitingForSelection || isBlocked}
-          className="flex-1 text-sm p-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#18cb96]/20"
-        />
-        <button
-          type="submit"
-          disabled={
-            chatState.waitingForSelection || isBlocked || !inputValue.trim()
-          }
-          className="bg-[#18cb96] text-white p-3 rounded-xl"
-        >
-          <Send size={20} />
-        </button>
-      </form>
+      {/* Badge de segurança */}
+      <div className="text-center mt-4">
+        <p className="text-xs text-gray-700 flex items-center justify-center gap-1 bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 mx-auto w-fit shadow-sm border border-gray-200">
+          <CheckCircle2 className="w-3 h-3 text-green-600" />
+          Seus dados estão seguros • Não enviamos spam
+        </p>
+      </div>
     </div>
   );
 }
+
+export default MiniChat;
