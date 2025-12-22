@@ -254,28 +254,6 @@ const QUESTOES_EXEMPLO = [
   },
 ];
 
-const VALID_EMAIL_DOMAINS = [
-  "gmail.com",
-  "hotmail.com",
-  "outlook.com",
-  "yahoo.com",
-  "yahoo.com.br",
-  "icloud.com",
-  "live.com",
-  "msn.com",
-  "uol.com.br",
-  "bol.com.br",
-  "terra.com.br",
-  "globo.com",
-  "ig.com.br",
-  "oi.com.br",
-  "r7.com",
-  "zipmail.com.br",
-  "protonmail.com",
-  "mail.com",
-  "aol.com",
-];
-
 const BLOCK_KEY = "passarei_test_completed";
 const BLOCK_DURATION = 30 * 24 * 60 * 60 * 1000;
 
@@ -284,7 +262,11 @@ const isUserBlocked = (): boolean => {
     const blockData = localStorage.getItem(BLOCK_KEY);
     if (!blockData) return false;
     const { timestamp } = JSON.parse(blockData);
-    return Date.now() - timestamp < BLOCK_DURATION;
+    if (Date.now() - timestamp > BLOCK_DURATION) {
+      localStorage.removeItem(BLOCK_KEY);
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }
@@ -293,7 +275,9 @@ const isUserBlocked = (): boolean => {
 const blockUser = () => {
   try {
     localStorage.setItem(BLOCK_KEY, JSON.stringify({ timestamp: Date.now() }));
-  } catch {}
+  } catch {
+    console.error("Erro ao salvar bloqueio");
+  }
 };
 
 export function MiniChat() {
@@ -374,7 +358,7 @@ export function MiniChat() {
     optionType?: "single" | "multi",
   ) => {
     const newMessage: Message = {
-      id: Math.random().toString(),
+      id: Date.now().toString() + Math.random(),
       type: options ? "options" : "bot",
       content,
       options,
@@ -388,16 +372,14 @@ export function MiniChat() {
     offerType: "benefits" | "ppu" | "veterano" | "telegram",
     content: string,
   ) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(),
-        type: "offer-block",
-        content,
-        offerType,
-        timestamp: new Date(),
-      },
-    ]);
+    const newMessage: Message = {
+      id: Date.now().toString() + Math.random(),
+      type: "offer-block",
+      content,
+      offerType,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, newMessage]);
   };
 
   const addQuestionMessage = (
@@ -405,29 +387,25 @@ export function MiniChat() {
     questionOptions: string[],
     correctIndex: number,
   ) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(),
-        type: "question",
-        content,
-        questionOptions,
-        correctIndex,
-        timestamp: new Date(),
-      },
-    ]);
+    const newMessage: Message = {
+      id: Date.now().toString() + Math.random(),
+      type: "question",
+      content,
+      questionOptions,
+      correctIndex,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, newMessage]);
   };
 
   const addUserMessage = (content: string) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(),
-        type: "user",
-        content,
-        timestamp: new Date(),
-      },
-    ]);
+    const newMessage: Message = {
+      id: Date.now().toString() + Math.random(),
+      type: "user",
+      content,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, newMessage]);
   };
 
   const simulateTyping = async (callback: () => void, delay: number = 1000) => {
@@ -454,13 +432,11 @@ export function MiniChat() {
     if (chatState.step === "email") {
       if (isValidEmail(userInput)) {
         setChatState((prev) => ({ ...prev, email: userInput }));
-
-        // GTM FIX
+        // GTM FIX: Usando chatState.step
         (window as any).dataLayer = (window as any).dataLayer || [];
         (window as any).dataLayer.push({
           event: "onboarding_step",
-          step_name: "email_submitted",
-          email: userInput,
+          step_name: chatState.step,
         });
 
         try {
@@ -470,7 +446,7 @@ export function MiniChat() {
             body: JSON.stringify({ email: userInput }),
           });
         } catch (error) {
-          console.error(error);
+          console.error("Erro ao salvar lead:", error);
         }
 
         simulateTyping(() => {
@@ -480,20 +456,27 @@ export function MiniChat() {
           setTimeout(() => {
             addBotMessage(
               "📝 **PERGUNTA 1/8** 🎯\n\nQual concurso você está estudando?",
-              CONCURSOS.map((c) => ({ id: c.id, label: c.label })),
-              "single",
             );
-            setChatState((prev) => ({
-              ...prev,
-              step: "onboarding_concurso",
-              waitingForSelection: true,
-            }));
+            setTimeout(() => {
+              addBotMessage(
+                "Escolha uma opção:",
+                CONCURSOS.map((c) => ({ id: c.id, label: c.label })),
+                "single",
+              );
+              setChatState((prev) => ({
+                ...prev,
+                step: "onboarding_concurso",
+                waitingForSelection: true,
+              }));
+            }, 500);
           }, 1000);
         });
       } else {
-        addBotMessage(
-          "❌ E-mail inválido. Por favor, digite um e-mail válido:",
-        );
+        simulateTyping(() => {
+          addBotMessage(
+            "❌ E-mail inválido. Por favor, digite um e-mail válido:",
+          );
+        }, 500);
       }
     } else if (chatState.step === "onboarding_estado") {
       const estadoUpper = userInput.toUpperCase();
@@ -504,23 +487,28 @@ export function MiniChat() {
           setTimeout(() => {
             addBotMessage(
               "📝 **PERGUNTA 3/8** 👮\n\nQual cargo você pretende?",
-              (CARGOS[chatState.concurso] || []).map((c) => ({
-                id: c.id,
-                label: c.label,
-              })),
-              "single",
             );
-            setChatState((prev) => ({
-              ...prev,
-              step: "onboarding_cargo",
-              waitingForSelection: true,
-            }));
+            setTimeout(() => {
+              const cargos = CARGOS[chatState.concurso] || [];
+              addBotMessage(
+                "Escolha uma opção:",
+                cargos.map((c) => ({ id: c.id, label: c.label })),
+                "single",
+              );
+              setChatState((prev) => ({
+                ...prev,
+                step: "onboarding_cargo",
+                waitingForSelection: true,
+              }));
+            }, 500);
           }, 1000);
         });
       } else {
-        addBotMessage(
-          "❌ Estado inválido. Digite a sigla correta (ex: MG, SP, RJ):",
-        );
+        simulateTyping(() => {
+          addBotMessage(
+            "❌ Estado inválido. Digite a sigla correta (ex: MG, SP, RJ):",
+          );
+        }, 500);
       }
     }
   };
@@ -528,47 +516,49 @@ export function MiniChat() {
   const handleOptionClick = async (optionId: string, optionLabel: string) => {
     if (isTyping || !chatState.waitingForSelection) return;
 
-    // GTM FIX
+    // GTM FIX: Usando chatState.step
     (window as any).dataLayer = (window as any).dataLayer || [];
     (window as any).dataLayer.push({
       event: "onboarding_step",
       step_name: chatState.step,
-      selection: optionLabel,
     });
 
     switch (chatState.step) {
       case "onboarding_concurso":
         addUserMessage(optionLabel);
         const conc = CONCURSOS.find((c) => c.id === optionId);
+        if (!conc) return;
         setChatState((prev) => ({
           ...prev,
           concurso: optionId,
-          concursoLabel: optionLabel,
+          concursoLabel: conc.label,
           waitingForSelection: false,
         }));
-
         simulateTyping(() => {
           addBotMessage(`✅ ${optionLabel}`);
           setTimeout(() => {
-            if (conc?.group === "Federal") {
+            if (conc.group === "Federal") {
               setChatState((prev) => ({ ...prev, estado: "NACIONAL" }));
               addBotMessage(
-                "📝 **PERGUNTA 2/8** 📍\n\n🇧🇷 **Abrangência: NACIONAL**\n\nConcursos federais têm validade em todo o território!",
+                "📝 **PERGUNTA 2/8** 📍\n\n🇧🇷 **Abrangência: NACIONAL**\n\nConcursos federais têm validade em todo o território brasileiro!",
               );
               setTimeout(() => {
                 addBotMessage(
                   "📝 **PERGUNTA 3/8** 👮\n\nQual cargo você pretende?",
-                  (CARGOS[optionId] || []).map((c) => ({
-                    id: c.id,
-                    label: c.label,
-                  })),
-                  "single",
                 );
-                setChatState((prev) => ({
-                  ...prev,
-                  step: "onboarding_cargo",
-                  waitingForSelection: true,
-                }));
+                setTimeout(() => {
+                  const cargos = CARGOS[optionId] || [];
+                  addBotMessage(
+                    "Escolha uma opção:",
+                    cargos.map((c) => ({ id: c.id, label: c.label })),
+                    "single",
+                  );
+                  setChatState((prev) => ({
+                    ...prev,
+                    step: "onboarding_cargo",
+                    waitingForSelection: true,
+                  }));
+                }, 500);
               }, 1500);
             } else {
               addBotMessage(
@@ -595,15 +585,20 @@ export function MiniChat() {
           addBotMessage(`✅ Cargo: **${optionLabel}**`);
           setTimeout(() => {
             addBotMessage(
-              "📝 **PERGUNTA 4/8** 📊\n\nQual seu nível de conhecimento?",
-              NIVEIS.map((n) => ({ id: n.id, label: n.label })),
-              "single",
+              "📝 **PERGUNTA 4/8** 📊\n\nQual seu nível de conhecimento nas matérias do concurso?",
             );
-            setChatState((prev) => ({
-              ...prev,
-              step: "onboarding_nivel",
-              waitingForSelection: true,
-            }));
+            setTimeout(() => {
+              addBotMessage(
+                "Escolha uma opção:",
+                NIVEIS.map((n) => ({ id: n.id, label: n.label })),
+                "single",
+              );
+              setChatState((prev) => ({
+                ...prev,
+                step: "onboarding_nivel",
+                waitingForSelection: true,
+              }));
+            }, 500);
           }, 1000);
         });
         break;
@@ -620,14 +615,19 @@ export function MiniChat() {
           setTimeout(() => {
             addBotMessage(
               "📝 **PERGUNTA 5/8** 💚\n\nEm qual área você **JÁ TEM FACILIDADE**?",
-              MATERIAS.map((m) => ({ id: m.id, label: m.label })),
-              "multi",
             );
-            setChatState((prev) => ({
-              ...prev,
-              step: "onboarding_facilidade",
-              waitingForSelection: true,
-            }));
+            setTimeout(() => {
+              addBotMessage(
+                "Selecione as matérias:",
+                MATERIAS.map((m) => ({ id: m.id, label: m.label })),
+                "multi",
+              );
+              setChatState((prev) => ({
+                ...prev,
+                step: "onboarding_facilidade",
+                waitingForSelection: true,
+              }));
+            }, 500);
           }, 1000);
         });
         break;
@@ -635,7 +635,7 @@ export function MiniChat() {
       case "onboarding_facilidade":
         if (optionId === "confirmar") {
           if (selectedMaterias.length === 0) {
-            addBotMessage("⚠️ Selecione pelo menos uma!");
+            addBotMessage("⚠️ Selecione pelo menos uma matéria!");
             return;
           }
           const labels = selectedMaterias
@@ -653,14 +653,19 @@ export function MiniChat() {
             setTimeout(() => {
               addBotMessage(
                 "📝 **PERGUNTA 6/8** 🎯\n\nEm qual área você **TEM MAIS DIFICULDADE**?",
-                MATERIAS.map((m) => ({ id: m.id, label: m.label })),
-                "multi",
               );
-              setChatState((prev) => ({
-                ...prev,
-                step: "onboarding_dificuldade",
-                waitingForSelection: true,
-              }));
+              setTimeout(() => {
+                addBotMessage(
+                  "Selecione as matérias:",
+                  MATERIAS.map((m) => ({ id: m.id, label: m.label })),
+                  "multi",
+                );
+                setChatState((prev) => ({
+                  ...prev,
+                  step: "onboarding_dificuldade",
+                  waitingForSelection: true,
+                }));
+              }, 500);
             }, 1000);
           });
         } else {
@@ -675,7 +680,7 @@ export function MiniChat() {
       case "onboarding_dificuldade":
         if (optionId === "confirmar") {
           if (selectedMaterias.length === 0) {
-            addBotMessage("⚠️ Selecione pelo menos uma!");
+            addBotMessage("⚠️ Selecione pelo menos uma matéria!");
             return;
           }
           const labels = selectedMaterias
@@ -693,14 +698,19 @@ export function MiniChat() {
             setTimeout(() => {
               addBotMessage(
                 "📝 **PERGUNTA 7/8** 📅\n\nQuanto tempo você tem até a prova?",
-                TEMPO_PROVA.map((t) => ({ id: t.id, label: t.label })),
-                "single",
               );
-              setChatState((prev) => ({
-                ...prev,
-                step: "onboarding_tempo",
-                waitingForSelection: true,
-              }));
+              setTimeout(() => {
+                addBotMessage(
+                  "Escolha uma opção:",
+                  TEMPO_PROVA.map((t) => ({ id: t.id, label: t.label })),
+                  "single",
+                );
+                setChatState((prev) => ({
+                  ...prev,
+                  step: "onboarding_tempo",
+                  waitingForSelection: true,
+                }));
+              }, 500);
             }, 1000);
           });
         } else {
@@ -724,14 +734,19 @@ export function MiniChat() {
           setTimeout(() => {
             addBotMessage(
               "📝 **PERGUNTA 8/8** ⏰\n\nQuando você **PREFERE ESTUDAR**?",
-              HORARIO_ESTUDO.map((h) => ({ id: h.id, label: h.label })),
-              "single",
             );
-            setChatState((prev) => ({
-              ...prev,
-              step: "onboarding_horario",
-              waitingForSelection: true,
-            }));
+            setTimeout(() => {
+              addBotMessage(
+                "Escolha uma opção:",
+                HORARIO_ESTUDO.map((h) => ({ id: h.id, label: h.label })),
+                "single",
+              );
+              setChatState((prev) => ({
+                ...prev,
+                step: "onboarding_horario",
+                waitingForSelection: true,
+              }));
+            }, 500);
           }, 1000);
         });
         break;
@@ -754,20 +769,20 @@ export function MiniChat() {
     setChatState((prev) => ({ ...prev, step: "resumo" }));
     const s = chatState;
     const fac = s.facilidade
-      .map((f) => MATERIAS.find((m) => m.id === f)?.label)
+      .map((f) => MATERIAS.find((m) => m.id === f)?.label || f)
       .join(", ");
     const dif = s.dificuldade
-      .map((d) => MATERIAS.find((m) => m.id === d)?.label)
+      .map((d) => MATERIAS.find((m) => m.id === d)?.label || d)
       .join(", ");
 
     addBotMessage("🎉 **PERFIL CRIADO COM SUCESSO!**");
     setTimeout(() => {
       addBotMessage(
-        `📋 **RESUMO DO SEU PLANO:**\n\n🎯 Concurso: **${s.concursoLabel}**\n📍 Local: **${s.estado}**\n👮 Cargo: **${s.cargo}**\n📊 Nível: **${s.nivel}**\n💚 Facilidades: ${fac}\n🎯 Focar em: ${dif}\n📅 Tempo: **${s.tempoProva}**\n⏰ Horário: **${s.horarioEstudo}**\n\n━━━━━━━━━━━━━━━━`,
+        `📋 **RESUMO DO SEU PLANO DE ESTUDOS:**\n\n🎯 Concurso: **${s.concursoLabel}**\n📍 Local: **${s.estado}**\n👮 Cargo: **${s.cargo}**\n📊 Nível: **${s.nivel}**\n💚 Facilidades: ${fac || "Nenhuma"}\n🎯 Focar em: ${dif || "Nenhuma"}\n📅 Tempo: **${s.tempoProva}**\n⏰ Horário: **${s.horarioEstudo}**\n\n━━━━━━━━━━━━━━━━`,
       );
       setTimeout(() => {
         addBotMessage(
-          "🎁 Você tem **5 questões GRÁTIS** agora!\n\n⏳ Preparando...",
+          "🎁 Você tem **5 questões GRÁTIS** agora!\n\n⏳ Preparando suas questões personalizadas...",
         );
         setTimeout(() => {
           startQuestions();
@@ -812,30 +827,45 @@ export function MiniChat() {
 
     if (isCorrect) {
       setActualScore((prev) => prev + 1);
-      addBotMessage(`✅ **CORRETO!**\n\n${currentQ.explicacaoBreve}`);
+      addBotMessage(`✅ **CORRETO!** 🎉\n\n${currentQ.explicacaoBreve}`);
       await wait(4000);
+      const next = chatState.currentQuestion + 1;
+      if (next < 5) {
+        setChatState((p) => ({ ...p, currentQuestion: next, retryCount: 0 }));
+        showQuestion(next);
+      } else {
+        finishQuiz();
+      }
     } else {
-      addBotMessage(
-        `❌ **INCORRETO.**\n\n✅ **Resposta:** ${currentQ.opcoes[currentQ.correta]}\n\n📚 **Explicação:** ${currentQ.explicacaoBreve}`,
-      );
-      await wait(6000);
-    }
-
-    const nextQuestion = chatState.currentQuestion + 1;
-    if (nextQuestion < 5) {
-      setChatState((prev) => ({ ...prev, currentQuestion: nextQuestion }));
-      showQuestion(nextQuestion);
-    } else {
-      finishQuiz();
+      if (chatState.retryCount === 0) {
+        addBotMessage(
+          `❌ **Incorreto!**\n\n💡 Dica: ${currentQ.explicacaoBreve}`,
+        );
+        setChatState((p) => ({ ...p, retryCount: 1 }));
+        await wait(3000);
+        showQuestion(chatState.currentQuestion);
+      } else {
+        addBotMessage(
+          `❌ **Ainda não...**\n\n✅ Resposta: ${currentQ.opcoes[currentQ.correta]}\n\n📚 Explicação: ${currentQ.explicacaoDetalhada}`,
+        );
+        await wait(6000);
+        const next = chatState.currentQuestion + 1;
+        if (next < 5) {
+          setChatState((p) => ({ ...p, currentQuestion: next, retryCount: 0 }));
+          showQuestion(next);
+        } else {
+          finishQuiz();
+        }
+      }
     }
   };
 
   const finishQuiz = async () => {
+    setChatState((prev) => ({ ...prev, step: "finished" }));
     blockUser();
     const finalScore = actualScore;
     const percentage = Math.round((finalScore / 5) * 100);
 
-    // GTM FIX
     (window as any).dataLayer = (window as any).dataLayer || [];
     (window as any).dataLayer.push({
       event: "quiz_completed",
@@ -843,7 +873,7 @@ export function MiniChat() {
     });
 
     addBotMessage(
-      `🏆 **RESULTADO FINAL**\n\n📊 Acertou **${finalScore}/5** (${percentage}%)`,
+      `🏆 **RESULTADO FINAL**\n\n📊 Você acertou **${finalScore}/5** (${percentage}%)`,
     );
     await wait(3000);
     showOffer();
@@ -860,6 +890,8 @@ export function MiniChat() {
     addOfferBlock("ppu", "");
     await wait(1500);
     addOfferBlock("veterano", "");
+    await wait(1500);
+    addOfferBlock("telegram", "");
   };
 
   const showOfferForBlocked = async () => {
@@ -869,8 +901,12 @@ export function MiniChat() {
       waitingForSelection: true,
     }));
     addOfferBlock("benefits", "");
-    await wait(1000);
+    await wait(2000);
     addOfferBlock("ppu", "");
+    await wait(1500);
+    addOfferBlock("veterano", "");
+    await wait(1500);
+    addOfferBlock("telegram", "");
   };
 
   return (
@@ -907,7 +943,7 @@ export function MiniChat() {
                     <button
                       key={opt.id}
                       onClick={() => handleOptionClick(opt.id, opt.label)}
-                      className={`text-xs px-4 py-2.5 rounded-xl border transition-all font-medium ${selectedMaterias.includes(opt.id) ? "bg-[#18cb96] text-white border-[#18cb96] scale-95" : "bg-gray-50 text-gray-700 border-gray-200 hover:border-[#18cb96] hover:bg-green-50"}`}
+                      className={`text-xs px-4 py-2.5 rounded-xl border transition-all font-medium ${selectedMaterias.includes(opt.id) ? "bg-[#18cb96] text-white border-[#18cb96]" : "bg-gray-50 text-gray-700 border-gray-200 hover:border-[#18cb96]"}`}
                     >
                       {opt.label}
                     </button>
@@ -917,7 +953,7 @@ export function MiniChat() {
                       onClick={() =>
                         handleOptionClick("confirmar", "Confirmar")
                       }
-                      className="text-xs px-6 py-2.5 rounded-xl bg-gray-800 text-white w-full mt-2 font-bold hover:bg-black transition-colors"
+                      className="text-xs px-6 py-2.5 rounded-xl bg-gray-800 text-white w-full mt-2 font-bold"
                     >
                       Confirmar Escolhas
                     </button>
@@ -931,11 +967,9 @@ export function MiniChat() {
                     <button
                       key={i}
                       onClick={() => handleQuestionAnswer(i)}
-                      className="w-full text-left text-xs p-4 rounded-xl border border-gray-200 bg-gray-50 hover:bg-green-50 hover:border-[#18cb96] transition-all duration-200 group"
+                      className="w-full text-left text-xs p-4 rounded-xl border border-gray-200 bg-gray-50 hover:bg-green-50 transition-all"
                     >
-                      <span className="group-hover:text-[#18cb96] transition-colors">
-                        {opt}
-                      </span>
+                      {opt}
                     </button>
                   ))}
                 </div>
@@ -945,9 +979,11 @@ export function MiniChat() {
                 <div className="mt-3">
                   <button
                     onClick={() => (window.location.href = "/checkout")}
-                    className="w-full bg-[#18cb96] text-white py-4 rounded-xl font-black text-sm shadow-lg hover:bg-[#14b383] transition-transform active:scale-95 uppercase tracking-tight"
+                    className="w-full bg-[#18cb96] text-white py-4 rounded-xl font-black text-sm shadow-lg uppercase tracking-tight"
                   >
-                    Liberar Meu Plano de Estudos 🚀
+                    {m.offerType === "telegram"
+                      ? "Entrar no Grupo VIP Telegram 📱"
+                      : "Liberar Meu Plano de Estudos 🚀"}
                   </button>
                 </div>
               )}
@@ -959,7 +995,7 @@ export function MiniChat() {
             <div className="bg-white border p-3 rounded-2xl rounded-tl-none flex gap-1 items-center shadow-sm">
               <Loader2 size={14} className="animate-spin text-[#18cb96]" />
               <span className="text-[10px] text-gray-400 font-medium">
-                Analisando respostas...
+                Digitando...
               </span>
             </div>
           </div>
@@ -976,18 +1012,18 @@ export function MiniChat() {
           onChange={(e) => setInputValue(e.target.value)}
           placeholder={
             chatState.waitingForSelection
-              ? "Selecione uma opção acima..."
+              ? "Selecione uma opção..."
               : "Responda aqui..."
           }
           disabled={chatState.waitingForSelection || isBlocked}
-          className="flex-1 text-sm p-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#18cb96]/20 focus:border-[#18cb96] transition-all disabled:opacity-50"
+          className="flex-1 text-sm p-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#18cb96]/20"
         />
         <button
           type="submit"
           disabled={
             chatState.waitingForSelection || isBlocked || !inputValue.trim()
           }
-          className="bg-[#18cb96] text-white p-3 rounded-xl disabled:opacity-30 shadow-md hover:shadow-lg transition-all active:scale-90"
+          className="bg-[#18cb96] text-white p-3 rounded-xl"
         >
           <Send size={20} />
         </button>
