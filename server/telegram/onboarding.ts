@@ -132,7 +132,7 @@ export async function startOnboarding(
     `👋 *Olá, ${name}!*\n\n` +
       `🎯 Bem-vindo ao *PASSAREI* - seu assistente de estudos para concursos!\n\n` +
       `📚 Vou criar um plano personalizado para você em *8 perguntas rápidas*.\n\n` +
-      `🎁 *BÔNUS:* Você tem *5 questões GRÁTIS* hoje para testar!\n\n` +
+      `🎁 *BÔNUS:* Você tem *21 questões GRÁTIS* hoje para testar!\n\n` +
       `Vamos começar? 💪`,
     { parse_mode: "Markdown" },
   );
@@ -475,7 +475,7 @@ async function finishOnboarding(
         `📅 Tempo: *${data.timeUntilExam}*\n` +
         `⏰ Horário de estudo: *${scheduleText}*\n\n` +
         `━━━━━━━━━━━━━━━━\n\n` +
-        `🎁 *Você tem 5 questões GRÁTIS hoje!*\n\n` +
+        `🎁 *Você tem 21 questões GRÁTIS hoje!*\n\n` +
         `⏳ Preparando sua primeira aula...`,
       { parse_mode: "Markdown" },
     );

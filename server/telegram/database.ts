@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 // ============================================
 // CONSTANTES DO MODELO DE NEGÓCIO
 // ============================================
-const FREE_QUESTIONS_FIRST_DAY = 5; // Questões grátis no primeiro dia
+const FREE_QUESTIONS_FIRST_DAY = 21; // Questões grátis no primeiro dia
 const PRICE_PER_QUESTION = 0.99; // R$ 0,99 por questão
 const VETERANO_DAILY_LIMIT = 10; // 300 questões/mês para Veterano
 

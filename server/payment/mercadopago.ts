@@ -10,10 +10,12 @@ const payment = new Payment(client);
 
 // Pacotes de créditos disponíveis
 export const CREDIT_PACKAGES = [
-  { id: 'credits_5', amount: 5, questions: 5, label: 'R$ 5,00 (5 questões)' },
-  { id: 'credits_10', amount: 10, questions: 10, label: 'R$ 10,00 (10 questões)' },
-  { id: 'credits_20', amount: 20, questions: 20, label: 'R$ 20,00 (20 questões)' },
+  { id: 'calouro_mensal', amount: 89.90, questions: 300, label: 'Plano Calouro - R$ 89,90/mês' },
 ];
+
+// ID do plano de assinatura Veterano no Mercado Pago
+export const VETERANO_PLAN_ID = 'e717107a9daa436f81ce9c8cc1c00d8f';
+export const VETERANO_SUBSCRIPTION_URL = 'https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=e717107a9daa436f81ce9c8cc1c00d8f';
 
 // Plano Veterano
 export const VETERANO_PLAN = {
