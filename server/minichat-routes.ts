@@ -112,19 +112,17 @@ export function registerMiniChatRoutes(app: Express) {
           currentQuestion: existingSession.currentQuestion,
         });
       }
-
       // Salvar lead no Supabase
       let odId = nanoid();
       try {
         // Verificar se já existe
-        const { data: existingLead } = await supabaseHttp
+        const { data: existingLeads } = await supabaseHttp
           .from("Lead")
-          .select("id")
-          .eq("email", email)
-          .single();
-
-        if (existingLead) {
-          odId = existingLead.id;
+          .select("id", { email: email });
+        
+        if (existingLeads && existingLeads.length > 0) {
+          odId = existingLeads[0].id;
+          console.log("Lead existente encontrado:", odId);
         } else {
           // Criar novo lead
           const { data: newLead, error } = await supabaseHttp
@@ -141,20 +139,17 @@ export function registerMiniChatRoutes(app: Express) {
               source: "minichat",
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
-            })
-            .select()
-            .single();
-
+            });
+          
           if (error) {
             console.error("Erro ao criar lead:", error);
-          } else if (newLead) {
-            odId = newLead.id;
+          } else {
+            console.log("Novo lead criado:", odId);
           }
         }
       } catch (dbError) {
         console.error("Erro no banco (continuando):", dbError);
       }
-
       // Criar nova sessão
       const sessionId = `session_${nanoid()}`;
       const session: MiniChatSession = {
@@ -166,9 +161,8 @@ export function registerMiniChatRoutes(app: Express) {
         completed: false,
         createdAt: new Date(),
       };
-
       sessions.set(sessionId, session);
-      console.log(`✅ Sessão mini-chat: ${sessionId} - ${email}`);
+      console.log("Sessao mini-chat criada:", sessionId);
 
       res.json({ success: true, sessionId });
     } catch (error) {
