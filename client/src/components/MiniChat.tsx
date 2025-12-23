@@ -1,6 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, CheckCircle2, Trophy, Sparkles } from "lucide-react";
 
+// ============================================
+// TAREFA 2.1: CONSTANTES DE STORAGE
+// ============================================
+const STORAGE_KEYS = {
+  USER_EMAIL: "passarei_user_email",
+  LAST_SUBJECT: "passarei_last_subject",
+  LAST_TOPIC: "passarei_last_topic",
+  FIRST_VISIT: "passarei_first_visit",
+  CONCURSO: "passarei_concurso",
+  CARGO: "passarei_cargo",
+};
+
 // Tipos
 interface Message {
   id: string;
@@ -30,7 +42,8 @@ interface ChatState {
     | "resumo"
     | "questions"
     | "finished"
-    | "offer";
+    | "offer"
+    | "returning_menu"; // NOVO: menu para usuário retornando
   email: string;
   concurso: string;
   concursoLabel: string;
@@ -46,6 +59,18 @@ interface ChatState {
   sessionId: string;
   retryCount: number;
   waitingForSelection: boolean;
+}
+
+// ============================================
+// TAREFA 2.1: INTERFACE PARA CONTEXTO DO USUÁRIO
+// ============================================
+interface UserContext {
+  isReturning: boolean;
+  userEmail: string | null;
+  lastSubject: string | null;
+  lastTopic: string | null;
+  concurso: string | null;
+  cargo: string | null;
 }
 
 // Dados dos concursos - COMPLETO
@@ -314,6 +339,51 @@ const blockUser = () => {
   }
 };
 
+// ============================================
+// TAREFA 2.1: FUNÇÕES DE GERENCIAMENTO DE CONTEXTO
+// ============================================
+
+const checkUserContext = (): UserContext => {
+  try {
+    const userEmail = localStorage.getItem(STORAGE_KEYS.USER_EMAIL);
+    const lastSubject = localStorage.getItem(STORAGE_KEYS.LAST_SUBJECT);
+    const lastTopic = localStorage.getItem(STORAGE_KEYS.LAST_TOPIC);
+    const firstVisit = localStorage.getItem(STORAGE_KEYS.FIRST_VISIT);
+    const concurso = localStorage.getItem(STORAGE_KEYS.CONCURSO);
+    const cargo = localStorage.getItem(STORAGE_KEYS.CARGO);
+
+    return {
+      isReturning: !!userEmail && firstVisit === "false",
+      userEmail,
+      lastSubject,
+      lastTopic,
+      concurso,
+      cargo,
+    };
+  } catch (error) {
+    console.error("Erro ao verificar contexto do usuário:", error);
+    return {
+      isReturning: false,
+      userEmail: null,
+      lastSubject: null,
+      lastTopic: null,
+      concurso: null,
+      cargo: null,
+    };
+  }
+};
+
+const saveUserContext = (
+  key: keyof typeof STORAGE_KEYS,
+  value: string,
+): void => {
+  try {
+    localStorage.setItem(STORAGE_KEYS[key], value);
+  } catch (error) {
+    console.error("Erro ao salvar contexto:", error);
+  }
+};
+
 export function MiniChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -352,7 +422,9 @@ export function MiniChat() {
     scrollToBottom();
   }, [messages, selectedMaterias]);
 
-  // Verificar bloqueio ao iniciar
+  // ============================================
+  // TAREFA 2.1: INICIALIZAÇÃO COM CONTEXTO
+  // ============================================
   useEffect(() => {
     if (isUserBlocked()) {
       setIsBlocked(true);
@@ -367,25 +439,101 @@ export function MiniChat() {
         }, 1000);
       }, 1500);
     } else if (messages.length === 0) {
-      setTimeout(() => {
-        addBotMessage("👋 Olá! Eu sou o Assistente Passarei!");
-        setTimeout(() => {
-          addBotMessage(
-            "🎯 Vou criar um plano de estudos personalizado para você em 8 perguntas rápidas!",
-          );
-          setTimeout(() => {
-            addBotMessage(
-              "🎁 BÔNUS: Você tem **21 questões GRÁTIS** para testar agora!",
-            );
-            setTimeout(() => {
-              addBotMessage("📧 Para começar, me diz seu melhor e-mail:");
-              setChatState((prev) => ({ ...prev, step: "email" }));
-            }, 1000);
-          }, 1500);
-        }, 1500);
-      }, 500);
+      // NOVA LÓGICA: Verificar se é usuário retornando
+      const userContext = checkUserContext();
+
+      if (userContext.isReturning) {
+        // USUÁRIO RETORNANDO
+        handleReturningUser(userContext);
+      } else {
+        // USUÁRIO NOVO
+        handleNewUser();
+      }
     }
   }, []);
+
+  // ============================================
+  // TAREFA 2.1: HANDLER PARA USUÁRIO RETORNANDO
+  // ============================================
+  const handleReturningUser = (userContext: UserContext) => {
+    setTimeout(() => {
+      let welcomeMessage = "👋 **Bem-vindo de volta ao Passarei!**";
+
+      if (userContext.concurso || userContext.lastSubject) {
+        welcomeMessage += "\n\n📚 Seu perfil:\n";
+
+        if (userContext.concurso) {
+          const concursoObj = CONCURSOS.find(
+            (c) => c.id === userContext.concurso,
+          );
+          welcomeMessage += `🎯 ${concursoObj?.label || userContext.concurso}\n`;
+        }
+
+        if (userContext.cargo) {
+          welcomeMessage += `👮 ${userContext.cargo}\n`;
+        }
+
+        if (userContext.lastSubject) {
+          welcomeMessage += `\n📖 Última matéria estudada: **${userContext.lastSubject}**`;
+          if (userContext.lastTopic) {
+            welcomeMessage += `\n🎯 Tópico: ${userContext.lastTopic}`;
+          }
+        }
+
+        welcomeMessage += "\n\nO que deseja fazer hoje?";
+      } else {
+        welcomeMessage += "\n\nVamos continuar seus estudos?";
+      }
+
+      addBotMessage(welcomeMessage);
+
+      setTimeout(() => {
+        const hasContext = !!(userContext.concurso || userContext.lastSubject);
+
+        const options = [
+          ...(hasContext
+            ? [{ id: "continue_last", label: "📚 Continuar estudando" }]
+            : []),
+          { id: "new_theme", label: "🆕 Começar novo tema" },
+          { id: "show_progress", label: "📊 Ver estatísticas" },
+          { id: "update_profile", label: "⚙️ Atualizar perfil" },
+        ];
+
+        addBotMessage("Escolha uma opção:", options, "single");
+        setChatState((prev) => ({
+          ...prev,
+          step: "returning_menu",
+          waitingForSelection: true,
+        }));
+      }, 1000);
+    }, 500);
+  };
+
+  // ============================================
+  // TAREFA 2.1: HANDLER PARA USUÁRIO NOVO
+  // ============================================
+  const handleNewUser = () => {
+    setTimeout(() => {
+      addBotMessage("👋 Olá! Eu sou o Assistente Passarei!");
+      setTimeout(() => {
+        addBotMessage(
+          "🎯 Vou criar um plano de estudos personalizado para você em 8 perguntas rápidas!",
+        );
+        setTimeout(() => {
+          addBotMessage(
+            "🎁 BÔNUS: Você tem **21 questões GRÁTIS** para testar agora!",
+          );
+          setTimeout(() => {
+            addBotMessage("📧 Para começar, me diz seu melhor e-mail:");
+            setChatState((prev) => ({ ...prev, step: "email" }));
+
+            // Marcar que não é mais primeira visita
+            saveUserContext("FIRST_VISIT", "false");
+          }, 1000);
+        }, 1500);
+      }, 1500);
+    }, 500);
+  };
 
   const addBotMessage = (
     content: string,
@@ -495,13 +643,18 @@ export function MiniChat() {
     if (chatState.step === "email") {
       if (isValidEmail(userInput)) {
         setChatState((prev) => ({ ...prev, email: userInput }));
+
+        // TAREFA 2.1: Salvar email no localStorage
+        saveUserContext("USER_EMAIL", userInput);
+
         // Adicione isto para notificar o Google Tag Manager
         (window as any).dataLayer = (window as any).dataLayer || [];
         (window as any).dataLayer.push({
           event: "onboarding_step",
-          step_number: 1, // ou a variável que indica a fase atual
+          step_number: 1,
           step_name: "Pergunta Onboarding",
         });
+
         try {
           await fetch("/api/minichat/start", {
             method: "POST",
@@ -579,13 +732,99 @@ export function MiniChat() {
 
   const handleOptionClick = async (optionId: string, optionLabel: string) => {
     if (isTyping || !chatState.waitingForSelection) return;
+
     // Adicione isto para notificar o Google Tag Manager
     (window as any).dataLayer = (window as any).dataLayer || [];
     (window as any).dataLayer.push({
       event: "onboarding_step",
-      step_number: 1, // ou a variável que indica a fase atual
+      step_number: 1,
       step_name: "Pergunta Onboarding",
     });
+
+    // ============================================
+    // TAREFA 2.1: NOVOS HANDLERS PARA MENU DE RETORNO
+    // ============================================
+    if (chatState.step === "returning_menu") {
+      switch (optionId) {
+        case "continue_last":
+          addUserMessage(optionLabel);
+          setChatState((prev) => ({ ...prev, waitingForSelection: false }));
+          simulateTyping(() => {
+            addBotMessage("📚 Ótimo! Vamos continuar de onde você parou...");
+            setTimeout(() => {
+              startQuestions();
+            }, 1500);
+          });
+          break;
+
+        case "new_theme":
+          addUserMessage(optionLabel);
+          setChatState((prev) => ({ ...prev, waitingForSelection: false }));
+          simulateTyping(() => {
+            addBotMessage(
+              "🆕 Vamos escolher um novo tema!\n\nQual concurso você quer focar?",
+            );
+            setTimeout(() => {
+              addBotMessage(
+                "Escolha uma opção:",
+                CONCURSOS.map((c) => ({ id: c.id, label: c.label })),
+                "single",
+              );
+              setChatState((prev) => ({
+                ...prev,
+                step: "onboarding_concurso",
+                waitingForSelection: true,
+              }));
+            }, 500);
+          });
+          break;
+
+        case "show_progress":
+          addUserMessage(optionLabel);
+          setChatState((prev) => ({ ...prev, waitingForSelection: false }));
+          simulateTyping(() => {
+            addBotMessage("📊 Buscando suas estatísticas...");
+            setTimeout(() => {
+              addBotMessage(
+                "📈 **Suas Estatísticas**\n\n" +
+                  "🎯 Questões respondidas: Em breve!\n" +
+                  "✅ Taxa de acerto: Em breve!\n" +
+                  "🔥 Dias de estudo: Em breve!\n\n" +
+                  "💡 Estas estatísticas estarão disponíveis em breve no app completo!",
+              );
+              setTimeout(() => {
+                const userContext = checkUserContext();
+                handleReturningUser(userContext);
+              }, 3000);
+            }, 1500);
+          });
+          break;
+
+        case "update_profile":
+          addUserMessage(optionLabel);
+          setChatState((prev) => ({ ...prev, waitingForSelection: false }));
+          simulateTyping(() => {
+            addBotMessage(
+              "⚙️ Vamos atualizar seu perfil!\n\nQual concurso você está estudando agora?",
+            );
+            setTimeout(() => {
+              addBotMessage(
+                "Escolha uma opção:",
+                CONCURSOS.map((c) => ({ id: c.id, label: c.label })),
+                "single",
+              );
+              setChatState((prev) => ({
+                ...prev,
+                step: "onboarding_concurso",
+                waitingForSelection: true,
+              }));
+            }, 500);
+          });
+          break;
+      }
+      return;
+    }
+
     switch (chatState.step) {
       case "onboarding_concurso":
         addUserMessage(optionLabel);
@@ -598,6 +837,10 @@ export function MiniChat() {
           concursoLabel: concursoSelecionado.label,
           waitingForSelection: false,
         }));
+
+        // TAREFA 2.1: Salvar concurso no localStorage
+        saveUserContext("CONCURSO", optionId);
+        saveUserContext("LAST_SUBJECT", concursoSelecionado.label);
 
         const isFederal = concursoSelecionado.group === "Federal";
 
@@ -648,6 +891,9 @@ export function MiniChat() {
           cargo: optionLabel,
           waitingForSelection: false,
         }));
+
+        // TAREFA 2.1: Salvar cargo no localStorage
+        saveUserContext("CARGO", optionLabel);
 
         simulateTyping(() => {
           addBotMessage(`✅ Cargo: **${optionLabel}**`);
@@ -757,6 +1003,15 @@ export function MiniChat() {
             .map((m) => MATERIAS.find((mat) => mat.id === m)?.label)
             .join(", ");
           addUserMessage(labels);
+
+          // TAREFA 2.1: Salvar tópicos de dificuldade como último tema estudado
+          const firstDifficulty = MATERIAS.find(
+            (m) => m.id === selectedMaterias[0],
+          );
+          if (firstDifficulty) {
+            saveUserContext("LAST_TOPIC", firstDifficulty.label);
+          }
+
           setChatState((prev) => ({
             ...prev,
             dificuldade: [...selectedMaterias],
@@ -997,13 +1252,15 @@ export function MiniChat() {
     addBotMessage(
       `${emoji} **RESULTADO FINAL**\n\n📊 Você acertou **${finalScore}/5** questões (**${percentage}%**)\n\n${message}`,
     );
+
     // Adicione isto para notificar o Google Tag Manager
     (window as any).dataLayer = (window as any).dataLayer || [];
     (window as any).dataLayer.push({
-      event: "onboarding_step",
-      step_number: 1, // ou a variável que indica a fase atual
-      step_name: "Pergunta Onboarding",
+      event: "quiz_completed",
+      quiz_score: finalScore,
+      quiz_percentage: percentage,
     });
+
     await wait(3000);
     showOffer();
   };
@@ -1083,24 +1340,22 @@ export function MiniChat() {
           <div className="bg-white border-2 border-gray-200 rounded-2xl p-4 mb-3 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xl">💰</span>
-              <p className="font-bold text-gray-800">PLANO PAY-PER-USE</p>
+              <p className="font-bold text-gray-800">PLANO CALOURO</p>
             </div>
             <p className="text-2xl font-bold text-[#18cb96] mb-2">
-              R$ 0,99{" "}
-              <span className="text-sm font-normal text-gray-500">
-                por questão
-              </span>
+              R$ 89,90{" "}
+              <span className="text-sm font-normal text-gray-500">por mês</span>
             </p>
             <ul className="text-xs text-gray-600 space-y-1 mb-3">
-              <li>• Pague apenas o que usar</li>
-              <li>• Sem mensalidade</li>
-              <li>• Créditos não expiram</li>
+              <li>• Questões ilimitadas</li>
+              <li>• Sem compromisso, cancele quando quiser</li>
+              <li>• Acesso completo à plataforma</li>
             </ul>
             <button
               onClick={() => handlePayment("ppu")}
               className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2.5 px-4 rounded-xl transition-all text-sm"
             >
-              💳 Comprar Créditos
+              💳 Assinar Agora
             </button>
           </div>
         );
@@ -1118,15 +1373,19 @@ export function MiniChat() {
               </span>
             </div>
             <p className="text-2xl font-bold text-white mb-2">
-              R$ 49,90{" "}
+              R$ 44,90{" "}
               <span className="text-sm font-normal text-white/80">/mês</span>
             </p>
+            <p className="text-xs text-white/80 mb-2">
+              (plano anual = R$ 538,80)
+            </p>
             <ul className="text-xs text-white/90 space-y-1 mb-3">
-              <li>• 10 questões por dia</li>
+              <li>• Questões ilimitadas</li>
               <li>• Correção de redações com IA</li>
               <li>• Todas as apostilas inclusas</li>
               <li>• Revisão inteligente SM2</li>
               <li>• Suporte prioritário</li>
+              <li>• Economia de 50% vs mensal</li>
             </ul>
             <button
               onClick={() => handlePayment("veterano")}
@@ -1146,7 +1405,7 @@ export function MiniChat() {
               <p className="font-bold text-white">Prefere o Telegram?</p>
             </div>
             <p className="text-xs text-white/80 mb-3">
-              Continue estudando gratuitamente pelo nosso bot
+              Continue estudando pelo nosso bot
             </p>
             <button
               onClick={handleTelegram}
