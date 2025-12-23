@@ -22,8 +22,8 @@ export default function Reembolso() {
               O Passarei oferece garantia incondicional de reembolso de 7 dias para os planos pagos:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground mb-4 space-y-2">
-              <li><strong>Plano Calouro (R$ 12,90/mês)</strong></li>
-              <li><strong>Plano Veterano (R$ 118,80/ano)</strong></li>
+              <li><strong>Plano Calouro (R$ 89,90/mês)</strong></li>
+              <li><strong>Plano Veterano (R$ 538,80/ano ou R$ 44,90/mês)</strong></li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mb-4">
               Se você não estiver satisfeito por <strong>qualquer motivo</strong> dentro dos primeiros 
@@ -102,8 +102,8 @@ export default function Reembolso() {
               Correções de redação adquiridas separadamente:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground mb-4 space-y-2">
-              <li><strong>Plano Calouro:</strong> R$ 1,90 por correção</li>
-              <li><strong>Plano Veterano:</strong> R$ 0,99 por correção</li>
+              <li><strong>Plano Calouro:</strong> Correções inclusas no plano</li>
+              <li><strong>Plano Veterano:</strong> 2 correções/mês inclusas</li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mb-4 mt-4">
               <strong>Política de reembolso:</strong>

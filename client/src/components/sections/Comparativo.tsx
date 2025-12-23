@@ -11,13 +11,13 @@ export function Comparativo() {
   const features = [
     {
       name: "Preço mensal",
-      passarei: "R$ 49,90*",
+      passarei: "R$ 44,90*",
       cursinhos: "R$ 129,90",
       livros: "R$ 150+",
     },
     {
       name: "Custo/dia",
-      passarei: "R$ 1,66",
+      passarei: "R$ 1,49",
       cursinhos: "R$ 4,33",
       livros: "Variável",
     },

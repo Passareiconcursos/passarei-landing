@@ -35,7 +35,7 @@ export function Depoimentos() {
       age: 31,
       status: "✅ Aprovado PRF 2025 - Agente",
       location: "📍 Brasília, DF",
-      text: "Gastei R$ 5 mil em cursinhos sem resultado. Aqui por R$ 49,90/mês aprendi mais em 3 meses e fui aprovado na PRF. Melhor investimento que já fiz!",
+      text: "Gastei R$ 5 mil em cursinhos sem resultado. Aqui por R$ 44,90/mês aprendi mais em 3 meses e fui aprovado na PRF. Melhor investimento que já fiz!",
       initials: "RS",
       color: "bg-purple-500",
     },
