@@ -262,42 +262,50 @@ export async function handleLearningCallback(
     await bot.answerCallbackQuery(query.id);
     const keyboard = {
       inline_keyboard: [
-        [{ text: "💰 R$ 5 (5 questões)", callback_data: "pay_credits_5" }],
-        [{ text: "💰 R$ 10 (10 questões)", callback_data: "pay_credits_10" }],
-        [{ text: "💰 R$ 20 (20 questões)", callback_data: "pay_credits_20" }],
+        [{ text: "🎓 Plano Calouro - R$ 89,90/mês", callback_data: "pay_calouro" }],
+        [{ text: "⭐ Plano Veterano - R$ 44,90/mês (anual)", callback_data: "pay_veterano" }],
         [{ text: "🔙 Voltar", callback_data: "back_to_menu" }],
       ],
     };
     await bot.sendMessage(
       chatId,
-      `💳 *COMPRAR CRÉDITOS*\n\nEscolha o pacote:\n\n• R$ 5,00 = 5 questões\n• R$ 10,00 = 10 questões\n• R$ 20,00 = 20 questões\n\n_Pagamento via PIX ou Cartão_`,
+      `💳 *NOSSOS PLANOS*\n\n` +
+      `🎓 *CALOURO* - R$ 89,90/mês\n` +
+      `• Sem compromisso, cancele quando quiser\n` +
+      `• 300 questões personalizadas/mês\n` +
+      `• Correção detalhada com IA\n` +
+      `• Pix ou Cartão\n\n` +
+      `⭐ *VETERANO* - R$ 44,90/mês (anual)\n` +
+      `• 30 questões/dia (900/mês)\n` +
+      `• 2 correções de redação/mês\n` +
+      `• Intensivo nas dificuldades\n` +
+      `• Simulados mensais\n` +
+      `• Suporte prioritário\n\n` +
+      `_Economize 50% no plano anual!_`,
       { parse_mode: "Markdown", reply_markup: keyboard },
     );
     return true;
   }
-  if (data.startsWith("pay_credits_")) {
+  if (data === "pay_calouro") {
     await bot.answerCallbackQuery(query.id);
-    const amount = data.replace("pay_credits_", "");
-    const packageId = `credits_${amount}`;
-    const appUrl = process.env.APP_URL || "https://passarei.com.br";
+    const appUrl = process.env.APP_URL || "https://passarei-landing-production.up.railway.app";
     await bot.sendMessage(
       chatId,
-      `✅ *Clique no link para pagar R$ ${amount},00:*\n\n🔗 ${appUrl}/checkout?pkg=${packageId}\&user=${telegramId}\n\n_Após o pagamento, seus créditos serão adicionados automaticamente._`,
+      `🎓 *PLANO CALOURO*\n\nR$ 89,90/mês - Sem compromisso\n\n✅ 300 questões personalizadas/mês\n✅ Correção detalhada de cada alternativa\n✅ Explicações completas com IA\n✅ Use quando quiser\n✅ Créditos não expiram\n\n🔗 Clique para assinar:\n${appUrl}/checkout?pkg=calouro_mensal\&user=${telegramId}`,
       { parse_mode: "Markdown" },
     );
     return true;
   }
-  if (data === "buy_veterano") {
+  if (data === "pay_veterano" || data === "buy_veterano") {
     await bot.answerCallbackQuery(query.id);
-    const appUrl = process.env.APP_URL || "https://passarei.com.br";
+    const veteranoUrl = "https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=e717107a9daa436f81ce9c8cc1c00d8f";
     await bot.sendMessage(
       chatId,
-      `⭐ *PLANO VETERANO*\n\nR$ 49,90/mês\n\n✅ 300 questões personalizadas/mês\n✅ 2 correções de redação/mês com IA\n✅ Todas as apostilas inclusas\n✅ Revisão inteligente SM2\n\n🔗 Clique para assinar:\n${appUrl}/checkout?pkg=veterano\&user=${telegramId}\n\n_62% mais barato que a concorrência!_`,
+      `⭐ *PLANO VETERANO*\n\nR$ 44,90/mês (cobrado anualmente)\n\n✅ 30 questões/dia (10.800/ano)\n✅ 2 correções de redação/mês com IA\n✅ Intensivo nas suas dificuldades\n✅ Revisão inteligente SM2\n✅ Plano de estudos personalizado\n✅ Simulados mensais\n✅ Suporte prioritário\n✅ Troque de concurso quando quiser\n\n💰 *Economia de 50%* vs mensal!\n\n🔗 Clique para assinar:\n${veteranoUrl}`,
       { parse_mode: "Markdown" },
     );
     return true;
   }
-
   if (data === "check_balance") {
     await bot.answerCallbackQuery(query.id);
     const result = await db.execute(sql`

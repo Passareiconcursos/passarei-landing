@@ -85,7 +85,7 @@ export function CTAFinal() {
           <div className="mt-8 inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3">
             <CheckCircle className="w-5 h-5 text-green-400" />
             <span className="text-white text-sm">
-              5 questões grátis para você testar • Sem cartão de crédito
+              21 questões grátis para você testar • Sem cartão de crédito
             </span>
           </div>
 

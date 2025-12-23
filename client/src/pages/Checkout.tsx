@@ -6,12 +6,10 @@ declare global {
     MercadoPago: any;
   }
 }
-
 const PACKAGES = {
-  credits_5: { amount: 5, questions: 5, label: "5 Questões" },
-  credits_10: { amount: 10, questions: 10, label: "10 Questões" },
-  credits_20: { amount: 20, questions: 20, label: "20 Questões" },
-  veterano: { amount: 49.9, questions: 300, label: "Plano Veterano" },
+
+  calouro_mensal: { amount: 89.90, questions: 300, label: "Plano Calouro - Mensal" },
+  veterano: { amount: 538.80, questions: 10800, label: "Plano Veterano - Anual" },
 };
 
 export default function Checkout() {

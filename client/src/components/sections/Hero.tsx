@@ -33,7 +33,7 @@ export function Hero() {
                 onClick={() => setShowMiniChat(true)}
                 className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
-                <span className="text-2xl mr-2">🎁</span>5 Questões Grátis
+                <span className="text-2xl mr-2">🎁</span>21 Questões Grátis
               </Button>
 
               <Button
@@ -144,7 +144,7 @@ export function Hero() {
                       <div className="flex justify-start">
                         <div className="max-w-[85%] bg-white rounded-lg rounded-tl-none p-3 shadow-sm border-2 border-[#18cb96]">
                           <p className="text-sm">
-                            🎁 Você ganhou <strong>5 questões GRÁTIS</strong>{" "}
+                            🎁 Você ganhou <strong>21 questões GRÁTIS</strong>{" "}
                             para testar!
                           </p>
                           <p className="text-[10px] text-gray-500 text-right mt-1">
@@ -188,7 +188,7 @@ export function Hero() {
 
                 <div className="absolute -left-4 top-1/3 bg-white rounded-full px-4 py-2 shadow-lg border-2 border-blue-500">
                   <p className="text-xs font-bold text-blue-600">
-                    🎯 5 questões
+                    🎯 21 questões
                   </p>
                 </div>
 

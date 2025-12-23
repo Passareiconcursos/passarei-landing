@@ -35,9 +35,9 @@ export default function Termos() {
               <strong>Planos disponíveis:</strong>
             </p>
             <ul className="list-disc pl-6 text-muted-foreground mb-4 space-y-2">
-              <li><strong>Gratuito (R$ 0):</strong> 2 matérias por dia, 2 correções de exercícios por dia, suporte em até 24h, SEM correção de redação</li>
-              <li><strong>Calouro (R$ 12,90/mês):</strong> 10 matérias por dia (300/mês), 10 correções de exercícios por dia, 1 redação grátis por dia (30/mês), redações extras por R$ 1,90, plano de aula personalizado, simulados mensais, suporte prioritário em até 2h</li>
-              <li><strong>Veterano (R$ 118,80/ano ou R$ 9,90/mês):</strong> 30 matérias por dia (900/mês), 30 correções de exercícios por dia, 3 redações grátis por dia (90/mês), redações extras por R$ 0,99, simulados ilimitados, suporte VIP em até 30min (24/7), programa de afiliados com 20% de comissão recorrente</li>
+              <li><strong>Gratuito (R$ 0):</strong> 21 questões grátis (única vez) para testar a plataforma, correção detalhada com IA, sem cartão de crédito</li>
+              <li><strong>Calouro (R$ 89,90/mês):</strong> 300 questões personalizadas/mês, correção detalhada de cada alternativa, explicações completas com IA, sem compromisso - cancele quando quiser, créditos não expiram</li>
+              <li><strong>Veterano (R$ 44,90/mês cobrado anualmente - R$ 538,80/ano):</strong> 30 questões/dia (10.800/ano), 2 correções de redação/mês com IA, intensivo nas dificuldades, revisão inteligente SM2, plano de estudos personalizado, simulados mensais, suporte prioritário, troque de concurso quando quiser</li>
             </ul>
           </section>
 

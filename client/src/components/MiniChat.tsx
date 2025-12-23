@@ -357,7 +357,7 @@ export function MiniChat() {
     if (isUserBlocked()) {
       setIsBlocked(true);
       setChatState((prev) => ({ ...prev, step: "blocked" }));
-      addBotMessage("👋 Olá! Você já utilizou suas **5 questões grátis**.");
+      addBotMessage("👋 Olá! Você já utilizou suas **21 questões grátis**.");
       setTimeout(() => {
         addBotMessage(
           "🎯 Para continuar estudando, escolha um de nossos planos:",
@@ -375,7 +375,7 @@ export function MiniChat() {
           );
           setTimeout(() => {
             addBotMessage(
-              "🎁 BÔNUS: Você tem **5 questões GRÁTIS** para testar agora!",
+              "🎁 BÔNUS: Você tem **21 questões GRÁTIS** para testar agora!",
             );
             setTimeout(() => {
               addBotMessage("📧 Para começar, me diz seu melhor e-mail:");
@@ -926,7 +926,7 @@ export function MiniChat() {
 
       setTimeout(() => {
         addBotMessage(
-          "🎁 Você tem **5 questões GRÁTIS** agora!\n\n⏳ Preparando suas questões personalizadas...",
+          "🎁 Você tem **21 questões GRÁTIS** agora!\n\n⏳ Preparando suas questões personalizadas...",
         );
         setTimeout(() => {
           startQuestions();
@@ -1299,7 +1299,7 @@ export function MiniChat() {
               </p>
             </div>
             <div className="text-xs bg-white/20 px-2 py-1 rounded-full">
-              🎁 5 grátis
+              🎁 21 grátis
             </div>
           </div>
 

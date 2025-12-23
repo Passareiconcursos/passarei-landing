@@ -98,7 +98,7 @@ export function ComoFunciona() {
             </Button>
           </div>
           <p className="text-sm text-muted-foreground mt-4">
-            5 questões grátis • Sem cartão de crédito
+            21 questões grátis • Sem cartão de crédito
           </p>
         </div>
       </div>

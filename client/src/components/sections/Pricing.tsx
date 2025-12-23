@@ -10,57 +10,58 @@ export function Pricing() {
 
   const plans = [
     {
-      name: "Pay-per-use",
-      price: "0,99",
-      period: "/questão",
-      description: "Pague apenas o que usar",
-      features: [
-        "Sem mensalidade",
-        "Questões personalizadas por IA",
-        "Correção detalhada de cada alternativa",
-        "Explicações completas",
-        "Use quando quiser",
-        "Créditos não expiram",
-        "Pix ou Cartão de crédito",
-      ],
-      cta: "Começar Agora",
-      highlight: false,
-      popular: false,
-    },
-    {
-      name: "Veterano",
-      price: "49,90",
-      period: "/mês",
-      description: "Acesso completo para aprovação",
-      features: [
-        "300 Questões por mês",
-        "Correção de 2 redações mês com IA",
-        "Todas as apostilas inclusas (Em breve)",
-        "Revisão inteligente SM2",
-        "Plano de estudos personalizado",
-        "Simulados Mensais",
-        "Suporte prioritário",
-      ],
-      cta: "Assinar Agora",
-      highlight: true,
-      popular: true,
-      badge: "MAIS POPULAR",
-    },
-    {
       name: "Gratuito",
       price: "0",
-      period: "/sem cadastro",
+      period: "",
       description: "Teste a plataforma sem compromisso",
       features: [
-        "5 questões grátis para testar",
+        "21 questões grátis (única vez)",
         "Onboarding personalizado",
-        "Acesso ao Telegram",
+        "Correção detalhada com IA",
         "Conheça a metodologia",
         "Sem cartão de crédito",
       ],
       cta: "Testar Grátis",
       highlight: false,
       popular: false,
+    },
+    {
+      name: "Calouro",
+      price: "89,90",
+      period: "/mês",
+      description: "Sem compromisso, cancele quando quiser",
+      features: [
+        "300 questões personalizadas/mês",
+        "Correção detalhada de cada alternativa",
+        "Explicações completas com IA",
+        "Use quando quiser",
+        "Créditos não expiram",
+        "Pix ou Cartão de crédito",
+      ],
+      cta: "Assinar Calouro",
+      highlight: false,
+      popular: false,
+    },
+    {
+      name: "Veterano",
+      price: "44,90",
+      period: "/mês",
+      description: "Plano anual - Melhor custo-benefício",
+      features: [
+        "30 questões/dia (10.800/ano)",
+        "2 correções de redação/mês com IA",
+        "Intensivo nas suas dificuldades",
+        "Revisão inteligente SM2",
+        "Plano de estudos personalizado",
+        "Simulados mensais",
+        "Suporte prioritário",
+        "Troque de concurso quando quiser",
+      ],
+      cta: "Assinar Veterano",
+      highlight: true,
+      popular: true,
+      badge: "ECONOMIA DE 50%",
+      annualNote: "Cobrado anualmente (R$ 538,80/ano)",
     },
   ];
 
@@ -133,6 +134,11 @@ export function Pricing() {
                     {plan.period}
                   </span>
                 </div>
+                {plan.annualNote && (
+                  <p className={`text-xs mt-2 ${plan.highlight ? "text-white/80" : "text-gray-500"}`}>
+                    {plan.annualNote}
+                  </p>
+                )}
               </div>
 
               <ul className="space-y-4 mb-8">
@@ -156,10 +162,10 @@ export function Pricing() {
 
               <Button
                 onClick={scrollToCTA}
-                className={`w-full py-6 rounded-xl font-semibold text-base transition-all ${
+                className={`w-full py-6 text-lg font-semibold ${
                   plan.highlight
-                    ? "bg-white text-[#18cb96] hover:bg-gray-100 shadow-lg"
-                    : "bg-[#18cb96] text-white hover:bg-[#14b584] hover:scale-105"
+                    ? "bg-white text-[#18cb96] hover:bg-gray-100"
+                    : "bg-[#18cb96] text-white hover:bg-[#14b584]"
                 }`}
               >
                 {plan.cta}
@@ -169,23 +175,9 @@ export function Pricing() {
         </div>
 
         <div className="text-center">
-          <p className="text-gray-600 mb-6">
-            🔒 Garantia de 7 dias • Cancele quando quiser • Sem taxas escondidas
+          <p className="text-gray-500 text-sm">
+            ✅ Satisfação garantida ou seu dinheiro de volta em até 7 dias
           </p>
-          <Button
-            onClick={scrollToCTA}
-            size="lg"
-            className="bg-[#0088cc] hover:bg-[#0077b5] text-white px-12 py-6 text-lg font-semibold rounded-xl transition-all hover:scale-105"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="w-6 h-6 mr-2"
-              fill="currentColor"
-            >
-              <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-            </svg>
-            Começar pelo Telegram
-          </Button>
         </div>
       </div>
     </section>
