@@ -55,11 +55,11 @@ export const supabaseHttp = {
     
     insert: async (data: any) => {
       return supabaseFetch<any>(table, {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(data),
-      })
+      }, true);
     },
-    
+
     update: async (data: any, filters: Record<string, any>) => {
       let endpoint = `${table}?`
       
@@ -102,6 +102,14 @@ export const supabaseHttpAdmin = {
     },
     
     insert: async (data: any) => {
+      // Usar service key para insert
+      return supabaseFetch<any>(table, {
+        method: 'POST',
+        },
+        true
+      )
+    },
+    insertOld: async (data: any) => {
       return supabaseFetch<any>(table, {
         method: 'POST',
         body: JSON.stringify(data),
