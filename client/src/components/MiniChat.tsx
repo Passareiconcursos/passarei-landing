@@ -499,7 +499,7 @@ export function MiniChat() {
         (window as any).dataLayer = (window as any).dataLayer || [];
         (window as any).dataLayer.push({
           event: "onboarding_step",
-          step_number: currentStep, // ou a variável que indica a fase atual
+          step_number: 1, // ou a variável que indica a fase atual
           step_name: "Pergunta Onboarding",
         });
         try {
@@ -583,7 +583,7 @@ export function MiniChat() {
     (window as any).dataLayer = (window as any).dataLayer || [];
     (window as any).dataLayer.push({
       event: "onboarding_step",
-      step_number: currentStep, // ou a variável que indica a fase atual
+      step_number: 1, // ou a variável que indica a fase atual
       step_name: "Pergunta Onboarding",
     });
     switch (chatState.step) {
@@ -1001,7 +1001,7 @@ export function MiniChat() {
     (window as any).dataLayer = (window as any).dataLayer || [];
     (window as any).dataLayer.push({
       event: "onboarding_step",
-      step_number: currentStep, // ou a variável que indica a fase atual
+      step_number: 1, // ou a variável que indica a fase atual
       step_name: "Pergunta Onboarding",
     });
     await wait(3000);
