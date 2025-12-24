@@ -15,6 +15,7 @@ import Reembolso from "@/pages/reembolso";
 import EducLogin from "@/pages/educ-login";
 import EducDashboard from "@/pages/educ-dashboard";
 import EducLeads from "@/pages/educ-leads";
+import Success from "./pages/Success";
 import EducUsers from "@/pages/educ-users";
 import EducRevenue from "@/pages/educ-revenue";
 import EducContent from "@/pages/educ-content";
@@ -27,6 +28,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/obrigado" component={Obrigado} />
+      <Route path="/success" component={Success} />
       <Route path="/termos" component={Termos} />
       <Route path="/privacidade" component={Privacidade} />
       <Route path="/cookies" component={Cookies} />
