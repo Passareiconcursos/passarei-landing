@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import emailTestRouter from "./email/test-route";
 import { registerRoutes } from "./routes";
 import { registerAIRoutes } from "./ai-routes";
 import { registerEditalRoutes } from "./edital-routes";
@@ -49,6 +50,7 @@ app.use((req, res, next) => {
   registerEditalRoutes(app);
   registerMiniChatRoutes(app);
   app.use("/api/payment", paymentRoutes);
+  app.use('/api/email', emailTestRouter);
 
   // --- BLOCO DE SEO (A NOVIDADE) ---
   app.get("/robots.txt", (_req, res) => {

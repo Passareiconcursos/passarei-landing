@@ -270,7 +270,7 @@ export function Comparativo() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground text-center mt-4">
-            *Plano Veterano: R$ 49,90/mês
+            *Plano Veterano: R$ 44,90/mês
           </p>
         </div>
 
