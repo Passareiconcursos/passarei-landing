@@ -1,8 +1,8 @@
 // server/activation/codes.ts
 // 🔑 Sistema de códigos de ativação para conectar email ↔ Telegram
 
-import { db } from "../db";
-import { users } from "../db/schema";
+import { db } from "../../db";
+import { users } from "../../db/schema";
 import { eq, and } from "drizzle-orm";
 
 /**
