@@ -3,7 +3,7 @@
 
 import { db } from "../../db";
 import { users } from "../../db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 /**
  * Gera código de ativação único
@@ -47,13 +47,14 @@ export async function saveActivationCode(
       `💾 [Activation] Salvando código ${activationCode} para usuário ${userId}`,
     );
 
-    await db
-      .update(users)
-      .set({
-        activationCode,
-        activationCodeUsed: false,
-      })
-      .where(eq(users.id, userId));
+    // Usar SQL direto por enquanto
+    await db.execute(sql`
+      UPDATE "User" 
+      SET 
+        "activationCode" = ${activationCode},
+        "activationCodeUsed" = false
+      WHERE id = ${userId}
+    `);
 
     console.log("✅ [Activation] Código salvo com sucesso");
 
