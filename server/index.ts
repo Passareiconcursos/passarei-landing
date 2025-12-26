@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import emailTestRouter from "./email/test-route";
 import { registerRoutes } from "./routes";
 import { registerAIRoutes } from "./ai-routes";
+import activationRoutes from "./activation/test-routes";
 import { registerEditalRoutes } from "./edital-routes";
 // import { registerPrismaRoutes } from "./routes-prisma"; // DESABILITADO - usando Supabase
 import { registerSupabaseRoutes } from "./routes-supabase";
@@ -14,6 +15,7 @@ import { startTelegramBot } from "./telegram/bot";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use('/api/activation', activationRoutes);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -50,7 +52,7 @@ app.use((req, res, next) => {
   registerEditalRoutes(app);
   registerMiniChatRoutes(app);
   app.use("/api/payment", paymentRoutes);
-  app.use('/api/email', emailTestRouter);
+  app.use("/api/email", emailTestRouter);
 
   // --- BLOCO DE SEO (A NOVIDADE) ---
   app.get("/robots.txt", (_req, res) => {
