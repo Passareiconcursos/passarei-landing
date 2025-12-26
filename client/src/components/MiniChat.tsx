@@ -1297,9 +1297,32 @@ export function MiniChat() {
     addOfferBlock("telegram", "");
   };
 
-  const handlePayment = (plan: "ppu" | "veterano") => {
-    window.location.href =
-      plan === "veterano" ? "/checkout?plan=veterano" : "/checkout?plan=ppu";
+  const handlePayment = (plan: "calouro" | "veterano") => {
+    console.log("💳 Redirecionando para pagamento:", plan);
+
+    // Google Analytics
+    if (typeof window !== "undefined" && (window as any).gtag) {
+      (window as any).gtag("event", "begin_checkout", {
+        currency: "BRL",
+        value: plan === "veterano" ? 44.9 : 89.9,
+        items: [
+          {
+            item_name: `Plano ${plan === "veterano" ? "VETERANO" : "CALOURO"}`,
+            price: plan === "veterano" ? 44.9 : 89.9,
+            quantity: 1,
+          },
+        ],
+      });
+    }
+
+    if (plan === "veterano") {
+      // Redirecionar direto para assinatura Mercado Pago
+      window.location.href =
+        "https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=e717107a9daa436f81ce9c8cc1c00d8f";
+    } else {
+      // Redirecionar para checkout Calouro
+      window.location.href = "/checkout?plan=calouro";
+    }
   };
 
   const handleTelegram = () => {
@@ -1335,7 +1358,7 @@ export function MiniChat() {
           </div>
         );
 
-      case "ppu":
+      case "calouro":
         return (
           <div className="bg-white border-2 border-gray-200 rounded-2xl p-4 mb-3 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
@@ -1352,7 +1375,7 @@ export function MiniChat() {
               <li>• Acesso completo à plataforma</li>
             </ul>
             <button
-              onClick={() => handlePayment("ppu")}
+              onClick={() => handlePayment("calouro")}
               className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2.5 px-4 rounded-xl transition-all text-sm"
             >
               💳 Assinar Agora
