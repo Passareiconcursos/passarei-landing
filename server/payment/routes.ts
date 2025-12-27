@@ -1,46 +1,46 @@
-import { Router, Request, Response } from 'express';
-import { 
-  createPaymentPreference, 
-  createVeteranoPreference, 
+import { Router, Request, Response } from "express";
+import {
+  createPaymentPreference,
+  createVeteranoPreference,
   processPaymentWebhook,
   createVeteranoSubscription,
   getSubscriptionStatus,
   cancelSubscription,
-  CREDIT_PACKAGES 
-} from './mercadopago';
-import { db } from '../../db';
-import { sql } from 'drizzle-orm';
+  CREDIT_PACKAGES,
+} from "./mercadopago";
+import { db } from "../../db";
+import { sql } from "drizzle-orm";
 
 const router = Router();
 
 // Listar pacotes disponíveis
-router.get('/packages', (req: Request, res: Response) => {
+router.get("/packages", (req: Request, res: Response) => {
   res.json({
     success: true,
     packages: CREDIT_PACKAGES,
     veterano: {
-      id: 'veterano_monthly',
-      amount: 49.90,
-      label: 'Plano Veterano - R$ 49,90/mês',
+      id: "veterano_monthly",
+      amount: 49.9,
+      label: "Plano Veterano - R$ 49,90/mês",
       benefits: [
-        '300 questões personalizadas/mês',
-        '2 correções de redação/mês com IA',
-        'Todas as apostilas inclusas',
-        'Revisão inteligente SM2',
+        "300 questões personalizadas/mês",
+        "2 correções de redação/mês com IA",
+        "Todas as apostilas inclusas",
+        "Revisão inteligente SM2",
       ],
     },
   });
 });
 
 // Criar pagamento para créditos (Pay-per-use)
-router.post('/create-payment', async (req: Request, res: Response) => {
+router.post("/create-payment", async (req: Request, res: Response) => {
   try {
     const { packageId, telegramId, email } = req.body;
 
     if (!packageId || !telegramId) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'packageId e telegramId são obrigatórios' 
+      return res.status(400).json({
+        success: false,
+        error: "packageId e telegramId são obrigatórios",
       });
     }
 
@@ -50,9 +50,10 @@ router.post('/create-payment', async (req: Request, res: Response) => {
       email,
     });
 
-    const paymentUrl = process.env.NODE_ENV === 'production' 
-      ? preference.initPoint 
-      : preference.sandboxInitPoint;
+    const paymentUrl =
+      process.env.NODE_ENV === "production"
+        ? preference.initPoint
+        : preference.sandboxInitPoint;
 
     res.json({
       success: true,
@@ -60,23 +61,23 @@ router.post('/create-payment', async (req: Request, res: Response) => {
       paymentUrl,
     });
   } catch (error: any) {
-    console.error('❌ Erro ao criar pagamento:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    console.error("❌ Erro ao criar pagamento:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
     });
   }
 });
 
 // Criar pagamento para Plano Veterano (único)
-router.post('/create-veterano', async (req: Request, res: Response) => {
+router.post("/create-veterano", async (req: Request, res: Response) => {
   try {
     const { telegramId, email } = req.body;
 
     if (!telegramId) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'telegramId é obrigatório' 
+      return res.status(400).json({
+        success: false,
+        error: "telegramId é obrigatório",
       });
     }
 
@@ -85,9 +86,10 @@ router.post('/create-veterano', async (req: Request, res: Response) => {
       email,
     });
 
-    const paymentUrl = process.env.NODE_ENV === 'production' 
-      ? preference.initPoint 
-      : preference.sandboxInitPoint;
+    const paymentUrl =
+      process.env.NODE_ENV === "production"
+        ? preference.initPoint
+        : preference.sandboxInitPoint;
 
     res.json({
       success: true,
@@ -95,68 +97,170 @@ router.post('/create-veterano', async (req: Request, res: Response) => {
       paymentUrl,
     });
   } catch (error: any) {
-    console.error('❌ Erro ao criar pagamento Veterano:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    console.error("❌ Erro ao criar pagamento Veterano:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
     });
   }
 });
 
-// Webhook do Mercado Pago
-router.post('/webhooks/mercadopago', async (req: Request, res: Response) => {
+// Webhook do Mercado Pago - ATUALIZADO
+router.post("/webhooks/mercadopago", async (req: Request, res: Response) => {
   try {
+    console.log("🔔 [Webhook] Notificação recebida do Mercado Pago");
+    console.log("📦 [Webhook] Body:", JSON.stringify(req.body, null, 2));
+
     const { type, data } = req.body;
 
-    console.log('📩 Webhook recebido:', type, data);
-
-    if (type === 'payment') {
+    // Processar pagamento
+    if (type === "payment") {
       const paymentId = data?.id;
-      
-      if (paymentId) {
-        const result = await processPaymentWebhook(String(paymentId));
-        
-        if (result.success && result.telegramId) {
-          if (result.packageId === 'veterano') {
-            await db.execute(sql`
-              UPDATE "User" 
-              SET "plan" = 'VETERANO',
-                  "planExpiresAt" = NOW() + INTERVAL '30 days',
-                  "updatedAt" = NOW()
-              WHERE "telegramId" = ${result.telegramId}
-            `);
-            console.log(`✅ Plano Veterano ativado para ${result.telegramId}`);
-          } else {
-            const credits = result.amount || 0;
-            await db.execute(sql`
-              UPDATE "User" 
-              SET "credits" = COALESCE("credits", 0) + ${credits},
-                  "updatedAt" = NOW()
-              WHERE "telegramId" = ${result.telegramId}
-            `);
-            console.log(`✅ ${credits} créditos adicionados para ${result.telegramId}`);
-          }
+
+      if (!paymentId) {
+        return res
+          .status(200)
+          .json({ success: true, message: "ID não fornecido" });
+      }
+
+      console.log(`💳 [Webhook] Processando pagamento: ${paymentId}`);
+
+      // Buscar dados do pagamento
+      const paymentData = await payment.get({ id: paymentId });
+
+      console.log(`📊 [Webhook] Status: ${paymentData.status}`);
+      console.log(`💰 [Webhook] Valor: R$ ${paymentData.transaction_amount}`);
+
+      // Processar apenas se aprovado
+      if (paymentData.status === "approved") {
+        console.log("✅ [Webhook] Pagamento aprovado! Ativando usuário...");
+
+        const email = paymentData.payer?.email;
+        const amount = paymentData.transaction_amount || 0;
+
+        if (!email) {
+          console.error("❌ [Webhook] Email não encontrado");
+          return res
+            .status(200)
+            .json({ success: false, error: "Email não encontrado" });
         }
+
+        // Determinar plano baseado no valor
+        let plan: "calouro" | "veterano" = "calouro";
+        if (amount >= 40 && amount <= 50) {
+          plan = "veterano";
+        } else if (amount >= 500 && amount <= 550) {
+          plan = "veterano";
+        }
+
+        console.log(`📦 [Webhook] Plano: ${plan}`);
+
+        // Verificar se usuário já existe
+        const existingUser = await db.execute(sql`
+          SELECT id FROM "User" WHERE email = ${email} LIMIT 1
+        `);
+
+        let userId: string;
+
+        if (existingUser && existingUser.length > 0) {
+          // Atualizar usuário existente
+          userId = existingUser[0].id;
+          console.log(`🔄 [Webhook] Atualizando usuário: ${userId}`);
+
+          await db.execute(sql`
+            UPDATE "User"
+            SET 
+              plan = ${plan},
+              "planStatus" = 'active',
+              "planStartDate" = NOW(),
+              "planEndDate" = NOW() + INTERVAL '1 month',
+              "updatedAt" = NOW()
+            WHERE id = ${userId}
+          `);
+        } else {
+          // Criar novo usuário
+          console.log(`➕ [Webhook] Criando novo usuário`);
+          userId = `mp_${paymentId}_${Date.now()}`;
+
+          await db.execute(sql`
+            INSERT INTO "User" (
+              id, email, name, phone, plan, "planStatus",
+              "planStartDate", "planEndDate", "examType", state,
+              "isActive", "createdAt", "updatedAt"
+            ) VALUES (
+              ${userId}, ${email}, 
+              ${paymentData.payer?.first_name || "Usuário"},
+              ${paymentData.payer?.phone?.number || ""},
+              ${plan}, 'active', NOW(), NOW() + INTERVAL '1 month',
+              'OUTRO', 'SP', true, NOW(), NOW()
+            )
+          `);
+        }
+
+        // Importar funções de ativação
+        const { createActivationCode } = await import("../activation/codes");
+        const { sendWelcomeEmail } = await import("../email/send-welcome");
+
+        // Gerar código de ativação
+        console.log(`🔑 [Webhook] Gerando código de ativação`);
+        const activationCode = await createActivationCode(userId);
+
+        // Enviar email de boas-vindas
+        console.log(`📧 [Webhook] Enviando email de boas-vindas`);
+        try {
+          await sendWelcomeEmail({
+            userEmail: email,
+            userName: paymentData.payer?.first_name || email,
+            plan,
+            activationCode,
+            paymentId: paymentId.toString(),
+          });
+          console.log("✅ [Webhook] Email enviado com sucesso");
+        } catch (emailError) {
+          console.error(
+            "⚠️ [Webhook] Erro ao enviar email (não crítico):",
+            emailError,
+          );
+        }
+
+        console.log("✅ [Webhook] Usuário ativado com sucesso!");
+        console.log(`📧 Email: ${email}`);
+        console.log(`🔑 Código: ${activationCode}`);
+        console.log(`📦 Plano: ${plan}`);
+
+        return res.status(200).json({
+          success: true,
+          message: "Pagamento processado",
+          activationCode,
+        });
       }
     }
 
-    res.status(200).send('OK');
-  } catch (error) {
-    console.error('❌ Erro no webhook:', error);
-    res.status(500).send('Error');
+    // Assinatura (Veterano)
+    if (type === "subscription_preapproval") {
+      console.log("📅 [Webhook] Processando assinatura");
+      // TODO: Implementar lógica de assinatura se necessário
+    }
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Notificação recebida" });
+  } catch (error: any) {
+    console.error("❌ [Webhook] Erro:", error);
+    return res.status(200).json({ success: false, error: error.message });
   }
 });
 
 // Verificar status de pagamento
-router.get('/status/:paymentId', async (req: Request, res: Response) => {
+router.get("/status/:paymentId", async (req: Request, res: Response) => {
   try {
     const { paymentId } = req.params;
     const result = await processPaymentWebhook(paymentId);
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      error: error.message,
     });
   }
 });
@@ -166,14 +270,14 @@ router.get('/status/:paymentId', async (req: Request, res: Response) => {
 // ============================================
 
 // Criar assinatura do Plano Veterano
-router.post('/create-subscription', async (req: Request, res: Response) => {
+router.post("/create-subscription", async (req: Request, res: Response) => {
   try {
     const { telegramId, email } = req.body;
 
     if (!telegramId || !email) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'telegramId e email são obrigatórios' 
+      return res.status(400).json({
+        success: false,
+        error: "telegramId e email são obrigatórios",
       });
     }
 
@@ -188,53 +292,61 @@ router.post('/create-subscription', async (req: Request, res: Response) => {
       paymentUrl: subscription.initPoint,
     });
   } catch (error: any) {
-    console.error('❌ Erro ao criar assinatura:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    console.error("❌ Erro ao criar assinatura:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
     });
   }
 });
 
 // Verificar status da assinatura
-router.get('/subscription/:subscriptionId', async (req: Request, res: Response) => {
-  try {
-    const { subscriptionId } = req.params;
-    const status = await getSubscriptionStatus(subscriptionId);
-    res.json({ success: true, ...status });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+router.get(
+  "/subscription/:subscriptionId",
+  async (req: Request, res: Response) => {
+    try {
+      const { subscriptionId } = req.params;
+      const status = await getSubscriptionStatus(subscriptionId);
+      res.json({ success: true, ...status });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
 // Cancelar assinatura
-router.post('/subscription/:subscriptionId/cancel', async (req: Request, res: Response) => {
-  try {
-    const { subscriptionId } = req.params;
-    const result = await cancelSubscription(subscriptionId);
-    res.json({ success: true, ...result });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+router.post(
+  "/subscription/:subscriptionId/cancel",
+  async (req: Request, res: Response) => {
+    try {
+      const { subscriptionId } = req.params;
+      const result = await cancelSubscription(subscriptionId);
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  },
+);
 
 // Webhook para assinaturas
-router.post('/webhooks/subscription', async (req: Request, res: Response) => {
+router.post("/webhooks/subscription", async (req: Request, res: Response) => {
   try {
     const { type, data } = req.body;
-    
-    console.log('📩 Webhook de assinatura:', type, data);
 
-    if (type === 'subscription_preapproval') {
+    console.log("📩 Webhook de assinatura:", type, data);
+
+    if (type === "subscription_preapproval") {
       const subscriptionId = data?.id;
-      
+
       if (subscriptionId) {
-        const subscription = await getSubscriptionStatus(String(subscriptionId));
-        
-        if (subscription.status === 'authorized') {
-          const externalRef = subscription.external_reference || '';
-          const [telegramId] = externalRef.split('|');
-          
+        const subscription = await getSubscriptionStatus(
+          String(subscriptionId),
+        );
+
+        if (subscription.status === "authorized") {
+          const externalRef = subscription.external_reference || "";
+          const [telegramId] = externalRef.split("|");
+
           await db.execute(sql`
             UPDATE "User" 
             SET "plan" = 'VETERANO',
@@ -242,16 +354,16 @@ router.post('/webhooks/subscription', async (req: Request, res: Response) => {
                 "updatedAt" = NOW()
             WHERE "telegramId" = ${telegramId}
           `);
-          
+
           console.log(`✅ Assinatura Veterano ativada para ${telegramId}`);
         }
       }
     }
 
-    res.status(200).send('OK');
+    res.status(200).send("OK");
   } catch (error) {
-    console.error('❌ Erro no webhook de assinatura:', error);
-    res.status(500).send('Error');
+    console.error("❌ Erro no webhook de assinatura:", error);
+    res.status(500).send("Error");
   }
 });
 
@@ -261,28 +373,35 @@ export default router;
 // PROCESSAR PAGAMENTO DO BRICK
 // ============================================
 
-router.post('/process-brick', async (req: Request, res: Response) => {
+router.post("/process-brick", async (req: Request, res: Response) => {
   try {
-    const { token, payment_method_id, installments, telegramId, packageId, payer } = req.body;
+    const {
+      token,
+      payment_method_id,
+      installments,
+      telegramId,
+      packageId,
+      payer,
+    } = req.body;
 
     if (!telegramId) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Dados de pagamento incompletos' 
+      return res.status(400).json({
+        success: false,
+        error: "Dados de pagamento incompletos",
       });
     }
 
     // Encontrar valor do pacote
-    const pkg = CREDIT_PACKAGES.find(p => p.id === packageId);
-    const amount = pkg ? pkg.amount : (packageId === 'veterano' ? 49.90 : 5);
+    const pkg = CREDIT_PACKAGES.find((p) => p.id === packageId);
+    const amount = pkg ? pkg.amount : packageId === "veterano" ? 49.9 : 5;
 
     // Processar pagamento via API do Mercado Pago
-    const response = await fetch('https://api.mercadopago.com/v1/payments', {
-      method: 'POST',
+    const response = await fetch("https://api.mercadopago.com/v1/payments", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
-        'Content-Type': 'application/json',
-        'X-Idempotency-Key': `${telegramId}-${Date.now()}`,
+        Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+        "Content-Type": "application/json",
+        "X-Idempotency-Key": `${telegramId}-${Date.now()}`,
       },
       body: JSON.stringify({
         token,
@@ -290,18 +409,22 @@ router.post('/process-brick', async (req: Request, res: Response) => {
         installments: installments || 1,
         payment_method_id,
         payer: {
-          email: payer?.email || 'cliente@passarei.com.br',
+          email: payer?.email || "cliente@passarei.com.br",
         },
         external_reference: `${telegramId}|${packageId}|${Date.now()}`,
       }),
     });
 
     const paymentData = await response.json();
-    console.log('📩 Resposta do pagamento:', paymentData.status, paymentData.id);
+    console.log(
+      "📩 Resposta do pagamento:",
+      paymentData.status,
+      paymentData.id,
+    );
 
-    if (paymentData.status === 'approved') {
+    if (paymentData.status === "approved") {
       // Atualizar usuário no banco
-      if (packageId === 'veterano') {
+      if (packageId === "veterano") {
         await db.execute(sql`
           UPDATE "User" 
           SET "plan" = 'VETERANO',
@@ -323,28 +446,31 @@ router.post('/process-brick', async (req: Request, res: Response) => {
 
       return res.json({
         success: true,
-        status: 'approved',
+        status: "approved",
         paymentId: paymentData.id,
       });
-    } else if (paymentData.status === 'pending' || paymentData.status === 'in_process') {
+    } else if (
+      paymentData.status === "pending" ||
+      paymentData.status === "in_process"
+    ) {
       return res.json({
         success: true,
-        status: 'pending',
+        status: "pending",
         paymentId: paymentData.id,
-        message: 'Pagamento em processamento',
+        message: "Pagamento em processamento",
       });
     } else {
       return res.json({
         success: false,
         status: paymentData.status,
-        error: paymentData.message || 'Pagamento não aprovado',
+        error: paymentData.message || "Pagamento não aprovado",
       });
     }
   } catch (error: any) {
-    console.error('❌ Erro ao processar pagamento:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    console.error("❌ Erro ao processar pagamento:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
     });
   }
 });
