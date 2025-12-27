@@ -105,7 +105,7 @@ router.post("/create-veterano", async (req: Request, res: Response) => {
   }
 });
 
-// Webhook do Mercado Pago - ATUALIZADO
+// Webhook do Mercado Pago - ATUALIZADO COM FETCH
 router.post("/webhooks/mercadopago", async (req: Request, res: Response) => {
   try {
     console.log("🔔 [Webhook] Notificação recebida do Mercado Pago");
@@ -125,8 +125,38 @@ router.post("/webhooks/mercadopago", async (req: Request, res: Response) => {
 
       console.log(`💳 [Webhook] Processando pagamento: ${paymentId}`);
 
-      // Buscar dados do pagamento
-      const paymentData = await payment.get({ id: paymentId });
+      // Buscar dados do pagamento via API
+      const MP_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN;
+
+      if (!MP_ACCESS_TOKEN) {
+        console.error("❌ [Webhook] MERCADOPAGO_ACCESS_TOKEN não configurado");
+        return res
+          .status(200)
+          .json({ success: false, error: "Token MP não configurado" });
+      }
+
+      const mpResponse = await fetch(
+        `https://api.mercadopago.com/v1/payments/${paymentId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
+          },
+        },
+      );
+
+      if (!mpResponse.ok) {
+        const errorText = await mpResponse.text();
+        console.error(
+          `❌ [Webhook] Erro ao buscar pagamento: ${mpResponse.status}`,
+        );
+        console.error(`❌ [Webhook] Resposta: ${errorText}`);
+        return res.status(200).json({
+          success: false,
+          error: `MP API retornou ${mpResponse.status}`,
+        });
+      }
+
+      const paymentData = await mpResponse.json();
 
       console.log(`📊 [Webhook] Status: ${paymentData.status}`);
       console.log(`💰 [Webhook] Valor: R$ ${paymentData.transaction_amount}`);
@@ -232,6 +262,14 @@ router.post("/webhooks/mercadopago", async (req: Request, res: Response) => {
           success: true,
           message: "Pagamento processado",
           activationCode,
+        });
+      } else {
+        console.log(
+          `⏳ [Webhook] Pagamento ainda não aprovado: ${paymentData.status}`,
+        );
+        return res.status(200).json({
+          success: true,
+          message: "Pagamento recebido mas não aprovado",
         });
       }
     }
