@@ -23,7 +23,7 @@ interface Message {
   correctIndex?: number;
   timestamp: Date;
   optionType?: "single" | "multi";
-  offerType?: "benefits" | "ppu" | "veterano" | "telegram";
+  offerType?: "benefits" | "calouro" | "veterano" | "telegram";
 }
 
 interface ChatState {
@@ -552,7 +552,7 @@ export function MiniChat() {
   };
 
   const addOfferBlock = (
-    offerType: "benefits" | "ppu" | "veterano" | "telegram",
+    offerType: "benefits" | "calouro" | "veterano" | "telegram",
     content: string,
   ) => {
     const newMessage: Message = {
@@ -1274,7 +1274,7 @@ export function MiniChat() {
 
     addOfferBlock("benefits", "");
     await wait(2000);
-    addOfferBlock("ppu", "");
+    addOfferBlock("calouro", "");
     await wait(1500);
     addOfferBlock("veterano", "");
     await wait(1500);
@@ -1290,7 +1290,7 @@ export function MiniChat() {
 
     addOfferBlock("benefits", "");
     await wait(3000);
-    addOfferBlock("ppu", "");
+    addOfferBlock("calouro", "");
     await wait(2000);
     addOfferBlock("veterano", "");
     await wait(2000);
