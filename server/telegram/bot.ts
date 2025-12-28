@@ -55,8 +55,10 @@ export async function startTelegramBot() {
           const { user } = result;
 
           // Mensagem de boas-vindas personalizada
-          const planEmoji = user.plan === "veterano" ? "⭐" : "🎓";
-          const planName = user.plan === "veterano" ? "VETERANO" : "CALOURO";
+          const planEmoji =
+            user.plan?.toLowerCase() === "veterano" ? "⭐" : "🎓";
+          const planName =
+            user.plan?.toLowerCase() === "veterano" ? "VETERANO" : "CALOURO";
 
           await bot!.sendMessage(
             chatId,
