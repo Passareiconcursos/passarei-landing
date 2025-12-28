@@ -1370,7 +1370,7 @@ export function MiniChat() {
               <span className="text-sm font-normal text-gray-500">por mês</span>
             </p>
             <ul className="text-xs text-gray-600 space-y-1 mb-3">
-              <li>• Questões ilimitadas</li>
+              <li>• 300 Questões mês</li>
               <li>• Sem compromisso, cancele quando quiser</li>
               <li>• Acesso completo à plataforma</li>
             </ul>
@@ -1403,9 +1403,9 @@ export function MiniChat() {
               (plano anual = R$ 538,80)
             </p>
             <ul className="text-xs text-white/90 space-y-1 mb-3">
-              <li>• Questões ilimitadas</li>
-              <li>• Correção de redações com IA</li>
-              <li>• Todas as apostilas inclusas</li>
+              <li>• + de 10 mil Questões ano!</li>
+              <li>• Correção de 2 redações mês</li>
+              <li>• Intensivo de aprendizado</li>
               <li>• Revisão inteligente SM2</li>
               <li>• Suporte prioritário</li>
               <li>• Economia de 50% vs mensal</li>
