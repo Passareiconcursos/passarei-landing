@@ -74,8 +74,23 @@ export async function startTelegramBot() {
           // Criar usuário no sistema do bot (se não existir)
           await createOrGetUser(telegramId, name);
 
-          // Iniciar onboarding normal
-          await startOnboarding(bot!, chatId, telegramId, name);
+          // NÃO iniciar onboarding - usuário já tem plano ativo!
+          // O onboarding é para usuários grátis (21 questões)
+          // Usuário pagante vai direto usar o bot
+
+          console.log(
+            `✅ [Bot] Usuário ${telegramId} com plano ${user.plan} não precisa de onboarding`,
+          );
+          // Enviar menu de comandos disponíveis
+          await bot!.sendMessage(
+            chatId,
+            `📚 *Comandos disponíveis:*\n\n` +
+              `/estudar - Iniciar sessão de estudos\n` +
+              `/progresso - Ver seu progresso\n` +
+              `/ajuda - Ajuda e suporte\n\n` +
+              `Digite /estudar para começar! 🚀`,
+            { parse_mode: "Markdown" },
+          );
 
           console.log(`✅ [Bot] Usuário ${telegramId} ativado com sucesso!`);
         } else {
