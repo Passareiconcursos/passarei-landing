@@ -162,9 +162,13 @@ export async function connectCodeToTelegram(
     };
   } catch (error: any) {
     console.error("❌ [Activation] Erro ao conectar código:", error);
+    console.error("❌ [Activation] Stack:", error.stack);
+    console.error("❌ [Activation] Message:", error.message);
+    console.error("❌ [Activation] Code:", error.code);
+
     return {
       success: false,
-      error: "Erro ao processar código de ativação",
+      error: `ERRO: ${error.message || error}`, // ← Mostrar erro real
     };
   }
 }
