@@ -240,7 +240,7 @@ export const leads = pgTable("leads", {
 // USERS - Usuários da plataforma
 // ============================================
 
-export const users = pgTable("Users", {
+export const users = pgTable("User", {
   id: uuid("id")
     .primaryKey()
     .default(sql`gen_random_uuid()`),
