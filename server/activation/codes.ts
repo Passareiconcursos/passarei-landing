@@ -95,19 +95,16 @@ export async function connectCodeToTelegram(
       `🔗 [Activation] Conectando código ${activationCode} ao Telegram ${telegramId}`,
     );
 
-    // Buscar usuário pelo código
-    const user = await db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.activationCode, activationCode),
-          eq(users.activationCodeUsed, false),
-        ),
-      )
-      .limit(1);
+    // Buscar usuário pelo código usando SQL direto
+    const result = await db.execute(sql`
+      SELECT id, email, plan, "planStatus", "telegramId"
+      FROM "User"
+      WHERE "activationCode" = ${activationCode}
+        AND "activationCodeUsed" = false
+      LIMIT 1
+    `);
 
-    if (!user || user.length === 0) {
+    if (!result || result.length === 0) {
       console.log("❌ [Activation] Código não encontrado ou já usado");
       return {
         success: false,
@@ -115,14 +112,15 @@ export async function connectCodeToTelegram(
       };
     }
 
-    const userData = user[0];
+    const userData = result[0];
 
     // Verificar se Telegram já está vinculado a outra conta
-    const existingTelegram = await db
-      .select()
-      .from(users)
-      .where(eq(users.telegramId, telegramId))
-      .limit(1);
+    const existingTelegram = await db.execute(sql`
+      SELECT id, email
+      FROM "User"
+      WHERE "telegramId" = ${telegramId}
+      LIMIT 1
+    `);
 
     if (
       existingTelegram &&
@@ -137,13 +135,14 @@ export async function connectCodeToTelegram(
     }
 
     // Atualizar usuário: adicionar telegramId e marcar código como usado
-    await db
-      .update(users)
-      .set({
-        telegramId,
-        activationCodeUsed: true,
-      })
-      .where(eq(users.id, userData.id));
+    await db.execute(sql`
+      UPDATE "User"
+      SET 
+        "telegramId" = ${telegramId},
+        "activationCodeUsed" = true,
+        "updatedAt" = NOW()
+      WHERE id = ${userData.id}
+    `);
 
     console.log("✅ [Activation] Código vinculado com sucesso!");
     console.log(`📧 Email: ${userData.email}`);
