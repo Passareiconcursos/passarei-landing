@@ -350,6 +350,14 @@ async function main() {
   const topics = [
     "Princípios Fundamentais da República",
     "Direitos e Garantias Fundamentais",
+    "Direitos Sociais",
+    "Nacionalidade Brasileira",
+    "Direitos Políticos",
+    "Organização do Estado",
+    "Administração Pública",
+    "Poder Legislativo",
+    "Poder Executivo",
+    "Poder Judiciário",
   ];
 
   await generateSubject(subjectId, topics, examType, 4);
