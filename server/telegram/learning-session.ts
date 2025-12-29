@@ -188,8 +188,16 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
     "Definição não disponível";
 
   // Gerar conteúdo enriquecido com IA
-  await bot.sendMessage(session.chatId, `⏳ _Preparando conteúdo personalizado..._`, { parse_mode: "Markdown" });
-  const enhanced = await generateEnhancedContent(title, definition, session.examType);
+  await bot.sendMessage(
+    session.chatId,
+    `⏳ _Preparando conteúdo personalizado..._`,
+    { parse_mode: "Markdown" },
+  );
+  const enhanced = await generateEnhancedContent(
+    title,
+    definition,
+    session.examType,
+  );
   const keyPoints = enhanced.keyPoints;
   const example = enhanced.example;
   const tip = enhanced.tip;
@@ -205,18 +213,33 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
   const question = generateMultipleChoice(content);
   session.currentQuestion = question;
 
+  // Formatar opções completas fora dos botões
+  const optionsText = question.options
+    .map((opt: string, idx: number) => {
+      const letter = String.fromCharCode(65 + idx); // A, B, C, D, E
+      return `${letter}) ${opt}`;
+    })
+    .join("\n\n");
+
+  // Botões só com letras
   const keyboard = {
     inline_keyboard: question.options.map((opt: string, idx: number) => [
       {
-        text: `${String.fromCharCode(65 + idx)}) ${opt.substring(0, 45)}...`,
+        text: `${String.fromCharCode(65 + idx)}️⃣ Opção ${String.fromCharCode(65 + idx)}`,
         callback_data: `answer_${idx}`,
       },
     ]),
   };
 
+  // Enviar questão com opções formatadas FORA dos botões
   await bot.sendMessage(
     session.chatId,
-    `✍️ *EXERCÍCIO*\n\n❓ ${question.question}`,
+    `✍️ *EXERCÍCIO*\n\n` +
+      `❓ ${question.question}\n\n` +
+      `───────────────\n` +
+      `${optionsText}\n` +
+      `───────────────\n\n` +
+      `👇 *Escolha sua resposta:*`,
     {
       parse_mode: "Markdown",
       reply_markup: keyboard,
@@ -262,33 +285,45 @@ export async function handleLearningCallback(
     await bot.answerCallbackQuery(query.id);
     const keyboard = {
       inline_keyboard: [
-        [{ text: "🎓 Plano Calouro - R$ 89,90/mês", callback_data: "pay_calouro" }],
-        [{ text: "⭐ Plano Veterano - R$ 44,90/mês (anual)", callback_data: "pay_veterano" }],
+        [
+          {
+            text: "🎓 Plano Calouro - R$ 89,90/mês",
+            callback_data: "pay_calouro",
+          },
+        ],
+        [
+          {
+            text: "⭐ Plano Veterano - R$ 44,90/mês (anual)",
+            callback_data: "pay_veterano",
+          },
+        ],
         [{ text: "🔙 Voltar", callback_data: "back_to_menu" }],
       ],
     };
     await bot.sendMessage(
       chatId,
       `💳 *NOSSOS PLANOS*\n\n` +
-      `🎓 *CALOURO* - R$ 89,90/mês\n` +
-      `• Sem compromisso, cancele quando quiser\n` +
-      `• 300 questões personalizadas/mês\n` +
-      `• Correção detalhada com IA\n` +
-      `• Pix ou Cartão\n\n` +
-      `⭐ *VETERANO* - R$ 44,90/mês (anual)\n` +
-      `• 30 questões/dia (900/mês)\n` +
-      `• 2 correções de redação/mês\n` +
-      `• Intensivo nas dificuldades\n` +
-      `• Simulados mensais\n` +
-      `• Suporte prioritário\n\n` +
-      `_Economize 50% no plano anual!_`,
+        `🎓 *CALOURO* - R$ 89,90/mês\n` +
+        `• Sem compromisso, cancele quando quiser\n` +
+        `• 300 questões personalizadas/mês\n` +
+        `• Correção detalhada com IA\n` +
+        `• Pix ou Cartão\n\n` +
+        `⭐ *VETERANO* - R$ 44,90/mês (anual)\n` +
+        `• 30 questões/dia (900/mês)\n` +
+        `• 2 correções de redação/mês\n` +
+        `• Intensivo nas dificuldades\n` +
+        `• Simulados mensais\n` +
+        `• Suporte prioritário\n\n` +
+        `_Economize 50% no plano anual!_`,
       { parse_mode: "Markdown", reply_markup: keyboard },
     );
     return true;
   }
   if (data === "pay_calouro") {
     await bot.answerCallbackQuery(query.id);
-    const appUrl = process.env.APP_URL || "https://passarei-landing-production.up.railway.app";
+    const appUrl =
+      process.env.APP_URL ||
+      "https://passarei-landing-production.up.railway.app";
     await bot.sendMessage(
       chatId,
       `🎓 *PLANO CALOURO*\n\nR$ 89,90/mês - Sem compromisso\n\n✅ 300 questões personalizadas/mês\n✅ Correção detalhada de cada alternativa\n✅ Explicações completas com IA\n✅ Use quando quiser\n✅ Créditos não expiram\n\n🔗 Clique para assinar:\n${appUrl}/checkout?pkg=calouro_mensal\&user=${telegramId}`,
@@ -298,7 +333,8 @@ export async function handleLearningCallback(
   }
   if (data === "pay_veterano" || data === "buy_veterano") {
     await bot.answerCallbackQuery(query.id);
-    const veteranoUrl = "https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=e717107a9daa436f81ce9c8cc1c00d8f";
+    const veteranoUrl =
+      "https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=e717107a9daa436f81ce9c8cc1c00d8f";
     await bot.sendMessage(
       chatId,
       `⭐ *PLANO VETERANO*\n\nR$ 44,90/mês (cobrado anualmente)\n\n✅ 30 questões/dia (10.800/ano)\n✅ 2 correções de redação/mês com IA\n✅ Intensivo nas suas dificuldades\n✅ Revisão inteligente SM2\n✅ Plano de estudos personalizado\n✅ Simulados mensais\n✅ Suporte prioritário\n✅ Troque de concurso quando quiser\n\n💰 *Economia de 50%* vs mensal!\n\n🔗 Clique para assinar:\n${veteranoUrl}`,
@@ -344,9 +380,11 @@ export async function handleLearningCallback(
         session.currentContent.textContent || "",
         session.currentQuestion.options[answerIdx],
         session.currentQuestion.correctAnswer,
-        true
+        true,
       );
-      await bot.sendMessage(session.chatId, `💡 ${explanation.explanation}`, { parse_mode: "Markdown" });
+      await bot.sendMessage(session.chatId, `💡 ${explanation.explanation}`, {
+        parse_mode: "Markdown",
+      });
     } else {
       session.wrongAnswers++;
       const fb =
@@ -362,9 +400,11 @@ export async function handleLearningCallback(
         session.currentContent.textContent || "",
         session.currentQuestion.options[answerIdx],
         session.currentQuestion.correctAnswer,
-        false
+        false,
       );
-      await bot.sendMessage(session.chatId, `📚 ${explanation.explanation}`, { parse_mode: "Markdown" });
+      await bot.sendMessage(session.chatId, `📚 ${explanation.explanation}`, {
+        parse_mode: "Markdown",
+      });
     }
 
     await new Promise((r) => setTimeout(r, 2000));
