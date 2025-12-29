@@ -149,47 +149,7 @@ export async function startTelegramBot() {
     const chatId = msg.chat.id;
     const telegramId = String(msg.from?.id);
 
-    console.log(`📚 [Bot] Comando /estudar recebido de ${telegramId}`); // ← PARÊNTESES!
-    // Comando /progresso
-    bot.onText(/\/progresso/, async (msg) => {
-      const chatId = msg.chat.id;
-      const telegramId = String(msg.from?.id);
-
-      console.log(`📊 [Bot] Comando /progresso de ${telegramId}`);
-
-      await bot!.sendMessage(
-        chatId,
-        "📊 *Seu Progresso*\n\n" +
-          "✅ Questões respondidas: Em breve\n" +
-          "🎯 Taxa de acerto: Em breve\n" +
-          "📚 Conteúdos estudados: Em breve\n" +
-          "⭐ Sequência atual: Em breve\n\n" +
-          "_Sistema de estatísticas em desenvolvimento_",
-        { parse_mode: "Markdown" },
-      );
-    });
-
-    // Comando /ajuda
-    bot.onText(/\/ajuda/, async (msg) => {
-      const chatId = msg.chat.id;
-      const telegramId = String(msg.from?.id);
-
-      console.log(`❓ [Bot] Comando /ajuda de ${telegramId}`);
-
-      await bot!.sendMessage(
-        chatId,
-        "❓ *Ajuda - Passarei Concursos*\n\n" +
-          "📚 *Comandos disponíveis:*\n\n" +
-          "▪️ `/estudar` - Iniciar sessão de estudos\n" +
-          "▪️ `/progresso` - Ver suas estatísticas\n" +
-          "▪️ `/ajuda` - Mostrar esta ajuda\n\n" +
-          "💬 *Suporte:*\n" +
-          "📧 Email: oficialpassarei@gmail.com\n" +
-          "💬 Telegram: @PassareiSuporte\n\n" +
-          "🎓 _Bons estudos!_",
-        { parse_mode: "Markdown" },
-      );
-    });
+    console.log(`📚 [Bot] Comando /estudar recebido de ${telegramId}`);
 
     try {
       const { startLearningSession } = await import("./learning-session");
@@ -202,6 +162,47 @@ export async function startTelegramBot() {
         { parse_mode: "Markdown" },
       );
     }
+  });
+
+  // Comando /progresso
+  bot.onText(/\/progresso/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramId = String(msg.from?.id);
+
+    console.log(`📊 [Bot] Comando /progresso de ${telegramId}`);
+
+    await bot!.sendMessage(
+      chatId,
+      "📊 *Seu Progresso*\n\n" +
+        "✅ Questões respondidas: Em breve\n" +
+        "🎯 Taxa de acerto: Em breve\n" +
+        "📚 Conteúdos estudados: Em breve\n" +
+        "⭐ Sequência atual: Em breve\n\n" +
+        "_Sistema de estatísticas em desenvolvimento_",
+      { parse_mode: "Markdown" },
+    );
+  });
+
+  // Comando /ajuda
+  bot.onText(/\/ajuda/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramId = String(msg.from?.id);
+
+    console.log(`❓ [Bot] Comando /ajuda de ${telegramId}`);
+
+    await bot!.sendMessage(
+      chatId,
+      "❓ *Ajuda - Passarei Concursos*\n\n" +
+        "📚 *Comandos disponíveis:*\n\n" +
+        "▪️ `/estudar` - Iniciar sessão de estudos\n" +
+        "▪️ `/progresso` - Ver suas estatísticas\n" +
+        "▪️ `/ajuda` - Mostrar esta ajuda\n\n" +
+        "💬 *Suporte:*\n" +
+        "📧 Email: oficialpassarei@gmail.com\n" +
+        "💬 Telegram: @PassareiSuporte\n\n" +
+        "🎓 _Bons estudos!_",
+      { parse_mode: "Markdown" },
+    );
   });
 }
 
