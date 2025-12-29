@@ -144,6 +144,25 @@ export async function startTelegramBot() {
   });
 
   console.log("✅ Pronto!\n");
+  // Comando /estudar
+  bot.onText(/\/estudar/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramId = String(msg.from?.id);
+
+    console.log(`📚 [Bot] Comando /estudar recebido de ${telegramId}`); // ← PARÊNTESES!
+
+    try {
+      const { startLearningSession } = await import("./learning-session");
+      await startLearningSession(bot!, chatId, telegramId);
+    } catch (error: any) {
+      console.error("❌ [Bot] Erro ao iniciar sessão:", error.message);
+      await bot!.sendMessage(
+        chatId,
+        "❌ Erro ao iniciar sessão de estudos. Tente novamente em instantes.",
+        { parse_mode: "Markdown" },
+      );
+    }
+  });
 }
 
 export { bot };
