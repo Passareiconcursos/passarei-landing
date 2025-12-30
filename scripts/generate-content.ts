@@ -135,11 +135,16 @@ Formato JSON:
     {
       "question": "enunciado da questão (claro e objetivo)",
       "options": [
-        "alternativa A (completa)",
-        "alternativa B (completa)",
-        "alternativa C (completa)",
-        "alternativa D (completa)"
-      ],
+  "texto completo da alternativa A (até 200 caracteres se necessário)",
+  "texto completo da alternativa B (até 200 caracteres se necessário)",
+  "texto completo da alternativa C (até 200 caracteres se necessário)",
+  "texto completo da alternativa D (até 200 caracteres se necessário)"
+],
+REGRAS IMPORTANTES:
+- Alternativas podem ter até 200 caracteres
+- NUNCA corte frases no meio
+- Seja completo e claro
+- Evite reticências (...)
       "correctAnswer": 0,
       "explanation": "explicação detalhada por que a resposta está correta (100 palavras)",
       "difficulty": "medium"
@@ -344,20 +349,20 @@ async function main() {
   console.log("🚀 Iniciando geração de conteúdo...\n");
 
   // USAR O ID EXATO QUE EXISTE
-  const subjectId = "cmichej6a0005rpjyxqjqmyzr"; // DIR_CONSTITUCIONAL
-  const examType = "PM";
+  const subjectId = "cmichej5t0003rpiy2giws0j9"; // PORTUGUÊS
+  const examType = "GERAL";
 
   const topics = [
-    "Princípios Fundamentais da República",
-    "Direitos e Garantias Fundamentais",
-    "Direitos Sociais",
-    "Nacionalidade Brasileira",
-    "Direitos Políticos",
-    "Organização do Estado",
-    "Administração Pública",
-    "Poder Legislativo",
-    "Poder Executivo",
-    "Poder Judiciário",
+    "Ortografia e Acentuação",
+    "Classes Gramaticais",
+    "Sintaxe - Sujeito e Predicado",
+    "Concordância Verbal e Nominal",
+    "Regência Verbal e Nominal",
+    "Crase",
+    "Pontuação",
+    "Interpretação de Textos",
+    "Coesão e Coerência Textual",
+    "Figuras de Linguagem",
   ];
 
   await generateSubject(subjectId, topics, examType, 4);
