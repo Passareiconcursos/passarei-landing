@@ -1,8 +1,14 @@
+import { useState } from "react";
+import { MiniChat } from "@/components/MiniChat";
 import { Button } from "@/components/ui/button";
 
 export function ParaQuemE() {
+  const [showMiniChat, setShowMiniChat] = useState(false);
+
   const scrollToForm = () => {
-    document.getElementById("lead-form")?.scrollIntoView({ behavior: "smooth" });
+    document
+      .getElementById("lead-form")
+      ?.scrollIntoView({ behavior: "smooth" });
   };
 
   const profiles = [
@@ -19,7 +25,8 @@ export function ParaQuemE() {
     {
       emoji: "💰",
       title: "Sem Grana",
-      description: "Quer qualidade de cursinho caro por preço que cabe no bolso",
+      description:
+        "Quer qualidade de cursinho caro por preço que cabe no bolso",
     },
     {
       emoji: "📱",
@@ -36,7 +43,8 @@ export function ParaQuemE() {
             Para Quem é o Passarei?
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Se você se identifica com algum desses perfis, o Passarei foi feito para você
+            Se você se identifica com algum desses perfis, o Passarei foi feito
+            para você
           </p>
         </div>
 
@@ -56,12 +64,23 @@ export function ParaQuemE() {
             </div>
           ))}
         </div>
-
+        {showMiniChat && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="relative w-full max-w-2xl">
+              <button
+                onClick={() => setShowMiniChat(false)}
+                className="absolute -top-10 right-0 text-white hover:text-gray-300"
+              >
+                ✕ Fechar
+              </button>
+              <MiniChat />
+            </div>
+          </div>
+        )}
         <div className="text-center">
           <Button
-            onClick={scrollToForm}
-            size="lg"
-            className="bg-[#18cb96] hover:bg-[#14b584] text-white px-12 py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
+            onClick={() => setShowMiniChat(true)}
+            className="bg-[#18cb96] hover:bg-[#15b386] text-white px-8 py-4 rounded-full font-semibold transition-colors shadow-lg hover:shadow-xl"
           >
             🎯 Experimentar Grátis
           </Button>
