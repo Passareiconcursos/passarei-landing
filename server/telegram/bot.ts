@@ -198,7 +198,7 @@ export async function startTelegramBot() {
         "▪️ `/progresso` - Ver suas estatísticas\n" +
         "▪️ `/ajuda` - Mostrar esta ajuda\n\n" +
         "💬 *Suporte:*\n" +
-        "📧 Email: oficialpassarei@gmail.com\n" +
+        "📧 Email: suporte@passarei.com.br\n" +
         "💬 Telegram: @PassareiSuporte\n\n" +
         "🎓 _Bons estudos!_",
       { parse_mode: "Markdown" },

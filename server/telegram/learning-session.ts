@@ -225,7 +225,7 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
   const keyboard = {
     inline_keyboard: question.options.map((opt: string, idx: number) => [
       {
-        text: `─ ${String.fromCharCode(65 + idx)}) Alternativa ${String.fromCharCode(65 + idx)}`,
+        text: `Questão ${String.fromCharCode(65 + idx)}`,
         callback_data: `answer_${idx}`,
       },
     ]),
