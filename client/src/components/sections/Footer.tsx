@@ -118,21 +118,21 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="text-white font-semibold mb-4">Contato</h4>
-            <ul className="space-y-2 text-gray-400">
-              <li className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
+          <h4 className="text-white font-semibold mb-4">Contato</h4>
+          <ul className="space-y-2 text-gray-400">
+            <li className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
 
-                  href="mailto:suporte@passarei.com.br"
-                  className="hover:text-white transition-colors"
-                >
-                  suporte@passarei.com.br
-                </a>
-              </li>
-              <li className="text-sm">
-                💬 Suporte via Telegram (bot de estudos)
-              </li>
-            </ul>
+                href="mailto:suporte@passarei.com.br"
+                className="hover:text-white transition-colors"
+              >
+                suporte@passarei.com.br
+              </a>
+            </li>
+            <li className="text-sm">
+              💬 Suporte via Telegram (bot de estudos)
+            </li>
+          </ul>
           </div>
         </div>
 
