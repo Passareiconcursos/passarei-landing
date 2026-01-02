@@ -8,8 +8,8 @@ export default function Obrigado() {
 
   useEffect(() => {
     // Analytics tracking (quando configurado)
-    if (typeof window !== 'undefined') {
-      console.log('Conversão registrada!');
+    if (typeof window !== "undefined") {
+      console.log("Conversão registrada!");
     }
   }, []);
 
@@ -21,11 +21,11 @@ export default function Obrigado() {
             <CheckCircle className="w-16 h-16 text-green-600" />
           </div>
         </div>
-        
+
         <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
           Parabéns! Você Deu o Primeiro Passo! 🎉
         </h1>
-        
+
         <p className="text-xl text-gray-600 mb-8">
           Seu cadastro foi realizado com <strong>sucesso</strong>!
         </p>
@@ -40,11 +40,16 @@ export default function Obrigado() {
           <ol className="text-left text-gray-700 space-y-3">
             <li className="flex items-start">
               <span className="font-bold text-green-600 mr-3 text-lg">1.</span>
-              <span>Você receberá uma mensagem no WhatsApp <strong>em até 2 minutos</strong></span>
+              <span>
+                Você receberá um email de confirmação{" "}
+                <strong>em até 2 minutos</strong>
+              </span>
             </li>
             <li className="flex items-start">
               <span className="font-bold text-green-600 mr-3 text-lg">2.</span>
-              <span>Salve nosso número como <strong>"Passarei"</strong></span>
+              <span>
+                Salve nosso número como <strong>"Passarei"</strong>
+              </span>
             </li>
             <li className="flex items-start">
               <span className="font-bold text-green-600 mr-3 text-lg">3.</span>
@@ -52,7 +57,9 @@ export default function Obrigado() {
             </li>
             <li className="flex items-start">
               <span className="font-bold text-green-600 mr-3 text-lg">4.</span>
-              <span>Receba seu primeiro conteúdo <strong>hoje mesmo</strong>!</span>
+              <span>
+                Receba seu primeiro conteúdo <strong>hoje mesmo</strong>!
+              </span>
             </li>
           </ol>
         </div>
@@ -77,7 +84,13 @@ export default function Obrigado() {
         </div>
 
         <p className="mt-8 text-sm text-gray-500">
-          Tem dúvidas? Entre em contato: <a href="mailto:suporte@passarei.com.br" className="text-green-600 hover:underline font-medium">suporte@passarei.com.br</a>
+          Tem dúvidas? Entre em contato:{" "}
+          <a
+            href="mailto:suporte@passarei.com.br"
+            className="text-green-600 hover:underline font-medium"
+          >
+            suporte@passarei.com.br
+          </a>
         </p>
       </div>
     </div>
