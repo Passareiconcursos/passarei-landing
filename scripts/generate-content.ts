@@ -120,44 +120,41 @@ async function generateQuestions(
 
   const prompt = `Você é um especialista em elaborar questões de concursos públicos brasileiros.
 
-Com base neste conteúdo:
-TÍTULO: ${content.title}
-DEFINIÇÃO: ${content.definition}
-PONTOS-CHAVE: ${content.keyPoints.join(", ")}
+  ⚠️ REGRA CRÍTICA: As alternativas podem ter até 300 caracteres. Escreva COMPLETO, NUNCA use reticências (...).
 
-Crie ${quantity} questões de múltipla escolha no estilo CESPE/FCC/VUNESP.
+  Com base neste conteúdo:
+  TÍTULO: ${content.title}
+  DEFINIÇÃO: ${content.definition}
+  PONTOS-CHAVE: ${content.keyPoints.join(", ")}
 
-IMPORTANTE: Responda APENAS com JSON válido, sem texto adicional.
+  Crie ${quantity} questões de múltipla escolha no estilo CESPE/FCC/VUNESP.
 
-Formato JSON:
-{
-  "questions": [
-    {
-      "question": "enunciado da questão (claro e objetivo)",
-      "options": [
-  "texto completo da alternativa A (até 200 caracteres se necessário)",
-  "texto completo da alternativa B (até 200 caracteres se necessário)",
-  "texto completo da alternativa C (até 200 caracteres se necessário)",
-  "texto completo da alternativa D (até 200 caracteres se necessário)"
-],
-REGRAS IMPORTANTES:
-- Alternativas podem ter até 200 caracteres
-- NUNCA corte frases no meio
-- Seja completo e claro
-- Evite reticências (...)
-      "correctAnswer": 0,
-      "explanation": "explicação detalhada por que a resposta está correta (100 palavras)",
-      "difficulty": "medium"
-    }
-  ]
-}
+  IMPORTANTE: Responda APENAS com JSON válido, sem texto adicional.
 
-Requisitos:
-- 4 alternativas por questão
-- Apenas 1 correta
-- Distratores plausíveis (alternativas erradas convincentes)
-- Explicação clara
-- Variação de dificuldade: ${Math.floor(quantity * 0.4)} fáceis, ${Math.ceil(quantity * 0.4)} médias, ${Math.floor(quantity * 0.2)} difíceis`;
+  Formato JSON:
+  {
+    "questions": [
+      {
+        "question": "enunciado da questão (claro e objetivo)",
+        "options": [
+          "alternativa A completa - pode ter até 300 caracteres sem problema",
+          "alternativa B completa - pode ter até 300 caracteres sem problema",
+          "alternativa C completa - pode ter até 300 caracteres sem problema",
+          "alternativa D completa - pode ter até 300 caracteres sem problema"
+        ],
+        "correctAnswer": 0,
+        "explanation": "explicação detalhada por que a resposta está correta (100 palavras)",
+        "difficulty": "medium"
+      }
+    ]
+  }
+
+  Requisitos:
+  - 4 alternativas por questão (COMPLETAS, sem cortar!)
+  - Apenas 1 correta
+  - Distratores plausíveis (alternativas erradas convincentes)
+  - Explicação clara
+  - Variação de dificuldade: ${Math.floor(quantity * 0.4)} fáceis, ${Math.ceil(quantity * 0.4)} médias, ${Math.floor(quantity * 0.2)} difíceis`;
 
   try {
     const message = await anthropic.messages.create({
