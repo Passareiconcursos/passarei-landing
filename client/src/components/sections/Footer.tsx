@@ -24,7 +24,7 @@ export function Footer() {
               />
             </a>
             <p className="text-gray-400 text-sm">
-              Aprove em concursos policiais com IA e WhatsApp
+              Aprove em concursos policiais com IA e Telegram
             </p>
 
             <div className="flex flex-wrap gap-3 mt-6">
@@ -119,19 +119,18 @@ export function Footer() {
 
           <div>
             <h4 className="text-white font-semibold mb-4">Contato</h4>
-            <ul className="space-y-3 text-sm">
+            <ul className="space-y-2 text-gray-400">
               <li className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-primary" />
-                <a
+                <Mail className="h-4 w-4" />
+
                   href="mailto:suporte@passarei.com.br"
-                  className="hover:text-primary transition-colors"
+                  className="hover:text-white transition-colors"
                 >
                   suporte@passarei.com.br
                 </a>
               </li>
-              <li className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-primary" />
-                <span>Vitória/ES</span>
+              <li className="text-sm">
+                💬 Suporte via Telegram (bot de estudos)
               </li>
             </ul>
           </div>

@@ -346,20 +346,20 @@ async function main() {
   console.log("🚀 Iniciando geração de conteúdo...\n");
 
   // USAR O ID EXATO QUE EXISTE
-  const subjectId = "cmichej5t0003rpiy2giws0j9"; // PORTUGUÊS
+  const subjectId = "direito_penal"; // DIREITO PENAL
   const examType = "GERAL";
 
   const topics = [
-    "Ortografia e Acentuação",
-    "Classes Gramaticais",
-    "Sintaxe - Sujeito e Predicado",
-    "Concordância Verbal e Nominal",
-    "Regência Verbal e Nominal",
-    "Crase",
-    "Pontuação",
-    "Interpretação de Textos",
-    "Coesão e Coerência Textual",
-    "Figuras de Linguagem",
+    "Princípios do Direito Penal",
+    "Aplicação da Lei Penal",
+    "Crime - Conceito e Elementos",
+    "Dolo e Culpa",
+    "Legítima Defesa e Estado de Necessidade",
+    "Crimes contra a Pessoa - Homicídio",
+    "Crimes contra a Pessoa - Lesão Corporal",
+    "Crimes contra o Patrimônio - Furto e Roubo",
+    "Crimes contra a Administração Pública",
+    "Crimes de Trânsito",
   ];
 
   await generateSubject(subjectId, topics, examType, 4);
