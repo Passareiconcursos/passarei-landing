@@ -30,13 +30,13 @@ export function Footer() {
             <div className="flex flex-wrap gap-3 mt-6">
               <a
                 href="https://www.instagram.com/passareiconcursos"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-[#18cb96] transition-colors"
-                  aria-label="Siga no Instagram"
-                >
-                  <Instagram className="w-5 h-5" />
-                </a>
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-[#18cb96] transition-colors"
+                aria-label="Siga no Instagram"
+              >
+                <Instagram className="w-5 h-5" />
+              </a>
             </div>
 
             <p className="text-gray-400 text-sm mt-4">
@@ -116,8 +116,8 @@ export function Footer() {
               </li>
             </ul>
           </div>
-
-          <div>
+        </div>
+        <div>
           <h4 className="text-white font-semibold mb-4">Contato</h4>
           <ul className="space-y-2 text-gray-400">
             <li className="flex items-center gap-2">
@@ -133,9 +133,7 @@ export function Footer() {
               💬 Suporte via Telegram (bot de estudos)
             </li>
           </ul>
-          </div>
         </div>
-
         <div className="border-t border-gray-800 pt-8">
           <p className="text-sm text-gray-400 text-center">
             © {currentYear} Passarei. Todos os direitos reservados.
