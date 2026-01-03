@@ -7,12 +7,6 @@ import {
 import { Button } from "@/components/ui/button";
 
 export function FAQ() {
-  const scrollToForm = () => {
-    document
-      .getElementById("lead-form")
-      ?.scrollIntoView({ behavior: "smooth" });
-  };
-
   const faqs = [
     {
       number: 1,
@@ -104,11 +98,11 @@ export function FAQ() {
         <div className="mt-12 text-center">
           <p className="text-gray-600 mb-4">Ainda tem dúvidas?</p>
           <Button
-            onClick={scrollToForm}
+            asChild
             variant="outline"
             className="border-[#18cb96] text-[#18cb96] hover:bg-[#18cb96] hover:text-white"
           >
-            Fale Conosco
+            <a href="mailto:suporte@passarei.com.br">Fale Conosco</a>
           </Button>
         </div>
       </div>
