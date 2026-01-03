@@ -1344,7 +1344,7 @@ export function MiniChat() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-green-500">✓</span>
-                Revisão inteligente SM2 que reforça pontos fracos
+                Revisão espaçada inteligente que reforça pontos fracos
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-green-500">✓</span>
@@ -1406,7 +1406,7 @@ export function MiniChat() {
               <li>• + de 10 mil Questões ano!</li>
               <li>• Correção de 2 redações mês</li>
               <li>• Intensivo de aprendizado</li>
-              <li>• Revisão inteligente SM2</li>
+              <li>• Revisão espaçada inteligente</li>
               <li>• Suporte prioritário</li>
               <li>• Economia de 50% vs mensal</li>
             </ul>

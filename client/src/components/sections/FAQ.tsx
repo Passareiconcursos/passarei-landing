@@ -30,7 +30,7 @@ export function FAQ() {
       number: 4,
       question: "Quais são os limites de cada plano?",
       answer:
-        "PLANO FREE (R$ 0):\n• 21 questões grátis (única vez)\n• Correção detalhada com IA\n• Sem cartão de crédito\n\nPLANO CALOURO (R$ 89,90/mês):\n• 300 questões personalizadas/mês\n• Correção detalhada de cada alternativa\n• Explicações completas com IA\n• Sem compromisso - cancele quando quiser\n• Créditos não expiram\n\nPLANO VETERANO (R$ 44,90/mês cobrado anualmente):\n• 30 questões/dia (10.800/ano)\n• 2 correções de redação/mês com IA\n• Intensivo nas suas dificuldades\n• Revisão inteligente SM2\n• Plano de estudos personalizado\n• Simulados mensais\n• Suporte prioritário\n• Troque de concurso quando quiser",
+        "PLANO FREE (R$ 0):\n• 21 questões grátis (única vez)\n• Correção detalhada com IA\n• Sem cartão de crédito\n\nPLANO CALOURO (R$ 89,90/mês):\n• 300 questões personalizadas/mês\n• Correção detalhada de cada alternativa\n• Explicações completas com IA\n• Sem compromisso - cancele quando quiser\n• Créditos não expiram\n\nPLANO VETERANO (R$ 44,90/mês cobrado anualmente):\n• 30 questões/dia (10.800/ano)\n• 2 correções de redação/mês com IA\n• Intensivo nas suas dificuldades\n• Revisão espaçada inteligente\n• Plano de estudos personalizado\n• Simulados mensais\n• Suporte prioritário\n• Troque de concurso quando quiser",
     },
     {
       number: 5,

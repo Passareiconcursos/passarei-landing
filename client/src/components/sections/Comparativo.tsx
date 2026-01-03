@@ -65,7 +65,7 @@ export function Comparativo() {
     },
     {
       name: "Repetição espaçada científica",
-      passarei: "Algoritmo SM2",
+      passarei: "Repetição Espaçada Inteligente",
       cursinhos: "Não",
       livros: "Manual",
     },

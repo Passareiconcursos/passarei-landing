@@ -204,7 +204,7 @@ export default function Checkout() {
               <li>✅ 300 questões personalizadas/mês</li>
               <li>✅ 2 correções de redação/mês</li>
               <li>✅ Todas as apostilas inclusas</li>
-              <li>✅ Revisão inteligente SM2</li>
+              <li>✅ Revisão espaçada inteligente</li>
             </ul>
           )}
           <div className="flex justify-between items-center pt-4 mt-4 border-t">

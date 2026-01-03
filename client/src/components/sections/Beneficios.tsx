@@ -18,7 +18,7 @@ export function Beneficios() {
       icon: Target,
       title: "Repetição Espaçada",
       description:
-        "Algoritmo SM-2 comprovado pela neurociência revisita conteúdos no momento exato para maximizar sua memória de longo prazo. Você nunca mais esquece o que estudou.",
+        "Sistema de Repetição Espaçada comprovado pela neurociência revisita conteúdos no momento exato para maximizar sua memória de longo prazo. Você nunca mais esquece o que estudou.",
     },
     {
       icon: BarChart,

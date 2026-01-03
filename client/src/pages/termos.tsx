@@ -57,9 +57,9 @@ export default function Termos() {
                   Veterano (R$ 44,90/mês cobrado anualmente - R$ 538,80/ano):
                 </strong>{" "}
                 30 questões/dia (10.800/ano), 2 correções de redação/mês com IA,
-                intensivo nas dificuldades, revisão inteligente SM2, plano de
-                estudos personalizado, simulados mensais, suporte prioritário,
-                troque de concurso quando quiser
+                intensivo nas dificuldades, revisão espaçada inteligente, plano
+                de estudos personalizado, simulados mensais, suporte
+                prioritário, troque de concurso quando quiser
               </li>
             </ul>
           </section>
