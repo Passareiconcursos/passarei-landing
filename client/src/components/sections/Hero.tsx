@@ -209,7 +209,7 @@ export function Hero() {
           <div className="relative w-full max-w-md">
             <button
               onClick={() => setShowMiniChat(false)}
-              className="absolute -top-12 right-0 text-white text-lg font-semibold hover:text-gray-300"
+              className="absolute top-2 right-2 text-white text-lg font-semibold hover:text-gray-300 bg-black/50 rounded-full w-10 h-10 flex items-center justify-center"
             >
               ✕ Fechar
             </button>
