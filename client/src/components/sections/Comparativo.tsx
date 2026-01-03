@@ -23,18 +23,18 @@ export function Comparativo() {
     },
     {
       name: "Matérias/dia",
-      passarei: "10 (Telegram)",
+      passarei: "30(Telegram)",
       cursinhos: "Via web",
       livros: "Ilimitado",
     },
     {
       name: "Correções/dia",
-      passarei: "10",
+      passarei: "30",
       cursinhos: "Limitado",
       livros: "x",
     },
     {
-      name: "Redação grátis/mês",
+      name: "2 Redações grátis/mês",
       passarei: "Incluído",
       cursinhos: "1-2",
       livros: "x",

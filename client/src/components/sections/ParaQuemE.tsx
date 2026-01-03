@@ -26,7 +26,7 @@ export function ParaQuemE() {
       emoji: "💰",
       title: "Sem Grana",
       description:
-        "Quer qualidade de cursinho caro por preço que cabe no bolso",
+        "Questões de simulados por uma fração do preço dos cursinhos",
     },
     {
       emoji: "📱",

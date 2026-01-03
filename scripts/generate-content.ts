@@ -346,20 +346,20 @@ async function main() {
   console.log("🚀 Iniciando geração de conteúdo...\n");
 
   // USAR O ID EXATO QUE EXISTE
-  const subjectId = "direito_penal"; // DIREITO PENAL
+  const subjectId = "raciocinio_logico"; // RACIOCÍNIO LÓGICO
   const examType = "GERAL";
 
   const topics = [
-    "Princípios do Direito Penal",
-    "Aplicação da Lei Penal",
-    "Crime - Conceito e Elementos",
-    "Dolo e Culpa",
-    "Legítima Defesa e Estado de Necessidade",
-    "Crimes contra a Pessoa - Homicídio",
-    "Crimes contra a Pessoa - Lesão Corporal",
-    "Crimes contra o Patrimônio - Furto e Roubo",
-    "Crimes contra a Administração Pública",
-    "Crimes de Trânsito",
+    "Lógica Proposicional - Proposições e Conectivos",
+    "Tabelas Verdade",
+    "Equivalências Lógicas",
+    "Negação de Proposições",
+    "Diagramas Lógicos - Conjuntos",
+    "Raciocínio Sequencial",
+    "Associação Lógica",
+    "Verdades e Mentiras",
+    "Análise Combinatória Básica",
+    "Probabilidade Básica",
   ];
 
   await generateSubject(subjectId, topics, examType, 4);

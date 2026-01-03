@@ -129,9 +129,7 @@ export function Footer() {
                 suporte@passarei.com.br
               </a>
             </li>
-            <li className="text-sm">
-              💬 Suporte via Telegram (bot de estudos)
-            </li>
+            <li className="text-sm">💬 Suporte via Telegram</li>
           </ul>
         </div>
         <div className="border-t border-gray-800 pt-8">

@@ -32,7 +32,7 @@ export function Pricing() {
       description: "Sem compromisso, cancele quando quiser",
       features: [
         "300 questões personalizadas/mês",
-        "Correção detalhada de cada alternativa",
+        "Correção detalhada de cada questão",
         "Explicações completas com IA",
         "Use quando quiser",
         "Créditos não expiram",
@@ -48,10 +48,11 @@ export function Pricing() {
       period: "/mês",
       description: "Plano anual - Melhor custo-benefício",
       features: [
-        "30 questões/dia (10.800/ano)",
+        "900 questões/mês (10.800/ano)",
         "2 correções de redação/mês com IA",
+        "Questões de simulados diários",
         "Intensivo nas suas dificuldades",
-        "Revisão inteligente SM2",
+        "Revisão inteligente espaçada",
         "Plano de estudos personalizado",
         "Simulados mensais",
         "Suporte prioritário",
@@ -135,7 +136,9 @@ export function Pricing() {
                   </span>
                 </div>
                 {plan.annualNote && (
-                  <p className={`text-xs mt-2 ${plan.highlight ? "text-white/80" : "text-gray-500"}`}>
+                  <p
+                    className={`text-xs mt-2 ${plan.highlight ? "text-white/80" : "text-gray-500"}`}
+                  >
                     {plan.annualNote}
                   </p>
                 )}
