@@ -12,7 +12,7 @@ export function FAQ() {
       number: 1,
       question: "Como o Passarei funciona na prática?",
       answer:
-        "Não precisa baixar nada! O Passarei funciona 100% pelo Telegram.\n\nVocê receberá mensagens diárias com:\n• Conteúdos explicativos (5-10min leitura)\n• Questões de provas reais (10-15min prática)\n• Revisões programadas (quando o algoritmo decidir)\n\nÉ como ter um professor particular no seu bolso, disponível 24/7.\n\nBasta ter o telegram instalado e conexão com internet.",
+        "Não precisa baixar nada! O Passarei funciona 100% pelo Telegram.\n\nVocê receberá mensagens diárias com:\n• Conteúdos explicativos (3-5min de leitura)\n• Questões de provas reais (5-10min de prática)\n• Revisões programadas (quando o algoritmo decidir)\n\nÉ como ter um professor particular no seu bolso, disponível 24/7.\n\nBasta ter o Telegram instalado e conexão com internet.",
     },
     {
       number: 2,
@@ -36,7 +36,7 @@ export function FAQ() {
       number: 5,
       question: "Quanto tempo por dia preciso estudar?",
       answer:
-        "Recomendamos 15-30 minutos por dia para resultados consistentes.\n\nO segredo não é estudar horas seguidas, mas sim estudar UM POUCO TODOS OS DIAS.\n\nNosso método de repetição espaçada é otimizado para sessões curtas. Você aprende mais em 15min focados do que em 2h de aula cansativa.\n\nDistribuição ideal:\n• Manhã: 5-10min (leitura do conteúdo)\n• Tarde/Noite: 10-15min (questões práticas)\n• Total: 15-25min/dia",
+        "Recomendamos 15-20 minutos por dia para resultados consistentes.\n\nO segredo não é estudar horas seguidas, mas sim estudar UM POUCO TODOS OS DIAS.\n\nNosso método de repetição espaçada é otimizado para sessões curtas. Você aprende mais em 15min focados do que em 2h de aula cansativa.\n\nDistribuição ideal:\n• Manhã: 5min (conteúdo do dia)\n• Noite: 10min (questões + revisão)\n• Total: 15min/dia\n\nTem mais tempo? Ótimo! Mas 15min DIÁRIOS já garantem ótimos resultados.",
     },
     {
       number: 6,
