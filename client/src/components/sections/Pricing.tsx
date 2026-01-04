@@ -95,8 +95,9 @@ export function Pricing() {
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-xs font-bold shadow-lg">
-                    {plan.badge}
+                    <span className="bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-xs font-bold shadow-lg whitespace-nowrap">
+                      {plan.badge}
+                    </span>
                   </span>
                 </div>
               )}
