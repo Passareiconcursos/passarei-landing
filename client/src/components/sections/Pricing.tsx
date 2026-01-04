@@ -61,7 +61,7 @@ export function Pricing() {
       cta: "Garantir Desconto",
       highlight: true,
       popular: true,
-      badge: "🔥 MAIS POPULAR • 50% OFF",
+      badge: "🔥 POPULAR 50% OFF",
       annualNote: "Cobrado anualmente (R$ 538,80/ano)",
     },
   ];
