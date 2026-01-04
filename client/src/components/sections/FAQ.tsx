@@ -12,31 +12,31 @@ export function FAQ() {
       number: 1,
       question: "Como o Passarei funciona na prática?",
       answer:
-        "Não precisa baixar nada! O Passarei funciona 100% pelo Telegram.\n\nVocê receberá mensagens diárias com:\n• Conteúdos explicativos (3-5min de leitura)\n• Questões de provas reais (5-10min de prática)\n• Revisões programadas (quando o algoritmo decidir)\n\nÉ como ter um professor particular no seu bolso, disponível 24/7.\n\nBasta ter o Telegram instalado e conexão com internet.",
+        "Não precisa baixar nada! O Passarei funciona 100% pelo Telegram.\n\nVocê receberá mensagens diárias com:\n• Conteúdos explicativos (5min de leitura)\n• Questões de provas reais (5-10min de prática)\n• Revisões programadas (quando o algoritmo decidir)\n\nÉ como ter um professor particular no seu bolso, disponível 24/7.\n\nBasta ter o Telegram instalado e conexão com internet.",
     },
     {
       number: 2,
       question: "Funciona para qual concurso policial?",
       answer:
-        "Atualmente cobrimos:\n✅ PM (Polícia Militar) - Todos os estados\n✅ PC (Polícia Civil) - Todos os estados\n✅ PRF (Polícia Rodoviária Federal)\n✅ PF (Polícia Federal)\n✅ Outros concursos policiais federais/estaduais\n\nVocê informa qual concurso está estudando no cadastro e nosso sistema adapta TODO o conteúdo automaticamente.\n\nMatérias cobertas:\n• Português\n• Direito Constitucional\n• Direito Administrativo\n• Direito Penal\n• Direito Processual Penal\n• Legislação Penal Extravagante",
+        "Atualmente cobrimos:\n✅ PM (Polícia Militar) - Todos os estados\n✅ PC (Polícia Civil) - Todos os estados\n✅ PRF (Polícia Rodoviária Federal)\n✅ PF (Polícia Federal)\n✅ Entre outros concursos policiais federais/estaduais\n\nVocê informa qual concurso está estudando no cadastro e nosso sistema adapta TODO o conteúdo automaticamente.\n\nMatérias cobertas:\n• Português\n• Direito Constitucional\n• Direito Administrativo\n• Direito Penal\n• Direito Processual Penal\n• Legislação Penal Extravagante\n• E inumeras outras matérias pertinentes.",
     },
     {
       number: 3,
       question: "E se eu não souber meu edital ainda?",
       answer:
-        "Sem problemas! Você pode começar estudando as matérias mais comuns em concursos policiais (que caem em 90% das provas).\n\nQuando seu edital sair:\n1. Envie o link pelo Telegram\n2. Nossa IA analisa em segundos\n3. Ajustamos seu plano automaticamente\n4. Você continua de onde parou\n\nZero retrabalho, zero perda de tempo.",
+        "Sem problemas! Você inicia os estudos com as matérias mais comuns em concursos policiais (que caem em 90% das provas).\n\nQuando seu edital sair:\n1. Envie o link pelo Telegram\n2. Nossa IA analisa em segundos\n3. Ajustamos seu plano automaticamente\n4. Você continua de onde parou\n\nZero retrabalho, zero perda de tempo.",
     },
     {
       number: 4,
       question: "Quais são os limites de cada plano?",
       answer:
-        "PLANO FREE (R$ 0):\n• 21 questões grátis (única vez)\n• Correção detalhada com IA\n• Sem cartão de crédito\n\nPLANO CALOURO (R$ 89,90/mês):\n• 300 questões personalizadas/mês\n• Correção detalhada de cada alternativa\n• Explicações completas com IA\n• Sem compromisso - cancele quando quiser\n• Créditos não expiram\n\nPLANO VETERANO (R$ 44,90/mês cobrado anualmente):\n• 30 questões/dia (10.800/ano)\n• 2 correções de redação/mês com IA\n• Intensivo nas suas dificuldades\n• Revisão espaçada inteligente\n• Plano de estudos personalizado\n• Simulados mensais\n• Suporte prioritário\n• Troque de concurso quando quiser",
+        "PLANO FREE (R$ 0):\n• 21 questões grátis (única vez)\n• Correção detalhada com IA\n• Sem cartão de crédito\n\nPLANO CALOURO (R$ 89,90/mês):\n• 300 questões personalizadas/mês\n• Correção detalhada de cada alternativa\n• Explicações completas com IA\n• Sem compromisso - cancele quando quiser\n• Créditos não expiram\n\nPLANO VETERANO (R$ 44,90/mês cobrado anualmente):\n• 900 questões/mês (3x mais que Calouro!)\n• 2 correções de redação/mês com IA\n• Intensivo nas suas dificuldades\n• Revisão espaçada inteligente\n• Plano de estudos personalizado\n• Simulados mensais\n• Suporte prioritário\n• Troque de concurso quando quiser\n• Economia de R$ 539,40/ano",
     },
     {
       number: 5,
       question: "Quanto tempo por dia preciso estudar?",
       answer:
-        "Recomendamos 15-20 minutos por dia para resultados consistentes.\n\nO segredo não é estudar horas seguidas, mas sim estudar UM POUCO TODOS OS DIAS.\n\nNosso método de repetição espaçada é otimizado para sessões curtas. Você aprende mais em 15min focados do que em 2h de aula cansativa.\n\nDistribuição ideal:\n• Manhã: 5min (conteúdo do dia)\n• Noite: 10min (questões + revisão)\n• Total: 15min/dia\n\nTem mais tempo? Ótimo! Mas 15min DIÁRIOS já garantem ótimos resultados.",
+        "Recomendamos 15-20 minutos por dia para resultados consistentes.\n\nO segredo não é estudar horas seguidas, mas sim estudar UM POUCO TODOS OS DIAS.\n\nNosso método de repetição espaçada é otimizado para sessões curtas. Você aprende mais em 15 min focados do que em 2h de aula cansativa.\n\nDistribuição ideal:\n• Manhã: 5 min (conteúdo do dia)\n• Noite: 10 min (questões + revisão)\n• Total: 15 min/dia\n\nTem mais tempo? Ótimo! Mas 15 min DIÁRIOS já garantem ótimos resultados.",
     },
     {
       number: 6,
@@ -54,7 +54,7 @@ export function FAQ() {
       number: 8,
       question: "Como vocês são tão mais baratos que os concorrentes?",
       answer:
-        "Automação inteligente:\n\n• Cursinhos tradicionais: R$ 129,90/mês\n• Passarei Veterano: R$ 44,90/mês (anual)\n• ECONOMIA: 50% ou mais!\n\nComo?\n• 100% Telegram (sem app caro)\n• IA faz correções (sem professor humano)\n• Conteúdo automatizado (sem filmagens)\n• Infraestrutura enxuta (sem aluguel de espaço)\n\nRepassamos TODA economia para você.\n\nMesmo conteúdo, menor custo.\n\nAlém disso:\n• Plano Veterano inclui 2 redações/mês\n• Suporte prioritário\n• Você estuda onde já está (Telegram)",
+        "Automação inteligente:\n\n• Cursinhos tradicionais: R$ 129,90/mês\n• Passarei Veterano: R$ 44,90/mês (anual)\n• ECONOMIA: 50% ou mais!\n\nComo?\n• 100% Telegram (sem app caro)\n• IA faz correções (sem professor humano)\n• Conteúdo automatizado (sem filmagens)\n• Infraestrutura enxuta (sem aluguel de espaço)\n\nRepassamos TODA economia para você.\n\nMesmo conteúdo, menor custo.\n\nAlém disso:\n• Plano Veterano inclui 2 redações/mês\n• 900 questões/mês (3x mais que Calouro!)\n• São 10.800 questões de simulados por ano!\n• Economia de R$ 539,40/ano\n• Suporte prioritário\n• Intensivo nas suas dificuldades",
     },
   ];
 

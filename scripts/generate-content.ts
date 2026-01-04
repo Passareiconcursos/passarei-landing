@@ -346,20 +346,20 @@ async function main() {
   console.log("🚀 Iniciando geração de conteúdo...\n");
 
   // USAR O ID EXATO QUE EXISTE
-  const subjectId = "raciocinio_logico"; // RACIOCÍNIO LÓGICO
+  const subjectId = "direito_administrativo";
   const examType = "GERAL";
 
   const topics = [
-    "Lógica Proposicional - Proposições e Conectivos",
-    "Tabelas Verdade",
-    "Equivalências Lógicas",
-    "Negação de Proposições",
-    "Diagramas Lógicos - Conjuntos",
-    "Raciocínio Sequencial",
-    "Associação Lógica",
-    "Verdades e Mentiras",
-    "Análise Combinatória Básica",
-    "Probabilidade Básica",
+    "Princípios da Administração Pública",
+    "Poderes Administrativos",
+    "Atos Administrativos - Conceito e Atributos",
+    "Organização Administrativa",
+    "Administração Direta e Indireta",
+    "Agentes Públicos",
+    "Responsabilidade Civil do Estado",
+    "Licitações e Contratos - Lei 14.133/2021",
+    "Improbidade Administrativa",
+    "Processo Administrativo",
   ];
 
   await generateSubject(subjectId, topics, examType, 4);

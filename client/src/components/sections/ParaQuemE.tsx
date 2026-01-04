@@ -15,7 +15,7 @@ export function ParaQuemE() {
     {
       emoji: "🎓",
       title: "Iniciante",
-      description: "Começando do zero e precisa de direcionamento estruturado",
+      description: "É iniciante e precisa de acompanhamento",
     },
     {
       emoji: "💪",
@@ -25,8 +25,7 @@ export function ParaQuemE() {
     {
       emoji: "💰",
       title: "Sem Grana",
-      description:
-        "Questões de simulados por uma fração do preço dos cursinhos",
+      description: "Questões de simulados sem gastar com cursinhos",
     },
     {
       emoji: "📱",
@@ -43,8 +42,7 @@ export function ParaQuemE() {
             Para Quem é o Passarei?
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Se você se identifica com algum desses perfis, o Passarei foi feito
-            para você
+            Independente do seu perfil, o Passarei é a ferramenta certa!
           </p>
         </div>
 

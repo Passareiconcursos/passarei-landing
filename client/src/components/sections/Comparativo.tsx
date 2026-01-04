@@ -238,7 +238,7 @@ export function Comparativo() {
                   clipRule="evenodd"
                 />
               </svg>
-              <span className="text-muted-foreground">Tem completo</span>
+              <span className="text-muted-foreground">Completo</span>
             </div>
             <div className="flex items-center gap-2">
               <svg
@@ -252,7 +252,7 @@ export function Comparativo() {
                   clipRule="evenodd"
                 />
               </svg>
-              <span className="text-muted-foreground">Tem limitado</span>
+              <span className="text-muted-foreground">Limitado</span>
             </div>
             <div className="flex items-center gap-2">
               <svg

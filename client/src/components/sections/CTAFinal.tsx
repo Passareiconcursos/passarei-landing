@@ -49,11 +49,11 @@ export function CTAFinal() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 max-w-3xl mx-auto">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-white">
               <MessageCircle className="w-8 h-8 mx-auto mb-2 text-white" />
-              <p className="text-sm font-medium">Estude pelo celular</p>
+              <p className="text-sm font-medium">Estude agora pelo celular</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-white">
               <Clock className="w-8 h-8 mx-auto mb-2 text-white" />
-              <p className="text-sm font-medium">5 min por dia</p>
+              <p className="text-sm font-medium">Estude 15 min por dia</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-white">
               <BookOpen className="w-8 h-8 mx-auto mb-2 text-white" />
@@ -61,7 +61,7 @@ export function CTAFinal() {
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-white">
               <CheckCircle className="w-8 h-8 mx-auto mb-2 text-white" />
-              <p className="text-sm font-medium">IA reforça seus estudos</p>
+              <p className="text-sm font-medium">IA reforça seu APRENDIZADO</p>
             </div>
           </div>
           <p>
@@ -85,7 +85,7 @@ export function CTAFinal() {
           <div className="mt-8 inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3">
             <CheckCircle className="w-5 h-5 text-green-400" />
             <span className="text-white text-sm">
-              21 questões grátis para você testar • Sem cartão de crédito
+              Teste com 21 questões grátis • Sem cartão de crédito
             </span>
           </div>
 

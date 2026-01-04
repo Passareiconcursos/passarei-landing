@@ -46,9 +46,9 @@ export function Pricing() {
       name: "Veterano",
       price: "44,90",
       period: "/mês",
-      description: "Anual • Para quem leva os estudos a sério",
+      description: "Anual • Para levar os estudos a sério",
       features: [
-        "900 questões/mês (3x mais que Calouro!)",
+        "900 questões/mês (3x mais!)",
         "Simulados mensais completos",
         "2 correções de redação/mês com IA",
         "Intensivo nas suas dificuldades",
@@ -62,7 +62,7 @@ export function Pricing() {
       highlight: true,
       popular: true,
       badge: "🔥 MAIS ESCOLHIDO - 50% OFF",
-      annualNote: "Cobrado anualmente (R$ 538,80/ano) • Preço promocional",
+      annualNote: "Cobrado anualmente (R$ 538,80/ano)",
     },
   ];
 
