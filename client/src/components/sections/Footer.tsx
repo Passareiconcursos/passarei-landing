@@ -116,23 +116,24 @@ export function Footer() {
               </li>
             </ul>
           </div>
-        </div>
-        <div>
-          <h4 className="text-white font-semibold mb-4">Contato</h4>
-          <ul className="space-y-2 text-gray-400">
-            <li className="flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              <a
-                href="mailto:suporte@passarei.com.br"
-                className="hover:text-white transition-colors"
-              >
-                suporte@passarei.com.br
-              </a>
-            </li>
-            <li className="text-sm">💬 Suporte via Telegram</li>
-          </ul>
-        </div>
-        <div className="border-t border-gray-800 pt-8">
+            </div>
+            <div>
+              <h4 className="text-white font-semibold mb-4">Contato</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  <a>
+                    href="mailto:suporte@passarei.com.br"
+                    className="hover:text-white transition-colors"
+                  >
+                    suporte@passarei.com.br
+                  </a>
+                </li>
+                <li className="text-sm">💬 Suporte via Telegram</li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 pt-8">
           <p className="text-sm text-gray-400 text-center">
             © {currentYear} Passarei. Todos os direitos reservados.
           </p>
