@@ -8,7 +8,7 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 md:px-6">
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           <div>
-            <a
+            
               href="/"
               className="inline-block mb-4 hover:opacity-80 transition-opacity"
             >
@@ -28,7 +28,7 @@ export function Footer() {
             </p>
 
             <div className="flex flex-wrap gap-3 mt-6">
-              <a
+              
                 href="https://www.instagram.com/passareiconcursos"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -48,7 +48,7 @@ export function Footer() {
             <h4 className="text-white font-semibold mb-4">Produto</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a
+                
                   href="#como-funciona"
                   className="hover:text-primary transition-colors"
                 >
@@ -56,7 +56,7 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a
+                
                   href="#planos"
                   className="hover:text-primary transition-colors"
                 >
@@ -64,7 +64,7 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a
+                
                   href="#depoimentos"
                   className="hover:text-primary transition-colors"
                 >
@@ -83,7 +83,7 @@ export function Footer() {
             <h4 className="text-white font-semibold mb-4">Legal</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a
+                
                   href="/termos"
                   className="hover:text-primary transition-colors"
                 >
@@ -91,7 +91,7 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a
+                
                   href="/privacidade"
                   className="hover:text-primary transition-colors"
                 >
@@ -99,7 +99,7 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a
+                
                   href="/cookies"
                   className="hover:text-primary transition-colors"
                 >
@@ -107,7 +107,7 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a
+                
                   href="/reembolso"
                   className="hover:text-primary transition-colors"
                 >
@@ -116,25 +116,25 @@ export function Footer() {
               </li>
             </ul>
           </div>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Contato</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  <a>
-                    <a
-                href="mailto:suporte@passarei.com.br"
-                    className="hover:text-white transition-colors"
-                  >
-                    suporte@passarei.com.br
-                  </a>
-                </li>
-                <li className="text-sm">💬 Suporte via Telegram</li>
-              </ul>
-            </div>
+
+          <div>
+            <h4 className="text-white font-semibold mb-4">Contato</h4>
+            <ul className="space-y-2 text-gray-400">
+              <li className="flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                
+                  href="mailto:suporte@passarei.com.br"
+                  className="hover:text-white transition-colors"
+                >
+                  suporte@passarei.com.br
+                </a>
+              </li>
+              <li className="text-sm">💬 Suporte via Telegram</li>
+            </ul>
           </div>
-          <div className="border-t border-gray-800 pt-8">
+        </div>
+
+        <div className="border-t border-gray-800 pt-8">
           <p className="text-sm text-gray-400 text-center">
             © {currentYear} Passarei. Todos os direitos reservados.
           </p>
