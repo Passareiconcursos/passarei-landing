@@ -18,7 +18,7 @@ export function ComoFunciona() {
     },
     {
       number: "2️⃣",
-      title: "CONTEÚDO DIÁRIO NO TELEGRAM (5-10 min/dia)",
+      title: "CONTEÚDO DIÁRIO NO TELEGRAM (15 min/dia)",
       description:
         "Receba textos explicativos curtos sobre temas do seu edital. Leia, entenda o conceito e já pratique.",
       example:
@@ -26,7 +26,7 @@ export function ComoFunciona() {
     },
     {
       number: "3️⃣",
-      title: "QUESTÕES REAIS + FEEDBACK IA (10-15 min/dia)",
+      title: "QUESTÕES REAIS + FEEDBACK IA (15 min/dia)",
       description:
         "Resolva questões de bancas como CESPE, VUNESP, FCC. Receba explicações detalhadas de CADA alternativa, entendendo o porquê do acerto ou erro.",
       example:
