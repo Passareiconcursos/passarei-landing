@@ -434,8 +434,32 @@ router.post("/process-brick", async (req: Request, res: Response) => {
     const amount = pkg ? pkg.amount : packageId === "veterano" ? 49.9 : 5;
 
     // Processar pagamento via API do Mercado Pago
-    console.log('🔑 Token MP:', process.env.MERCADOPAGO_ACCESS_TOKEN?.substring(0, 20));
-    console.log('💳 Chamando MP API...');
+    console.log(
+      "🔑 Token MP:",
+      process.env.MERCADOPAGO_ACCESS_TOKEN?.substring(0, 20),
+    );
+    console.log("💳 Chamando MP API...");
+
+    const payloadMP = {
+      token,
+      transaction_amount: amount,
+      installments: installments || 1,
+      payment_method_id,
+      payer: {
+        email: payer?.email || "suporte@passarei.com.br",
+        identification: payer?.identification || {
+          type: "CPF",
+          number: "12345678909",
+        },
+      },
+      external_reference: `${telegramId}|${packageId}|${Date.now()}`,
+    };
+
+    console.log(
+      "📦 Payload enviado ao MP:",
+      JSON.stringify(payloadMP, null, 2),
+    );
+
     const response = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {
@@ -443,16 +467,7 @@ router.post("/process-brick", async (req: Request, res: Response) => {
         "Content-Type": "application/json",
         "X-Idempotency-Key": `${telegramId}-${Date.now()}`,
       },
-      body: JSON.stringify({
-        token,
-        transaction_amount: amount,
-        installments: installments || 1,
-        payment_method_id,
-        payer: {
-          email: payer?.email || "suporte@passarei.com.br",
-        },
-        external_reference: `${telegramId}|${packageId}|${Date.now()}`,
-      }),
+      body: JSON.stringify(payloadMP),
     });
 
     const paymentData = await response.json();
