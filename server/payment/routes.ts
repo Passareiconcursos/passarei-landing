@@ -434,6 +434,8 @@ router.post("/process-brick", async (req: Request, res: Response) => {
     const amount = pkg ? pkg.amount : packageId === "veterano" ? 49.9 : 5;
 
     // Processar pagamento via API do Mercado Pago
+    console.log('🔑 Token MP:', process.env.MERCADOPAGO_ACCESS_TOKEN?.substring(0, 20));
+    console.log('💳 Chamando MP API...');
     const response = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {
