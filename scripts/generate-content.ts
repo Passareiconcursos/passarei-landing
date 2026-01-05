@@ -346,20 +346,20 @@ async function main() {
   console.log("🚀 Iniciando geração de conteúdo...\n");
 
   // USAR O ID EXATO QUE EXISTE
-  const subjectId = "direito_administrativo";
+  const subjectId = "etica_servico_publico";
   const examType = "GERAL";
 
   const topics = [
-    "Princípios da Administração Pública",
-    "Poderes Administrativos",
-    "Atos Administrativos - Conceito e Atributos",
-    "Organização Administrativa",
-    "Administração Direta e Indireta",
-    "Agentes Públicos",
-    "Responsabilidade Civil do Estado",
-    "Licitações e Contratos - Lei 14.133/2021",
-    "Improbidade Administrativa",
-    "Processo Administrativo",
+    "Ética e Moral - Conceitos Fundamentais",
+    "Ética Profissional no Serviço Público",
+    "Código de Ética do Servidor Público",
+    "Princípios Éticos na Administração",
+    "Probidade Administrativa",
+    "Conflito de Interesses",
+    "Nepotismo e Favorecimento",
+    "Sigilo Profissional",
+    "Responsabilidade do Servidor Público",
+    "Ética e Cidadania",
   ];
 
   await generateSubject(subjectId, topics, examType, 4);

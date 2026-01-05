@@ -94,7 +94,7 @@ export default function Checkout() {
               const response = await fetch("/api/payment/process-brick", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
+                console.log('🔍 Dados enviados:', {
                   ...formData,
                   telegramId: userId,
                   packageId: pkg,
