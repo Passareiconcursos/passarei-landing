@@ -91,10 +91,15 @@ export default function Checkout() {
           onSubmit: async ({ selectedPaymentMethod, formData }: any) => {
             setLoading(true);
             try {
+              console.log("🔍 Dados enviados:", {
+                ...formData,
+                telegramId: userId,
+                packageId: pkg,
+              });
               const response = await fetch("/api/payment/process-brick", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                console.log('🔍 Dados enviados:', {
+                body: JSON.stringify({
                   ...formData,
                   telegramId: userId,
                   packageId: pkg,
