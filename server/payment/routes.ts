@@ -472,6 +472,12 @@ router.post("/process-brick", async (req: Request, res: Response) => {
 
     const paymentData = await response.json();
     console.log(
+      "📩 Resposta COMPLETA do MP:",
+      JSON.stringify(paymentData, null, 2),
+    );
+    console.log("📊 Status:", paymentData.status);
+    console.log("❌ Erro MP:", paymentData.message, paymentData.cause);
+    console.log(
       "📩 Resposta do pagamento:",
       paymentData.status,
       paymentData.id,
