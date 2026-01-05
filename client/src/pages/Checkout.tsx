@@ -29,7 +29,9 @@ export default function Checkout() {
   // Aceitar tanto 'pkg' quanto 'plan'
   const pkgParam =
     searchParams.get("pkg") || searchParams.get("plan") || "calouro_mensal";
-  const userId = searchParams.get("user") || "";
+  const userId =
+    searchParams.get("user") ||
+    `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   // Mapear 'plan' para 'pkg' se necessário
   const pkgMap: Record<string, string> = {

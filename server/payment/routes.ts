@@ -447,7 +447,7 @@ router.post("/process-brick", async (req: Request, res: Response) => {
         installments: installments || 1,
         payment_method_id,
         payer: {
-          email: payer?.email || "cliente@passarei.com.br",
+          email: payer?.email || "suporte@passarei.com.br",
         },
         external_reference: `${telegramId}|${packageId}|${Date.now()}`,
       }),
