@@ -69,7 +69,6 @@ export default function Checkout() {
       await bricks.create("payment", "payment-brick", {
         initialization: {
           amount: packageInfo.amount,
-          preferenceId: await getPreferenceId(),
         },
         customization: {
           visual: {
@@ -129,20 +128,6 @@ export default function Checkout() {
       setError("Erro ao carregar checkout");
       setLoading(false);
     }
-  };
-
-  const getPreferenceId = async () => {
-    const endpoint =
-      pkg === "veterano"
-        ? "/api/payment/create-veterano"
-        : "/api/payment/create-payment";
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ packageId: pkg, telegramId: userId }),
-    });
-    const data = await response.json();
-    return data.preferenceId;
   };
 
   if (paymentStatus === "approved") {
