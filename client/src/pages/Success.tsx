@@ -123,7 +123,7 @@ export default function Success() {
               >
                 <div className="flex items-center justify-center gap-3">
                   <Send className="w-7 h-7" />
-                  <span className="text-xl">Estude no Telegram</spa>
+                  <span className="text-xl">Estude no Telegram</span>
                 </div>
               </a>
 
