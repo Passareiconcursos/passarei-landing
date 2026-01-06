@@ -123,15 +123,14 @@ export default function Success() {
               >
                 <div className="flex items-center justify-center gap-3">
                   <Send className="w-7 h-7" />
-                  <span className="text-xl">Abrir Bot no Telegram</span>
-                  <Sparkles className="w-6 h-6 group-hover:animate-spin" />
+                  <span className="text-xl">Estude no Telegram</spa>
                 </div>
               </a>
 
               {/* Instruções abaixo do botão */}
               <div className="mt-4 text-center">
                 <p className="text-sm text-gray-600">
-                  👉 Ao abrir o bot, envie o comando{" "}
+                  👉 Clique no botão e envie o comando{" "}
                   <code className="bg-gray-200 px-2 py-1 rounded font-mono text-blue-600">
                     /start
                   </code>
@@ -210,7 +209,7 @@ export default function Success() {
                     </li>
                   </ul>
                   <p className="text-xs text-green-600 mt-3">
-                    Não recebeu? Verifique a pasta de <strong>SPAM</strong>
+                    Não recebeu? Verifique seu <strong>SPAM</strong>
                   </p>
                 </div>
               </div>
@@ -246,8 +245,7 @@ export default function Success() {
                       Receba Conteúdo
                     </h4>
                     <p className="text-sm text-purple-700">
-                      Questões personalizadas chegam automaticamente no seu
-                      Telegram
+                      Questões personalizadas de simulados no seu Telegram
                     </p>
                   </div>
                 </div>
@@ -261,7 +259,7 @@ export default function Success() {
                       Estude e Evolua
                     </h4>
                     <p className="text-sm text-purple-700">
-                      Receba correções detalhadas e acompanhe seu progresso
+                      Receba correções e acompanhe seu progresso
                     </p>
                   </div>
                 </div>
@@ -298,7 +296,7 @@ export default function Success() {
         <div className="text-center mt-6">
           <p className="text-xs text-gray-500 flex items-center justify-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-green-500" />
-            Pagamento processado com segurança pelo Mercado Pago
+            Pagamento com a segurança pelo Mercado Pago
           </p>
         </div>
       </div>

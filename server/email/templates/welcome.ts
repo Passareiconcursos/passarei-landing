@@ -117,7 +117,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
                       <tr>
                         <td align="center">
                           <a href="${telegramLink}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #0088cc 0%, #0077b3 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-weight: 700; font-size: 18px; box-shadow: 0 4px 12px rgba(0,136,204,0.3); transition: all 0.3s;">
-                            ✈️ Abrir Bot no Telegram ✨
+                            ✈️ Estudar no Telegram ✨
                           </a>
                         </td>
                       </tr>
@@ -125,7 +125,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
 
                     <!-- Instrução -->
                     <p style="margin: 20px 0 0; font-size: 14px; color: #1e40af; text-align: center;">
-                      👉 Ao abrir o bot, envie o comando <code style="background-color: #e5e7eb; padding: 3px 8px; border-radius: 4px; font-family: monospace; color: #3b82f6; font-weight: 600;">/start</code>
+                      👉 Clique no botão e envie o comando <code style="background-color: #e5e7eb; padding: 3px 8px; border-radius: 4px; font-family: monospace; color: #3b82f6; font-weight: 600;">/start</code>
                     </p>
                   </td>
                 </tr>
@@ -177,7 +177,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
                         </td>
                         <td valign="top" style="padding-left: 12px;">
                           <p style="margin: 0 0 4px; font-weight: 600; color: #701a75; font-size: 16px;">Receba Conteúdo</p>
-                          <p style="margin: 0; font-size: 14px; color: #86198f; line-height: 1.5;">Questões personalizadas chegam automaticamente no seu Telegram</p>
+                          <p style="margin: 0; font-size: 14px; color: #86198f; line-height: 1.5;">Questões de simulados entregues no seu Telegram</p>
                         </td>
                       </tr>
                     </table>
@@ -190,7 +190,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
                         </td>
                         <td valign="top" style="padding-left: 12px;">
                           <p style="margin: 0 0 4px; font-weight: 600; color: #701a75; font-size: 16px;">Estude e Evolua</p>
-                          <p style="margin: 0; font-size: 14px; color: #86198f; line-height: 1.5;">Receba correções detalhadas e acompanhe seu progresso</p>
+                          <p style="margin: 0; font-size: 14px; color: #86198f; line-height: 1.5;">Receba correções e acompanhe seu progresso</p>
                         </td>
                       </tr>
                     </table>
@@ -279,7 +279,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
           <tr>
             <td style="text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                🔒 Pagamento processado com segurança pelo Mercado Pago
+                🔒 Pagamento com a segurança pelo Mercado Pago
               </p>
             </td>
           </tr>
