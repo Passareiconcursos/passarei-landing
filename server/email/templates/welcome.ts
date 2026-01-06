@@ -279,7 +279,7 @@ export function generateWelcomeEmail(data: WelcomeEmailData): string {
           <tr>
             <td style="text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                🔒 Pagamento com a segurança pelo Mercado Pago
+                🔒 Pagamento com a segurança do Mercado Pago
               </p>
             </td>
           </tr>

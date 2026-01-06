@@ -296,7 +296,7 @@ export default function Success() {
         <div className="text-center mt-6">
           <p className="text-xs text-gray-500 flex items-center justify-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-green-500" />
-            Pagamento com a segurança pelo Mercado Pago
+            Pagamento com a segurança do Mercado Pago
           </p>
         </div>
       </div>
