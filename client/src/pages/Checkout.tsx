@@ -108,6 +108,8 @@ export default function Checkout() {
 
               if (result.success) {
                 setPaymentStatus("approved");
+                // Redirecionar para página de sucesso
+                window.location.href = `/success?payment=${result.paymentId}&plan=${pkg}`;
               } else {
                 setError(result.error || "Erro no pagamento");
               }
