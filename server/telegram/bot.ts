@@ -1,3 +1,5 @@
+import { db } from "../../db";
+import { sql } from "drizzle-orm";
 import TelegramBot from "node-telegram-bot-api";
 import {
   getRandomContent,
@@ -203,6 +205,92 @@ export async function startTelegramBot() {
         "🎓 _Bons estudos!_",
       { parse_mode: "Markdown" },
     );
+  });
+  // Comando: /concurso
+  bot.onText(/\/concurso/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramId = msg.from?.id.toString();
+
+    if (!telegramId) return;
+
+    console.log(`🎯 [Bot] Comando /concurso de ${telegramId}`);
+
+    // Lista de concursos disponíveis
+    const concursos = [
+      { id: "PM-ES", nome: "Polícia Militar do Espírito Santo" },
+      { id: "PC-ES", nome: "Polícia Civil do Espírito Santo" },
+      { id: "PRF", nome: "Polícia Rodoviária Federal" },
+      { id: "PF", nome: "Polícia Federal" },
+      { id: "PCDF", nome: "Polícia Civil do Distrito Federal" },
+      { id: "OUTRO", nome: "Outro concurso policial" },
+    ];
+
+    // Criar botões inline
+    const keyboard = concursos.map((concurso) => [
+      {
+        text: concurso.nome,
+        callback_data: `concurso_${concurso.id}`,
+      },
+    ]);
+
+    await bot!.sendMessage(
+      chatId,
+      "🎯 *Escolha seu concurso:*\n\n" +
+        "Selecione o concurso que você está estudando.\n" +
+        "Você pode trocar a qualquer momento usando /concurso novamente.",
+      {
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: keyboard,
+        },
+      },
+    );
+  });
+  // Handler: callback dos botões de concurso
+  bot.on("callback_query", async (query) => {
+    const chatId = query.message?.chat.id;
+    const telegramId = query.from.id.toString();
+    const data = query.data;
+
+    if (!chatId || !data) return;
+
+    // Processar escolha de concurso
+    if (data.startsWith("concurso_")) {
+      const concursoId = data.replace("concurso_", "");
+
+      console.log(
+        `✅ [Bot] Concurso escolhido: ${concursoId} por ${telegramId}`,
+      );
+
+      // Salvar no banco
+      try {
+        await db.execute(sql`
+          UPDATE "User"
+          SET 
+            "examType" = ${concursoId},
+            "updatedAt" = NOW()
+          WHERE "telegramId" = ${telegramId}
+        `);
+
+        // Confirmar escolha
+        await bot!.answerCallbackQuery(query.id, {
+          text: "✅ Concurso atualizado!",
+        });
+
+        await bot!.sendMessage(
+          chatId,
+          `✅ *Concurso atualizado!*\n\n` +
+            `Agora você está estudando para: *${concursoId}*\n\n` +
+            `Use /estudar para começar a praticar questões! 📚`,
+          { parse_mode: "Markdown" },
+        );
+      } catch (error) {
+        console.error("❌ Erro ao salvar concurso:", error);
+        await bot!.answerCallbackQuery(query.id, {
+          text: "❌ Erro ao atualizar",
+        });
+      }
+    }
   });
 }
 
