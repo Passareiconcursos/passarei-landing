@@ -226,7 +226,7 @@ router.post("/webhooks/mercadopago", async (req: Request, res: Response) => {
             ) VALUES (
               ${userId}, ${email}, 
               ${paymentData.payer?.first_name || "Usuário"},
-              ${paymentData.payer?.phone?.number || ""},
+              ${paymentData.payer?.phone?.number || null},
               ${plan}, 'active', NOW(), NOW() + INTERVAL '1 month',
               'OUTRO', 'SP', true, NOW(), NOW()
             )
