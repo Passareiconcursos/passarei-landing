@@ -165,8 +165,14 @@ router.post("/webhooks/mercadopago", async (req: Request, res: Response) => {
       if (paymentData.status === "approved") {
         console.log("✅ [Webhook] Pagamento aprovado! Ativando usuário...");
 
-        const email = paymentData.payer?.email;
+        // Extrair email do external_reference (enviado pelo frontend)
+        const externalRef = paymentData.external_reference || "";
+        const [telegramId, packageId, userEmail] = externalRef.split("|");
+
+        const email = userEmail || paymentData.payer?.email;
         const amount = paymentData.transaction_amount || 0;
+
+        console.log(`📧 [Webhook] Email extraído: ${email} (do frontend)`);
 
         if (!email) {
           console.error("❌ [Webhook] Email não encontrado");
@@ -452,7 +458,7 @@ router.post("/process-brick", async (req: Request, res: Response) => {
           number: "12345678909",
         },
       },
-      external_reference: `${telegramId}|${packageId}|${Date.now()}`,
+      external_reference: `${telegramId}|${packageId}|${payer?.email || ""}|${Date.now()}`,
     };
 
     console.log(
