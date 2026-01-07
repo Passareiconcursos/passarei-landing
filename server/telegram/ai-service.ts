@@ -20,7 +20,7 @@ interface ExplanationResult {
 export async function generateEnhancedContent(
   title: string,
   textContent: string,
-  examType: string
+  examType: string,
 ): Promise<EnhancedContent> {
   try {
     const response = await anthropic.messages.create({
@@ -55,22 +55,32 @@ texto da dica`,
       ],
     });
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
-    
+    const text =
+      response.content[0].type === "text" ? response.content[0].text : "";
+
     // Parse da resposta
-    const keyPointsMatch = text.match(/PONTOS-CHAVE:\n([\s\S]*?)(?=\nEXEMPLO:)/);
+    const keyPointsMatch = text.match(
+      /PONTOS-CHAVE:\n([\s\S]*?)(?=\nEXEMPLO:)/,
+    );
     const exampleMatch = text.match(/EXEMPLO:\n([\s\S]*?)(?=\nDICA:)/);
     const tipMatch = text.match(/DICA:\n([\s\S]*?)$/);
 
     return {
-      keyPoints: keyPointsMatch ? keyPointsMatch[1].trim() : "• Conceito fundamental\n• Aplicável em provas\n• Tema recorrente",
-      example: exampleMatch ? exampleMatch[1].trim() : "Aplicação prática em situações do cotidiano policial.",
-      tip: tipMatch ? tipMatch[1].trim() : "Fique atento a este tema nas provas objetivas.",
+      keyPoints: keyPointsMatch
+        ? keyPointsMatch[1].trim()
+        : "• Conceito fundamental\n• Aplicável em provas\n• Tema recorrente",
+      example: exampleMatch
+        ? exampleMatch[1].trim()
+        : "Aplicação prática em situações do cotidiano policial.",
+      tip: tipMatch
+        ? tipMatch[1].trim()
+        : "Fique atento a este tema nas provas objetivas.",
     };
   } catch (error) {
     console.error("❌ Erro ao gerar conteúdo com IA:", error);
     return {
-      keyPoints: "• Conceito fundamental\n• Aplicável em provas\n• Tema recorrente",
+      keyPoints:
+        "• Conceito fundamental\n• Aplicável em provas\n• Tema recorrente",
       example: "Aplicação prática em situações do cotidiano policial.",
       tip: "Fique atento a este tema nas provas objetivas.",
     };
@@ -83,42 +93,56 @@ export async function generateExplanation(
   textContent: string,
   userAnswer: string,
   correctAnswer: string,
-  isCorrect: boolean
+  isCorrect: boolean,
 ): Promise<ExplanationResult> {
   try {
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 200,
+      max_tokens: 400,
       messages: [
         {
           role: "user",
-          content: `Você é um professor de concursos.
+          content: `Você é um professor experiente de concursos policiais.
 
-TEMA: ${title}
-CONCEITO: ${textContent}
-RESPOSTA DO ALUNO: ${userAnswer}
-RESPOSTA CORRETA: ${correctAnswer}
-ACERTOU: ${isCorrect ? "SIM" : "NÃO"}
+          📚 TEMA: ${title}
+          📖 CONCEITO-CHAVE: ${textContent}
 
-${isCorrect 
-  ? "Dê um reforço positivo breve (1-2 linhas) explicando POR QUE está correto."
-  : "Explique brevemente (2-3 linhas) por que a resposta está errada e qual o conceito correto."
-}
+          👤 RESPOSTA DO ALUNO: ${userAnswer}
+          ✅ RESPOSTA CORRETA: ${correctAnswer}
+          ${isCorrect ? "🎯 ACERTOU!" : "❌ ERROU"}
 
-Seja direto e didático. Máximo 3 linhas.`,
+          ${
+            isCorrect
+              ? `TAREFA: Dê feedback positivo (2-3 linhas) explicando:
+          1. POR QUE a resposta ${correctAnswer} está correta
+          2. O ponto-chave do conceito que ele demonstrou dominar
+          3. Uma dica rápida de como esse tema costuma cair em provas
+
+          Seja motivador e didático!`
+              : `TAREFA: Explique de forma clara (3-4 linhas):
+          1. POR QUE a resposta ${userAnswer} está ERRADA
+          2. POR QUE a resposta correta é ${correctAnswer}
+          3. O conceito-chave que ele precisa revisar
+          4. Uma dica rápida de estudo
+
+          Seja construtivo e motivador!`
+          }
+
+          IMPORTANTE: Máximo 5 linhas. Seja direto, didático e motivador.`,
         },
       ],
     });
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
-    
+    const text =
+      response.content[0].type === "text" ? response.content[0].text : "";
+
     return {
       explanation: text.trim(),
     };
   } catch (error) {
     console.error("❌ Erro ao gerar explicação com IA:", error);
     return {
-      explanation: isCorrect 
+      explanation: isCorrect
         ? "Muito bem! Você demonstrou conhecimento do tema."
         : "Revise este conceito. É importante para sua aprovação.",
     };
