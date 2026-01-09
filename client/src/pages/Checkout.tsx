@@ -102,6 +102,7 @@ export default function Checkout() {
                   ...formData,
                   telegramId: userId,
                   packageId: pkg,
+                  userEmail: formData?.email,
                 }),
               });
               const result = await response.json();
