@@ -126,6 +126,83 @@ export async function startTelegramBot() {
     }
   });
 
+  // Comando: /menu - Menu principal com botões
+  bot.onText(/\/menu/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramId = msg.from?.id.toString();
+
+    if (!telegramId) return;
+
+    console.log(`📋 [Bot] Comando /menu de ${telegramId}`);
+
+    // Verificar se usuário tem plano ativo
+    const user = await db.execute(sql`
+      SELECT plan, "planStatus" 
+      FROM "User" 
+      WHERE "telegramId" = ${telegramId}
+      LIMIT 1
+    `);
+
+    const hasActivePlan =
+      user && user.length > 0 && user[0].planStatus === "active";
+
+    // Handler: callbacks do menu
+    bot.on("callback_query", async (query) => {
+      const chatId = query.message?.chat.id;
+      const telegramId = query.from.id.toString();
+      const data = query.data;
+
+      if (!chatId || !data) return;
+
+      // Responder callback (remove loading)
+      await bot!.answerCallbackQuery(query.id);
+
+      // Menu principal
+      if (data === "menu_estudar") {
+        // Simular comando /estudar
+        await bot!.sendMessage(chatId, "/estudar");
+      } else if (data === "menu_concurso") {
+        // Simular comando /concurso
+        await bot!.sendMessage(chatId, "/concurso");
+      } else if (data === "menu_progresso") {
+        // Simular comando /progresso
+        await bot!.sendMessage(chatId, "/progresso");
+      } else if (data === "menu_ajuda") {
+        // Simular comando /ajuda
+        await bot!.sendMessage(chatId, "/ajuda");
+      }
+    });
+
+    // Menu com botões inline
+    const keyboard = [
+      [
+        { text: "📚 Estudar", callback_data: "menu_estudar" },
+        { text: "🎯 Escolher Concurso", callback_data: "menu_concurso" },
+      ],
+      [
+        { text: "📊 Meu Progresso", callback_data: "menu_progresso" },
+        { text: "❓ Ajuda", callback_data: "menu_ajuda" },
+      ],
+    ];
+
+    const planInfo = hasActivePlan
+      ? `✅ Plano ${user[0].plan?.toUpperCase()} ativo`
+      : `⚠️ Plano inativo - Ative seu plano!`;
+
+    await bot!.sendMessage(
+      chatId,
+      `📋 *Menu Principal - Passarei*\n\n` +
+        `${planInfo}\n\n` +
+        `Escolha uma opção abaixo:`,
+      {
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: keyboard,
+        },
+      },
+    );
+  });
+
   bot.on("message", async (msg) => {
     const telegramId = String(msg.from?.id);
 
@@ -194,15 +271,14 @@ export async function startTelegramBot() {
 
     await bot!.sendMessage(
       chatId,
-      "❓ *Ajuda - Passarei Concursos*\n\n" +
-        "📚 *Comandos disponíveis:*\n\n" +
-        "▪️ `/estudar` - Iniciar sessão de estudos\n" +
-        "▪️ `/progresso` - Ver suas estatísticas\n" +
-        "▪️ `/ajuda` - Mostrar esta ajuda\n\n" +
-        "💬 *Suporte:*\n" +
-        "📧 Email: suporte@passarei.com.br\n" +
-        "💬 Telegram: @PassareiSuporte\n\n" +
-        "🎓 _Bons estudos!_",
+      `📚 *Como usar:*\n\n` +
+        `Use /menu para ver todas as opções disponíveis!\n\n` +
+        `Ou use os comandos:\n` +
+        `• /estudar - Começar a estudar\n` +
+        `• /concurso - Escolher concurso\n` +
+        `• /progresso - Ver progresso\n` +
+        `• /menu - Menu completo\n\n` +
+        `Digite /menu para começar! 🚀`,
       { parse_mode: "Markdown" },
     );
   });
