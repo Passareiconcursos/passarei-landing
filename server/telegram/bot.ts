@@ -253,7 +253,7 @@ export async function startTelegramBot() {
     try {
       // Buscar dados do usuário
       const userData = await db.execute(sql`
-        SELECT plan, "planStatus", "createdAt"
+        SELECT id, plan, "planStatus", "createdAt"
         FROM "User"
         WHERE "telegramId" = ${telegramId}
         LIMIT 1
@@ -271,13 +271,15 @@ export async function startTelegramBot() {
       const user = userData[0];
 
       // Buscar estatísticas de respostas
+      const userId = user.id; // ← ADICIONAR ANTES
+
       const stats = await db.execute(sql`
         SELECT 
           COUNT(*) as total,
           SUM(CASE WHEN correct = true THEN 1 ELSE 0 END) as acertos,
           SUM(CASE WHEN correct = false THEN 1 ELSE 0 END) as erros
         FROM "user_answers"
-        WHERE "userId" = ${telegramId}
+        WHERE "userId" = ${userId}
       `);
 
       const total = Number(stats[0]?.total || 0);
