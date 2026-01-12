@@ -250,77 +250,99 @@ export async function startTelegramBot() {
 
     console.log(`📊 [Bot] Comando /progresso de ${telegramId}`);
 
-    await bot!.sendMessage(
-      chatId,
-      "📊 *Seu Progresso*\n\n" +
-        "✅ Questões respondidas: Em breve\n" +
-        "🎯 Taxa de acerto: Em breve\n" +
-        "📚 Conteúdos estudados: Em breve\n" +
-        "⭐ Sequência atual: Em breve\n\n" +
-        "_Sistema de estatísticas em desenvolvimento_",
-      { parse_mode: "Markdown" },
-    );
-  });
+    try {
+      // Buscar dados do usuário
+      const userData = await db.execute(sql`
+        SELECT plan, "planStatus", "createdAt"
+        FROM "User"
+        WHERE "telegramId" = ${telegramId}
+        LIMIT 1
+      `);
 
-  // Comando /ajuda
-  bot.onText(/\/ajuda/, async (msg) => {
-    const chatId = msg.chat.id;
-    const telegramId = String(msg.from?.id);
+      if (!userData || userData.length === 0) {
+        await bot!.sendMessage(
+          chatId,
+          "❌ Usuário não encontrado. Use /start para começar.",
+          { parse_mode: "Markdown" },
+        );
+        return;
+      }
 
-    console.log(`❓ [Bot] Comando /ajuda de ${telegramId}`);
+      const user = userData[0];
 
-    await bot!.sendMessage(
-      chatId,
-      `📚 *Como usar:*\n\n` +
-        `Use /menu para ver todas as opções disponíveis!\n\n` +
-        `Ou use os comandos:\n` +
-        `• /estudar - Começar a estudar\n` +
-        `• /concurso - Escolher concurso\n` +
-        `• /progresso - Ver progresso\n` +
-        `• /menu - Menu completo\n\n` +
-        `Digite /menu para começar! 🚀`,
-      { parse_mode: "Markdown" },
-    );
-  });
-  // Comando: /concurso
-  bot.onText(/\/concurso/, async (msg) => {
-    const chatId = msg.chat.id;
-    const telegramId = msg.from?.id.toString();
+      // Buscar estatísticas de respostas
+      const stats = await db.execute(sql`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN correct = true THEN 1 ELSE 0 END) as acertos,
+          SUM(CASE WHEN correct = false THEN 1 ELSE 0 END) as erros
+        FROM "user_answers"
+        WHERE "userId" = ${telegramId}
+      `);
 
-    if (!telegramId) return;
+      const total = Number(stats[0]?.total || 0);
+      const acertos = Number(stats[0]?.acertos || 0);
+      const erros = Number(stats[0]?.erros || 0);
+      const taxaAcerto = total > 0 ? ((acertos / total) * 100).toFixed(1) : 0;
 
-    console.log(`🎯 [Bot] Comando /concurso de ${telegramId}`);
+      // Calcular dias desde cadastro (streak simplificado)
+      const cadastro = new Date(user.createdAt);
+      const hoje = new Date();
+      const diasDesde = Math.floor(
+        (hoje.getTime() - cadastro.getTime()) / (1000 * 60 * 60 * 24),
+      );
 
-    // Lista de concursos disponíveis
-    const concursos = [
-      { id: "PM-ES", nome: "Polícia Militar do Espírito Santo" },
-      { id: "PC-ES", nome: "Polícia Civil do Espírito Santo" },
-      { id: "PRF", nome: "Polícia Rodoviária Federal" },
-      { id: "PF", nome: "Polícia Federal" },
-      { id: "PCDF", nome: "Polícia Civil do Distrito Federal" },
-      { id: "OUTRO", nome: "Outro concurso policial" },
-    ];
+      // Emoji da taxa de acerto
+      let emojiTaxa = "📊";
+      if (Number(taxaAcerto) >= 80) emojiTaxa = "🏆";
+      else if (Number(taxaAcerto) >= 60) emojiTaxa = "✅";
+      else if (Number(taxaAcerto) >= 40) emojiTaxa = "⚠️";
+      else if (total > 0) emojiTaxa = "📉";
 
-    // Criar botões inline
-    const keyboard = concursos.map((concurso) => [
-      {
-        text: concurso.nome,
-        callback_data: `concurso_${concurso.id}`,
-      },
-    ]);
+      // Mensagem de progresso
+      let mensagem = `📊 *Seu Progresso*\n\n`;
 
-    await bot!.sendMessage(
-      chatId,
-      "🎯 *Escolha seu concurso:*\n\n" +
-        "Selecione o concurso que você está estudando.\n" +
-        "Você pode trocar a qualquer momento usando /concurso novamente.",
-      {
-        parse_mode: "Markdown",
-        reply_markup: {
-          inline_keyboard: keyboard,
-        },
-      },
-    );
+      // Status do plano
+      const planEmoji = user.plan?.toLowerCase() === "veterano" ? "⭐" : "🎓";
+      const planName = user.plan?.toUpperCase() || "INATIVO";
+      mensagem += `${planEmoji} Plano: *${planName}*\n`;
+      mensagem += `📅 Membro há: *${diasDesde} dia(s)*\n\n`;
+
+      // Estatísticas
+      mensagem += `📚 *Estatísticas de Estudo:*\n\n`;
+
+      if (total === 0) {
+        mensagem += `⚠️ Você ainda não respondeu nenhuma questão!\n\n`;
+        mensagem += `Use /estudar para começar a praticar! 🚀`;
+      } else {
+        mensagem += `✅ Questões respondidas: *${total}*\n`;
+        mensagem += `${emojiTaxa} Taxa de acerto: *${taxaAcerto}%*\n`;
+        mensagem += `🎯 Acertos: *${acertos}*\n`;
+        mensagem += `❌ Erros: *${erros}*\n\n`;
+
+        // Motivação baseada na taxa
+        if (Number(taxaAcerto) >= 80) {
+          mensagem += `🏆 *Excelente!* Continue assim!\n`;
+        } else if (Number(taxaAcerto) >= 60) {
+          mensagem += `✅ *Bom trabalho!* Você está no caminho certo!\n`;
+        } else if (Number(taxaAcerto) >= 40) {
+          mensagem += `💪 *Continue praticando!* Você vai melhorar!\n`;
+        } else {
+          mensagem += `📚 *Não desista!* Revise os conteúdos e tente novamente!\n`;
+        }
+
+        mensagem += `\nUse /estudar para continuar praticando! 📖`;
+      }
+
+      await bot!.sendMessage(chatId, mensagem, { parse_mode: "Markdown" });
+    } catch (error) {
+      console.error("❌ [Bot] Erro ao buscar progresso:", error);
+      await bot!.sendMessage(
+        chatId,
+        "⚠️ Erro ao buscar seu progresso. Tente novamente em instantes.",
+        { parse_mode: "Markdown" },
+      );
+    }
   });
   // Handler: callback dos botões de concurso
   bot.on("callback_query", async (query) => {
