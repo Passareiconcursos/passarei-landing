@@ -598,6 +598,18 @@ export const contentGenerationLog = pgTable("content_generation_log", {
   status: varchar("status", { length: 20 }).default("used"), // used, available
 });
 
+// Tabela: Respostas dos usuários
+export const userAnswers = pgTable("user_answers", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("userId", { length: 255 }).notNull(),
+  questionId: integer("questionId").notNull(),
+  selectedAnswer: integer("selectedAnswer").notNull(), // 0-4 (A-E)
+  correct: boolean("correct").notNull(),
+  answeredAt: timestamp("answeredAt", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 // Types para TypeScript
 export type EditalSubject = {
   name: string;
