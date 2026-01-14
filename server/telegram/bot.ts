@@ -43,37 +43,159 @@ export async function startTelegramBot() {
       await bot!.answerCallbackQuery(query.id);
 
       if (data === "menu_estudar") {
-        // Trigger /estudar
-        const msg = {
-          chat: { id: chatId },
-          from: { id: parseInt(telegramId) },
-        };
-        bot!.emit("message", msg);
-        await bot!.sendMessage(chatId, "/estudar");
+        console.log(`📚 [Bot] Menu Estudar clicado por ${telegramId}`);
+        // Chamar função de estudar diretamente
+        const { startLearningSession } = await import(
+          "../telegram/learning-session"
+        );
+        await startLearningSession(bot!, chatId, telegramId);
         return;
       }
+
       if (data === "menu_concurso") {
-        const msg = {
-          chat: { id: chatId },
-          from: { id: parseInt(telegramId) },
-        };
-        await bot!.sendMessage(chatId, "/concurso");
+        console.log(`🎯 [Bot] Menu Concurso clicado por ${telegramId}`);
+        // Mostrar lista de concursos
+        const concursos = [
+          { id: "PM-ES", nome: "Polícia Militar do Espírito Santo" },
+          { id: "PC-ES", nome: "Polícia Civil do Espírito Santo" },
+          { id: "PRF", nome: "Polícia Rodoviária Federal" },
+          { id: "PF", nome: "Polícia Federal" },
+          { id: "PCDF", nome: "Polícia Civil do Distrito Federal" },
+          { id: "OUTRO", nome: "Outro concurso policial" },
+        ];
+        const keyboard = concursos.map((concurso) => [
+          { text: concurso.nome, callback_data: `concurso_${concurso.id}` },
+        ]);
+        await bot!.sendMessage(
+          chatId,
+          "🎯 *Escolha seu concurso:*\n\n" +
+            "Selecione o concurso que você está estudando.\n" +
+            "Você pode trocar a qualquer momento usando /concurso novamente.",
+          {
+            parse_mode: "Markdown",
+            reply_markup: { inline_keyboard: keyboard },
+          },
+        );
         return;
       }
+
       if (data === "menu_progresso") {
-        const msg = {
-          chat: { id: chatId },
-          from: { id: parseInt(telegramId) },
-        };
-        await bot!.sendMessage(chatId, "/progresso");
+        console.log(`📊 [Bot] Menu Progresso clicado por ${telegramId}`);
+        // Buscar e mostrar progresso (código do /progresso)
+        try {
+          const userData = await db.execute(sql`
+            SELECT id, plan, "planStatus", "createdAt", "examType"
+            FROM "User"
+            WHERE "telegramId" = ${telegramId}
+            LIMIT 1
+          `);
+
+          if (!userData || userData.length === 0) {
+            await bot!.sendMessage(
+              chatId,
+              "❌ Usuário não encontrado. Use /start para começar.",
+              { parse_mode: "Markdown" },
+            );
+            return;
+          }
+
+          const user = userData[0];
+          const userId = user.id;
+
+          const stats = await db.execute(sql`
+            SELECT 
+              COUNT(*) as total,
+              SUM(CASE WHEN correct = true THEN 1 ELSE 0 END) as acertos,
+              SUM(CASE WHEN correct = false THEN 1 ELSE 0 END) as erros
+            FROM "user_answers"
+            WHERE "userId" = ${userId}
+          `);
+
+          const total = Number(stats[0]?.total || 0);
+          const acertos = Number(stats[0]?.acertos || 0);
+          const erros = Number(stats[0]?.erros || 0);
+          const taxaAcerto =
+            total > 0 ? ((acertos / total) * 100).toFixed(1) : 0;
+
+          const cadastro = new Date(user.createdAt);
+          const hoje = new Date();
+          const diasDesde = Math.floor(
+            (hoje.getTime() - cadastro.getTime()) / (1000 * 60 * 60 * 24),
+          );
+
+          let emojiTaxa = "📊";
+          if (Number(taxaAcerto) >= 80) emojiTaxa = "🏆";
+          else if (Number(taxaAcerto) >= 60) emojiTaxa = "✅";
+          else if (Number(taxaAcerto) >= 40) emojiTaxa = "⚠️";
+          else if (total > 0) emojiTaxa = "📉";
+
+          let mensagem = `📊 *Seu Progresso*\n\n`;
+
+          const planEmoji =
+            user.plan?.toLowerCase() === "veterano" ? "⭐" : "🎓";
+          const planName = user.plan?.toUpperCase() || "INATIVO";
+          mensagem += `${planEmoji} Plano: *${planName}*\n`;
+          mensagem += `📅 Membro há: *${diasDesde} dia(s)*\n`;
+
+          // Adicionar concurso escolhido
+          if (user.examType) {
+            mensagem += `🎯 Concurso: *${user.examType}*\n`;
+          }
+          mensagem += `\n`;
+
+          mensagem += `📚 *Estatísticas de Estudo:*\n\n`;
+
+          if (total === 0) {
+            mensagem += `⚠️ Você ainda não respondeu nenhuma questão!\n\n`;
+            mensagem += `Use /estudar para começar a praticar! 🚀`;
+          } else {
+            mensagem += `✅ Questões respondidas: *${total}*\n`;
+            mensagem += `${emojiTaxa} Taxa de acerto: *${taxaAcerto}%*\n`;
+            mensagem += `🎯 Acertos: *${acertos}*\n`;
+            mensagem += `❌ Erros: *${erros}*\n\n`;
+
+            if (Number(taxaAcerto) >= 80) {
+              mensagem += `🏆 *Excelente!* Continue assim!\n`;
+            } else if (Number(taxaAcerto) >= 60) {
+              mensagem += `✅ *Bom trabalho!* Você está no caminho certo!\n`;
+            } else if (Number(taxaAcerto) >= 40) {
+              mensagem += `💪 *Continue praticando!* Você vai melhorar!\n`;
+            } else {
+              mensagem += `📚 *Não desista!* Revise os conteúdos e tente novamente!\n`;
+            }
+
+            mensagem += `\nUse /estudar para continuar praticando! 📖`;
+          }
+
+          await bot!.sendMessage(chatId, mensagem, { parse_mode: "Markdown" });
+        } catch (error) {
+          console.error("❌ [Bot] Erro ao buscar progresso:", error);
+          await bot!.sendMessage(
+            chatId,
+            "⚠️ Erro ao buscar seu progresso. Tente novamente em instantes.",
+            { parse_mode: "Markdown" },
+          );
+        }
         return;
       }
+
       if (data === "menu_ajuda") {
-        const msg = {
-          chat: { id: chatId },
-          from: { id: parseInt(telegramId) },
-        };
-        await bot!.sendMessage(chatId, "/ajuda");
+        console.log(`❓ [Bot] Menu Ajuda clicado por ${telegramId}`);
+        await bot!.sendMessage(
+          chatId,
+          "❓ *Ajuda - Passarei Concursos*\n\n" +
+            "📚 *Comandos disponíveis:*\n\n" +
+            "▪️ `/estudar` - Iniciar sessão de estudos\n" +
+            "▪️ `/concurso` - Escolher concurso\n" +
+            "▪️ `/progresso` - Ver suas estatísticas\n" +
+            "▪️ `/menu` - Menu principal\n" +
+            "▪️ `/ajuda` - Mostrar esta ajuda\n\n" +
+            "💬 *Suporte:*\n" +
+            "📧 Email: suporte@passarei.com.br\n" +
+            "💬 Telegram: @PassareiSuporte\n\n" +
+            "🎓 _Bons estudos!_",
+          { parse_mode: "Markdown" },
+        );
         return;
       }
     }
