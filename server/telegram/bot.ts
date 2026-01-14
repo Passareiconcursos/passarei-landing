@@ -403,22 +403,5 @@ export async function startTelegramBot() {
       );
     }
   });
-  
-        await bot!.sendMessage(
-          chatId,
-          `✅ *Concurso atualizado!*\n\n` +
-            `Agora você está estudando para: *${concursoId}*\n\n` +
-            `Use /estudar para começar a praticar questões! 📚`,
-          { parse_mode: "Markdown" },
-        );
-      } catch (error) {
-        console.error("❌ Erro ao salvar concurso:", error);
-        await bot!.answerCallbackQuery(query.id, {
-          text: "❌ Erro ao atualizar",
-        });
-      }
-    }
-  });
 }
-
 export { bot };
