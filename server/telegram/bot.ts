@@ -432,11 +432,11 @@ export async function startTelegramBot() {
     try {
       // Buscar dados do usuário
       const userData = await db.execute(sql`
-        SELECT id, plan, "planStatus", "createdAt"
-        FROM "User"
-        WHERE "telegramId" = ${telegramId}
-        LIMIT 1
-      `);
+          SELECT id, plan, "planStatus", "createdAt", "examType"
+          FROM "User"
+          WHERE "telegramId" = ${telegramId}
+          LIMIT 1
+        `);
 
       if (!userData || userData.length === 0) {
         await bot!.sendMessage(
@@ -487,7 +487,13 @@ export async function startTelegramBot() {
       const planEmoji = user.plan?.toLowerCase() === "veterano" ? "⭐" : "🎓";
       const planName = user.plan?.toUpperCase() || "INATIVO";
       mensagem += `${planEmoji} Plano: *${planName}*\n`;
-      mensagem += `📅 Membro há: *${diasDesde} dia(s)*\n\n`;
+      mensagem += `📅 Membro há: *${diasDesde} dia(s)*\n`;
+
+      // Adicionar concurso escolhido
+      if (user.examType) {
+        mensagem += `🎯 Concurso: *${user.examType}*\n`;
+      }
+      mensagem += `\n`;
 
       // Estatísticas
       mensagem += `📚 *Estatísticas de Estudo:*\n\n`;
