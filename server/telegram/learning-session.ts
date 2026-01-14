@@ -253,7 +253,7 @@ function generateMultipleChoice(content: any) {
   const title = content.title || "Conceito";
   const def =
     content.textContent || content.definition || content.description || "";
-  let correctAnswer = def.length > 80 ? def.substring(0, 77) + "..." : def;
+  let correctAnswer = def; // Usar texto completo sem cortar
 
   const wrongAnswers = [
     `${title} refere-se exclusivamente a crimes dolosos`,
