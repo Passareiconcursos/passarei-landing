@@ -24,10 +24,94 @@ export async function startTelegramBot() {
   bot = new TelegramBot(token, { polling: true });
 
   bot.on("callback_query", async (query) => {
+    const chatId = query.message?.chat.id;
+    const telegramId = query.from.id.toString();
+    const data = query.data;
+
+    if (!chatId || !data) return;
+
+    // 1. Processar learning primeiro
     const isLearning = await handleLearningCallback(bot!, query);
     if (isLearning) return;
 
-    await handleOnboardingCallback(bot!, query);
+    // 2. Processar onboarding
+    const isOnboarding = await handleOnboardingCallback(bot!, query);
+    if (isOnboarding) return;
+
+    // 3. Processar menu
+    if (data.startsWith("menu_")) {
+      await bot!.answerCallbackQuery(query.id);
+
+      if (data === "menu_estudar") {
+        // Trigger /estudar
+        const msg = {
+          chat: { id: chatId },
+          from: { id: parseInt(telegramId) },
+        };
+        bot!.emit("message", msg);
+        await bot!.sendMessage(chatId, "/estudar");
+        return;
+      }
+      if (data === "menu_concurso") {
+        const msg = {
+          chat: { id: chatId },
+          from: { id: parseInt(telegramId) },
+        };
+        await bot!.sendMessage(chatId, "/concurso");
+        return;
+      }
+      if (data === "menu_progresso") {
+        const msg = {
+          chat: { id: chatId },
+          from: { id: parseInt(telegramId) },
+        };
+        await bot!.sendMessage(chatId, "/progresso");
+        return;
+      }
+      if (data === "menu_ajuda") {
+        const msg = {
+          chat: { id: chatId },
+          from: { id: parseInt(telegramId) },
+        };
+        await bot!.sendMessage(chatId, "/ajuda");
+        return;
+      }
+    }
+
+    // 4. Processar concurso
+    if (data.startsWith("concurso_")) {
+      const concursoId = data.replace("concurso_", "");
+      console.log(
+        `✅ [Bot] Concurso escolhido: ${concursoId} por ${telegramId}`,
+      );
+
+      try {
+        await db.execute(sql`
+          UPDATE "User"
+          SET 
+            "examType" = ${concursoId},
+            "updatedAt" = NOW()
+          WHERE "telegramId" = ${telegramId}
+        `);
+
+        await bot!.answerCallbackQuery(query.id, {
+          text: "✅ Concurso atualizado!",
+        });
+
+        await bot!.sendMessage(
+          chatId,
+          `✅ *Concurso atualizado!*\n\n` +
+            `Agora você está estudando para: *${concursoId}*\n\n` +
+            `Use /estudar para começar a praticar questões! 📚`,
+          { parse_mode: "Markdown" },
+        );
+      } catch (error) {
+        console.error("❌ Erro ao salvar concurso:", error);
+        await bot!.answerCallbackQuery(query.id, {
+          text: "❌ Erro ao atualizar",
+        });
+      }
+    }
   });
 
   bot.onText(/\/start(.*)/, async (msg, match) => {
@@ -145,33 +229,6 @@ export async function startTelegramBot() {
 
     const hasActivePlan =
       user && user.length > 0 && user[0].planStatus === "active";
-
-    // Handler: callbacks do menu
-    bot.on("callback_query", async (query) => {
-      const chatId = query.message?.chat.id;
-      const telegramId = query.from.id.toString();
-      const data = query.data;
-
-      if (!chatId || !data) return;
-
-      // Responder callback (remove loading)
-      await bot!.answerCallbackQuery(query.id);
-
-      // Menu principal
-      if (data === "menu_estudar") {
-        // Simular comando /estudar
-        await bot!.sendMessage(chatId, "/estudar");
-      } else if (data === "menu_concurso") {
-        // Simular comando /concurso
-        await bot!.sendMessage(chatId, "/concurso");
-      } else if (data === "menu_progresso") {
-        // Simular comando /progresso
-        await bot!.sendMessage(chatId, "/progresso");
-      } else if (data === "menu_ajuda") {
-        // Simular comando /ajuda
-        await bot!.sendMessage(chatId, "/ajuda");
-      }
-    });
 
     // Menu com botões inline
     const keyboard = [
@@ -346,37 +403,7 @@ export async function startTelegramBot() {
       );
     }
   });
-  // Handler: callback dos botões de concurso
-  bot.on("callback_query", async (query) => {
-    const chatId = query.message?.chat.id;
-    const telegramId = query.from.id.toString();
-    const data = query.data;
-
-    if (!chatId || !data) return;
-
-    // Processar escolha de concurso
-    if (data.startsWith("concurso_")) {
-      const concursoId = data.replace("concurso_", "");
-
-      console.log(
-        `✅ [Bot] Concurso escolhido: ${concursoId} por ${telegramId}`,
-      );
-
-      // Salvar no banco
-      try {
-        await db.execute(sql`
-          UPDATE "User"
-          SET 
-            "examType" = ${concursoId},
-            "updatedAt" = NOW()
-          WHERE "telegramId" = ${telegramId}
-        `);
-
-        // Confirmar escolha
-        await bot!.answerCallbackQuery(query.id, {
-          text: "✅ Concurso atualizado!",
-        });
-
+  
         await bot!.sendMessage(
           chatId,
           `✅ *Concurso atualizado!*\n\n` +
