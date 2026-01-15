@@ -24,6 +24,7 @@ export function Pricing() {
       cta: "Testar Grátis",
       highlight: false,
       popular: false,
+      action: "scroll",
     },
     {
       name: "Calouro",
@@ -41,6 +42,8 @@ export function Pricing() {
       cta: "Começar Agora",
       highlight: false,
       popular: false,
+      action: "checkout",
+      checkoutPlan: "calouro_mensal",
     },
     {
       name: "Veterano",
@@ -63,6 +66,8 @@ export function Pricing() {
       popular: true,
       badge: "🔥 POPULAR 50% OFF",
       annualNote: "Cobrado anualmente (R$ 538,80/ano)",
+      action: "checkout",
+      checkoutPlan: "veterano_anual",
     },
   ];
 
@@ -163,16 +168,29 @@ export function Pricing() {
                 ))}
               </ul>
 
-              <Button
-                onClick={scrollToCTA}
-                className={`w-full py-6 text-lg font-semibold ${
-                  plan.highlight
-                    ? "bg-white text-[#18cb96] hover:bg-gray-100"
-                    : "bg-[#18cb96] text-white hover:bg-[#14b584]"
-                }`}
-              >
-                {plan.cta}
-              </Button>
+              {plan.action === "checkout" ? (
+                
+                  href={`/checkout?plan=${plan.checkoutPlan}`}
+                  className={`block w-full py-6 text-lg font-semibold text-center rounded-lg transition-colors ${
+                    plan.highlight
+                      ? "bg-white text-[#18cb96] hover:bg-gray-100"
+                      : "bg-[#18cb96] text-white hover:bg-[#14b584]"
+                  }`}
+                >
+                  {plan.cta}
+                </a>
+              ) : (
+                <Button
+                  onClick={scrollToCTA}
+                  className={`w-full py-6 text-lg font-semibold ${
+                    plan.highlight
+                      ? "bg-white text-[#18cb96] hover:bg-gray-100"
+                      : "bg-[#18cb96] text-white hover:bg-[#14b584]"
+                  }`}
+                >
+                  {plan.cta}
+                </Button>
+              )}
             </div>
           ))}
         </div>
