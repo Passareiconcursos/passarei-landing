@@ -186,6 +186,8 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
     content.definition ||
     content.description ||
     "Definição não disponível";
+  // Salvar definição original antes da IA modificar
+  const originalDefinition = definition;
 
   // Gerar conteúdo enriquecido com IA
   await bot.sendMessage(
@@ -210,7 +212,14 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
 
   await new Promise((r) => setTimeout(r, 3000));
 
-  const question = generateMultipleChoice(content);
+  // Criar objeto com definição original
+  const contentForQuestion = {
+    ...content,
+    textContent: originalDefinition,
+    definition: originalDefinition,
+    description: originalDefinition,
+  };
+  const question = generateMultipleChoice(contentForQuestion);
   session.currentQuestion = question;
 
   // Formatar opções completas fora dos botões
@@ -251,12 +260,17 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
 
 function generateMultipleChoice(content: any) {
   const title = content.title || "Conceito";
-  const def =
-    content.textContent || content.definition || content.description || "";
-  // Usar apenas primeira frase da definição
-  let correctAnswer = def.split(".")[0] + ".";
-  if (correctAnswer.length > 250) {
-    correctAnswer = correctAnswer.substring(0, 247) + "...";
+  // Usar textContent que agora é a definição original
+  const def = content.textContent || "";
+
+  // Pegar primeira frase completa
+  let correctAnswer = def.split(/[.!?]/)[0].trim();
+
+  // Se muito longo, limitar
+  if (correctAnswer.length > 200) {
+    correctAnswer = correctAnswer.substring(0, 197) + "...";
+  } else if (correctAnswer.length > 0) {
+    correctAnswer += "."; // Adicionar ponto final
   }
 
   const wrongAnswers = [
