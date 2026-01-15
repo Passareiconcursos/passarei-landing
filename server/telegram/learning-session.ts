@@ -407,6 +407,37 @@ export async function handleLearningCallback(
       });
     }
 
+    // 💾 SALVAR RESPOSTA NO BANCO (NOVO CÓDIGO!)
+    try {
+      // Buscar userId do banco
+      const userData = await db.execute(sql`
+        SELECT id FROM "User" WHERE "telegramId" = ${telegramId} LIMIT 1
+      `);
+
+      if (userData && userData.length > 0) {
+        const userId = userData[0].id;
+
+        // Salvar resposta
+        await db.execute(sql`
+          INSERT INTO "user_answers" ("userId", "questionId", "selectedAnswer", "correct", "answeredAt")
+          VALUES (
+            ${userId},
+            ${session.currentContent.id || 0},
+            ${answerIdx},
+            ${isCorrect},
+            NOW()
+          )
+        `);
+
+        console.log(
+          `💾 [Learning] Resposta salva: ${telegramId} - ${isCorrect ? "✅" : "❌"}`,
+        );
+      }
+    } catch (error) {
+      console.error("❌ [Learning] Erro ao salvar resposta:", error);
+      // Não bloqueia o fluxo se falhar
+    }
+
     await new Promise((r) => setTimeout(r, 2000));
 
     const keyboard = {
