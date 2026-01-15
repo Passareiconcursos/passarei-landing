@@ -253,7 +253,11 @@ function generateMultipleChoice(content: any) {
   const title = content.title || "Conceito";
   const def =
     content.textContent || content.definition || content.description || "";
-  let correctAnswer = def; // Usar texto completo sem cortar
+  // Usar apenas primeira frase da definição
+  let correctAnswer = def.split(".")[0] + ".";
+  if (correctAnswer.length > 250) {
+    correctAnswer = correctAnswer.substring(0, 247) + "...";
+  }
 
   const wrongAnswers = [
     `${title} refere-se exclusivamente a crimes dolosos`,
@@ -366,6 +370,9 @@ export async function handleLearningCallback(
     const isCorrect = answerIdx === session.currentQuestion.correctIndex;
 
     await bot.answerCallbackQuery(query.id);
+
+    // Delay para dar tempo do usuário processar
+    await new Promise((r) => setTimeout(r, 1500)); // 1,5 segundos
 
     if (isCorrect) {
       session.correctAnswers++;
