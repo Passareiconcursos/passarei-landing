@@ -169,7 +169,7 @@ export function Pricing() {
               </ul>
 
               {plan.action === "checkout" ? (
-                
+
                   href={`/checkout?plan=${plan.checkoutPlan}`}
                   className={`block w-full py-6 text-lg font-semibold text-center rounded-lg transition-colors ${
                     plan.highlight
