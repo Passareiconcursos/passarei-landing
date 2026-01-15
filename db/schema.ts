@@ -602,8 +602,9 @@ export const contentGenerationLog = pgTable("content_generation_log", {
 export const userAnswers = pgTable("user_answers", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: varchar("userId", { length: 255 }).notNull(),
-  questionId: integer("questionId").notNull(),
-  selectedAnswer: integer("selectedAnswer").notNull(), // 0-4 (A-E)
+  contentId: varchar("contentId", { length: 255 }), // ← NOVO!
+  questionId: integer("questionId"), // ← Tornar opcional
+  selectedAnswer: integer("selectedAnswer").notNull(),
   correct: boolean("correct").notNull(),
   answeredAt: timestamp("answeredAt", { withTimezone: true })
     .defaultNow()

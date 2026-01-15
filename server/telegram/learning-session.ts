@@ -440,14 +440,8 @@ export async function handleLearningCallback(
 
         // Salvar resposta
         await db.execute(sql`
-          INSERT INTO "user_answers" ("userId", "questionId", "selectedAnswer", "correct", "answeredAt")
-          VALUES (
-            ${userId},
-            ${session.currentContent.id || 0},
-            ${answerIdx},
-            ${isCorrect},
-            NOW()
-          )
+          INSERT INTO "user_answers" ("userId", "contentId", "selectedAnswer", "correct", "answeredAt")
+VALUES (${userId}, ${session.currentContent.id}, ${answerIdx}, ${isCorrect}, NOW())
         `);
 
         console.log(
