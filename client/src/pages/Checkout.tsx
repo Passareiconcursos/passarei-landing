@@ -177,17 +177,16 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white py-8 px-4">
-      <div className="max-w-lg mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <img src="/logo.png" alt="Passarei" className="h-10 w-auto" />
-            <p <h1 className="text-3xl font-bold text-gray-800">
-              Checkout Seguro
-            </h1></p>
-          </div>
-          <p className="text-gray-600">Finalize sua compra de forma segura</p>
-        </div>
+      <div className="flex flex-col items-center gap-3 mb-8">
+        <img 
+          src="/logo.png" 
+          alt="Passarei" 
+          className="h-16 w-auto"
+        />
+        <h1 className="text-xl font-semibold text-gray-700">
+          Checkout Seguro
+        </h1>
+      </div>
 
         {/* Resumo do pedido */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">
