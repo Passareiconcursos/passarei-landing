@@ -16,6 +16,12 @@ export const CREDIT_PACKAGES = [
     questions: 300,
     label: "Plano Calouro - R$ 89,90/mês",
   },
+  {
+    id: "veterano_anual",
+    amount: 538.8,
+    questions: 900,
+    label: "Plano Veterano - R$ 538,80/ano (R$ 44,90/mês)",
+  },
 ];
 
 // ID do plano de assinatura Veterano no Mercado Pago
