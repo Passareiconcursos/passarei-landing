@@ -65,7 +65,7 @@ export async function createPaymentPreference(params: CreatePaymentParams) {
             quantity: 1,
             currency_id: "BRL",
             unit_price:
-              process.env.TEST_MODE_ENABLED === "true" ? 1.0 : pkg.amount,
+              process.env.TEST_MODE_ENABLED === "true" ? 5.0 : pkg.amount,
           },
         ],
         payer: {

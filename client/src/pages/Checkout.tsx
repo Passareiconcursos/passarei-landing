@@ -8,11 +8,11 @@ declare global {
 }
 const PACKAGES = {
   calouro_mensal: {
-    amount: import.meta.env.VITE_TEST_MODE_ENABLED === "true" ? 1.0 : 89.9,
+    amount: import.meta.env.VITE_TEST_MODE_ENABLED === "true" ? 5.0 : 89.9,
     questions: 300,
     label:
       import.meta.env.VITE_TEST_MODE_ENABLED === "true"
-        ? "Plano Calouro - TESTE R$ 1,00"
+        ? "Plano Calouro - TESTE R$ 5,00"
         : "Plano Calouro - Mensal",
   },
   veterano: {
@@ -176,13 +176,16 @@ export default function Checkout() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white py-8 px-4">
       <div className="max-w-lg mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Checkout Passarei
-          </h1>
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <img src="/logo.png" alt="Passarei" className="h-10 w-auto" />
+            <h1 className="text-3xl font-bold text-gray-800">
+              Checkout Seguro
+            </h1>
+          </div>
           <p className="text-gray-600">Finalize sua compra de forma segura</p>
         </div>
 
@@ -207,7 +210,7 @@ export default function Checkout() {
           )}
           <div className="flex justify-between items-center pt-4 mt-4 border-t">
             <span className="font-semibold text-gray-800">Total</span>
-            <span className="text-2xl font-bold text-blue-600">
+            <span className="text-2xl font-bold text-[#18cb96]">
               R$ {packageInfo.amount.toFixed(2)}
             </span>
           </div>
