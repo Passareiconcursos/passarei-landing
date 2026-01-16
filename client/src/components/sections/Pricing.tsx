@@ -64,7 +64,7 @@ export function Pricing() {
       cta: "Garantir Desconto",
       highlight: true,
       popular: true,
-      badge: "💅 POPULAR 50% OFF",
+      badge: "O MAIS ESCOLHIDO 50% OFF",
       annualNote: "Cobrado Mensalmente Como Assinatura Anual",
       action: "checkout",
       checkoutPlan: "veterano_anual",
