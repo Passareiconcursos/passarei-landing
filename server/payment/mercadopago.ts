@@ -64,7 +64,8 @@ export async function createPaymentPreference(params: CreatePaymentParams) {
             description: `Pacote de ${pkg.questions} questões para estudo`,
             quantity: 1,
             currency_id: "BRL",
-            unit_price: pkg.amount,
+            unit_price:
+              process.env.TEST_MODE_ENABLED === "true" ? 1.0 : pkg.amount,
           },
         ],
         payer: {
