@@ -182,9 +182,9 @@ export default function Checkout() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-2">
             <img src="/logo.png" alt="Passarei" className="h-10 w-auto" />
-            <h1 className="text-3xl font-bold text-gray-800">
+            <p <h1 className="text-3xl font-bold text-gray-800">
               Checkout Seguro
-            </h1>
+            </h1></p>
           </div>
           <p className="text-gray-600">Finalize sua compra de forma segura</p>
         </div>
