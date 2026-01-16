@@ -65,9 +65,11 @@ export function Pricing() {
       highlight: true,
       popular: true,
       badge: "💅 POPULAR 50% OFF",
-      annualNote: "Cobrado anualmente (R$ 538,80/ano)",
+      annualNote: "Cobrado Mensalmente Como Assinatura Anual",
       action: "checkout",
       checkoutPlan: "veterano_anual",
+      subscriptionUrl:
+        "https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=e717107a9daa436f81ce9c8cc1c00d8f",
     },
   ];
 
@@ -109,8 +111,8 @@ export function Pricing() {
               <div className="mb-6">
                 <h3
                   className={`text-2xl font-bold mb-2 ${
-	                  plan.highlight ? "text-white" : "text-gray-900"
-                }`}
+                    plan.highlight ? "text-white" : "text-gray-900"
+                  }`}
                 >
                   {plan.name}
                 </h3>
@@ -159,7 +161,7 @@ export function Pricing() {
                     />
                     <span
                       className={`text-sm ${
-	                        plan.highlight ? "text-white" : "text-gray-700"
+                        plan.highlight ? "text-white" : "text-gray-700"
                       }`}
                     >
                       {feature}
@@ -170,7 +172,10 @@ export function Pricing() {
 
               {plan.action === "checkout" ? (
                 <a
-                  href={`/checkout?plan=${plan.checkoutPlan}`}
+                  href={
+                    plan.subscriptionUrl ||
+                    `/checkout?plan=${plan.checkoutPlan}`
+                  }
                   className={`block w-full py-6 text-lg font-semibold text-center rounded-lg transition-colors ${
                     plan.highlight
                       ? "bg-white text-[#18cb96] hover:bg-gray-100"
