@@ -64,7 +64,7 @@ export function Pricing() {
       cta: "Garantir Desconto",
       highlight: true,
       popular: true,
-      badge: "🔥 POPULAR 50% OFF",
+      badge: "💅 POPULAR 50% OFF",
       annualNote: "Cobrado anualmente (R$ 538,80/ano)",
       action: "checkout",
       checkoutPlan: "veterano_anual",
@@ -77,7 +77,7 @@ export function Pricing() {
         <div className="text-center mb-16">
           <div className="inline-block mb-4">
             <span className="bg-[#18cb96]/10 text-[#18cb96] px-4 py-2 rounded-full text-sm font-semibold">
-              💰 Preços acessíveis para sua aprovação
+              🊰 Preços acessíveis para sua aprovação
             </span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
@@ -109,8 +109,8 @@ export function Pricing() {
               <div className="mb-6">
                 <h3
                   className={`text-2xl font-bold mb-2 ${
-                    plan.highlight ? "text-white" : "text-gray-900"
-                  }`}
+	                  plan.highlight ? "text-white" : "text-gray-900"
+                }`}
                 >
                   {plan.name}
                 </h3>
@@ -159,7 +159,7 @@ export function Pricing() {
                     />
                     <span
                       className={`text-sm ${
-                        plan.highlight ? "text-white" : "text-gray-700"
+	                        plan.highlight ? "text-white" : "text-gray-700"
                       }`}
                     >
                       {feature}
@@ -169,7 +169,7 @@ export function Pricing() {
               </ul>
 
               {plan.action === "checkout" ? (
-
+                <a
                   href={`/checkout?plan=${plan.checkoutPlan}`}
                   className={`block w-full py-6 text-lg font-semibold text-center rounded-lg transition-colors ${
                     plan.highlight
