@@ -11,6 +11,7 @@ import {
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
 import { validateMercadoPagoSignature } from "./webhook-validator";
+import { handleManualActivation } from "./manual-activation";
 
 const router = Router();
 
@@ -452,6 +453,12 @@ router.post("/webhooks/subscription", async (req: Request, res: Response) => {
     res.status(500).send("Error");
   }
 });
+
+// ============================================
+// ATIVAÇÃO MANUAL (Para quando webhook não funciona)
+// ============================================
+
+router.post("/manual-activation", handleManualActivation);
 
 export default router;
 
