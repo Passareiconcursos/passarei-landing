@@ -256,8 +256,13 @@ export async function startTelegramBot() {
           "../activation/codes"
         );
 
+        console.log(`🔍 [Bot] Tentando conectar código: ${activationCode}`);
+        console.log(`🔍 [Bot] Telegram ID: ${telegramId}`);
+
         // Conectar código ao Telegram
         const result = await connectCodeToTelegram(activationCode, telegramId);
+
+        console.log(`📊 [Bot] Resultado:`, JSON.stringify(result, null, 2));
 
         if (result.success && result.user) {
           const { user } = result;
