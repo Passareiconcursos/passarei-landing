@@ -10,6 +10,7 @@ import {
 } from "./mercadopago";
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
+import { validateMercadoPagoSignature } from "./webhook-validator";
 
 const router = Router();
 
@@ -110,6 +111,26 @@ router.post("/webhooks/mercadopago", async (req: Request, res: Response) => {
   try {
     console.log("🔔 [Webhook] Notificação recebida do Mercado Pago");
     console.log("📦 [Webhook] Body:", JSON.stringify(req.body, null, 2));
+
+    // 🔐 VALIDAÇÃO DE SEGURANÇA - Verificar assinatura do webhook
+    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET_PAYMENTS;
+
+    if (secret) {
+      const isValid = validateMercadoPagoSignature(req, secret);
+
+      if (!isValid) {
+        console.error("🚨 [Webhook] WEBHOOK FALSO DETECTADO - Assinatura inválida!");
+        console.error("🚨 [Webhook] IP:", req.ip);
+        return res.status(401).json({
+          success: false,
+          error: "Assinatura inválida",
+        });
+      }
+
+      console.log("✅ [Webhook] Assinatura validada com sucesso");
+    } else {
+      console.warn("⚠️ [Webhook] WEBHOOK_SECRET não configurado - VALIDAÇÃO DESABILITADA");
+    }
 
     const { type, data } = req.body;
 
@@ -375,6 +396,27 @@ router.post(
 // Webhook para assinaturas
 router.post("/webhooks/subscription", async (req: Request, res: Response) => {
   try {
+    console.log("🔔 [Webhook Subscription] Notificação recebida");
+
+    // 🔐 VALIDAÇÃO DE SEGURANÇA - Verificar assinatura do webhook
+    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET_SUBSCRIPTIONS;
+
+    if (secret) {
+      const isValid = validateMercadoPagoSignature(req, secret);
+
+      if (!isValid) {
+        console.error("🚨 [Webhook Subscription] WEBHOOK FALSO DETECTADO!");
+        return res.status(401).json({
+          success: false,
+          error: "Assinatura inválida",
+        });
+      }
+
+      console.log("✅ [Webhook Subscription] Assinatura validada");
+    } else {
+      console.warn("⚠️ [Webhook Subscription] SECRET não configurado");
+    }
+
     const { type, data } = req.body;
 
     console.log("📩 Webhook de assinatura:", type, data);
