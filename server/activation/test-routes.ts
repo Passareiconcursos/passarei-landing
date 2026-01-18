@@ -178,6 +178,37 @@ router.get("/user", async (req, res) => {
 });
 
 /**
+ * Desvincular Telegram ID de contas antigas
+ * POST /api/activation/unlink-telegram
+ * Body: { telegramId: "123456789" }
+ */
+router.post("/unlink-telegram", async (req, res) => {
+  try {
+    const { telegramId } = req.body;
+
+    if (!telegramId) {
+      return res.status(400).json({
+        success: false,
+        error: "telegramId é obrigatório",
+      });
+    }
+
+    console.log(`🔓 [Test] Desvinculando Telegram: ${telegramId}`);
+
+    const { unlinkTelegram } = await import("./unlink-telegram");
+    const result = await unlinkTelegram(telegramId);
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("❌ [Test] Erro ao desvincular Telegram:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
  * Info sobre o sistema de ativação
  * GET /api/activation/info
  */
@@ -191,6 +222,7 @@ router.get("/info", (req, res) => {
       conectar: "POST /api/activation/connect { activationCode, telegramId }",
       validar: "GET /api/activation/validate?code=PASS-ABC123",
       usuario: "GET /api/activation/user?telegramId=123456789",
+      desvincular: "POST /api/activation/unlink-telegram { telegramId }",
     },
     fluxo: [
       "1. Usuário paga no site",
