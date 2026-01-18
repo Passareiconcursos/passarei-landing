@@ -8,12 +8,9 @@ declare global {
 }
 const PACKAGES = {
   calouro_mensal: {
-    amount: import.meta.env.VITE_TEST_MODE_ENABLED === "true" ? 5.0 : 89.9,
+    amount: 89.9,
     questions: 300,
-    label:
-      import.meta.env.VITE_TEST_MODE_ENABLED === "true"
-        ? "Plano Calouro - TESTE R$ 5,00"
-        : "Plano Calouro - Mensal",
+    label: "Plano Calouro - Mensal",
   },
   veterano: {
     amount: 538.8,
