@@ -65,11 +65,11 @@ export async function manualActivation(
 
       await db.execute(sql`
         INSERT INTO "User" (
-          id, email, name, plan, "planStatus",
+          id, email, name, phone, plan, "planStatus",
           "planStartDate", "planEndDate", "examType", state,
           "isActive", "createdAt", "updatedAt", "activationCode", "activationCodeUsed"
         ) VALUES (
-          ${userId}, ${email}, 'Usuário', ${plan}, 'active',
+          ${userId}, ${email}, 'Usuário', '00000000000', ${plan}, 'active',
           NOW(), NOW() + INTERVAL '1 month', 'OUTRO', 'SP',
           true, NOW(), NOW(), ${activationCode}, false
         )
