@@ -28,7 +28,7 @@ export default function Success() {
   const planColor =
     plan === "veterano"
       ? "from-[#18cb96] to-[#14b584]"
-      : "from-blue-500 to-blue-600";
+      : "from-[#18cb96] to-[#14b584]";
 
   // Scroll to top on mount
   useEffect(() => {
@@ -97,10 +97,10 @@ export default function Success() {
           {/* Conteúdo */}
           <div className="p-8 md:p-12">
             {/* Próximo passo - DESTAQUE */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-6 md:p-8 mb-8">
+            <div className="bg-gradient-to-br from-[#18cb96]/10 to-[#14b584]/10 border-2 border-[#18cb96]/30 rounded-2xl p-6 md:p-8 mb-8">
               <div className="flex items-start gap-4 mb-6">
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-[#18cb96] rounded-full flex items-center justify-center">
                     <ArrowRight className="w-6 h-6 text-white" />
                   </div>
                 </div>
@@ -131,7 +131,7 @@ export default function Success() {
               <div className="mt-4 text-center">
                 <p className="text-sm text-gray-600">
                   👉 Clique no botão e envie o comando{" "}
-                  <code className="bg-gray-200 px-2 py-1 rounded font-mono text-blue-600">
+                  <code className="bg-gray-200 px-2 py-1 rounded font-mono text-[#18cb96]">
                     /start
                   </code>
                 </p>
@@ -141,7 +141,7 @@ export default function Success() {
             {/* Informações do pedido */}
             <div className="bg-gray-50 rounded-xl p-6 mb-8">
               <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Mail className="w-5 h-5 text-blue-500" />
+                <Mail className="w-5 h-5 text-[#18cb96]" />
                 Informações do Pedido
               </h3>
               <div className="space-y-3 text-sm">
@@ -273,7 +273,7 @@ export default function Success() {
               </p>
               <a
                 href="mailto:suporte@passarei.com.br"
-                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+                className="inline-flex items-center gap-2 text-[#18cb96] hover:text-[#14b584] font-medium"
               >
                 <Mail className="w-4 h-4" />
                 suporte@passarei.com.br
