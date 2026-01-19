@@ -69,6 +69,9 @@ export default function Checkout() {
       await bricks.create("payment", "payment-brick", {
         initialization: {
           amount: packageInfo.amount,
+          payer: {
+            email: "",
+          },
         },
         customization: {
           visual: {
@@ -81,6 +84,9 @@ export default function Checkout() {
             debitCard: "all",
             bankTransfer: ["pix"],
             maxInstallments: 1,
+          },
+          payerForm: {
+            enabled: true,
           },
         },
         callbacks: {
