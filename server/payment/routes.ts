@@ -495,19 +495,56 @@ router.post("/process-brick", async (req: Request, res: Response) => {
     );
     console.log("💳 Chamando MP API...");
 
+    // Dados do pacote para descrição
+    const packageName = pkg?.label || (packageId === "veterano" ? "Plano Veterano" : "Plano Calouro");
+    const packageQuestions = pkg?.questions || (packageId === "veterano" ? 10800 : 300);
+
     const payloadMP = {
       token,
       transaction_amount: amount,
       installments: installments || 1,
       payment_method_id,
+      description: `${packageName} - Passarei Concursos`,
+      statement_descriptor: "PASSAREI",
+      external_reference: `${telegramId}|${packageId}|${payer?.email || ""}|${Date.now()}`,
       payer: {
         email: payer?.email || "suporte@passarei.com.br",
+        first_name: payer?.first_name || payer?.firstName || "",
+        last_name: payer?.last_name || payer?.lastName || "",
         identification: payer?.identification || {
           type: "CPF",
-          number: "12345678909",
+          number: "00000000000",
+        },
+        phone: payer?.phone ? {
+          area_code: payer.phone.area_code || payer.phone.areaCode || "",
+          number: payer.phone.number || "",
+        } : undefined,
+        address: payer?.address ? {
+          zip_code: payer.address.zip_code || payer.address.zipCode || "",
+          street_name: payer.address.street_name || payer.address.streetName || "",
+          street_number: payer.address.street_number || payer.address.streetNumber || "",
+          neighborhood: payer.address.neighborhood || "",
+          city: payer.address.city || "",
+          federal_unit: payer.address.federal_unit || payer.address.federalUnit || "",
+        } : undefined,
+      },
+      additional_info: {
+        items: [
+          {
+            id: packageId,
+            title: packageName,
+            description: `Acesso a ${packageQuestions} questões de concursos`,
+            category_id: "services",
+            quantity: 1,
+            unit_price: amount,
+          },
+        ],
+        payer: {
+          first_name: payer?.first_name || payer?.firstName || "",
+          last_name: payer?.last_name || payer?.lastName || "",
+          registration_date: new Date().toISOString(),
         },
       },
-      external_reference: `${telegramId}|${packageId}|${payer?.email || ""}|${Date.now()}`,
     };
 
     console.log(
