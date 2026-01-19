@@ -108,9 +108,14 @@ export default function Checkout() {
               const result = await response.json();
 
               if (result.success) {
-                setPaymentStatus("approved");
-                // Redirecionar para página de sucesso
-                window.location.href = `/success?payment=${result.paymentId}&plan=${pkg}`;
+                // Verificar se é aprovado ou pendente (PIX)
+                if (result.status === "approved") {
+                  setPaymentStatus("approved");
+                  window.location.href = `/success?payment=${result.paymentId}&plan=${pkg}&status=approved`;
+                } else if (result.status === "pending") {
+                  setPaymentStatus("pending");
+                  window.location.href = `/success?payment=${result.paymentId}&plan=${pkg}&status=pending`;
+                }
               } else {
                 setError(result.error || "Erro no pagamento");
               }

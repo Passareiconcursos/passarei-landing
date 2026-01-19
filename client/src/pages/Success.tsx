@@ -1,13 +1,9 @@
 // client/src/pages/Success.tsx
-// 🎉 Página exibida após pagamento aprovado
+// 🎉 Página exibida após pagamento aprovado ou pendente (PIX)
 
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { CheckCircle2, Send, Mail, ArrowRight, Sparkles } from "lucide-react";
-
-interface SuccessPageProps {
-  // Props virão da URL: ?plan=calouro&payment_id=XXX&email=user@email.com
-}
+import { CheckCircle2, Send, Mail, ArrowRight, Clock, AlertCircle } from "lucide-react";
 
 export default function Success() {
   const [searchParams] = useState(
@@ -16,26 +12,33 @@ export default function Success() {
   const [, setLocation] = useLocation();
 
   const plan = searchParams.get("plan") || "calouro";
-  const paymentId = searchParams.get("payment_id");
+  const paymentId = searchParams.get("payment") || searchParams.get("payment_id");
   const userEmail = searchParams.get("email");
+  const status = searchParams.get("status") || "approved";
 
-  // Gerar código de ativação (depois virá do backend)
-  const activationCode = searchParams.get("code") || "PASS-DEMO123";
+  // Código de ativação só aparece para pagamentos aprovados
+  const activationCode = status === "approved"
+    ? (searchParams.get("code") || "PASS-DEMO123")
+    : null;
+
+  // Determinar se é pendente (PIX)
+  const isPending = status === "pending";
 
   // Determinar nome do plano
   const planName = plan === "veterano" ? "VETERANO" : "CALOURO";
   const planPrice = plan === "veterano" ? "R$ 44,90/mês" : "R$ 89,90/mês";
-  const planColor =
-    plan === "veterano"
-      ? "from-[#18cb96] to-[#14b584]"
-      : "from-[#18cb96] to-[#14b584]";
+
+  // Cores diferentes para pendente vs aprovado
+  const headerColor = isPending
+    ? "from-yellow-500 to-orange-500"
+    : "from-[#18cb96] to-[#14b584]";
 
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo(0, 0);
 
-    // Google Analytics - conversão
-    if (typeof window !== "undefined" && (window as any).gtag) {
+    // Google Analytics - só registra conversão se aprovado
+    if (!isPending && typeof window !== "undefined" && (window as any).gtag) {
       (window as any).gtag("event", "purchase", {
         transaction_id: paymentId,
         value: plan === "veterano" ? 44.9 : 89.9,
@@ -50,9 +53,11 @@ export default function Success() {
         ],
       });
     }
-  }, [paymentId, plan, planName]);
+  }, [paymentId, plan, planName, isPending]);
 
-  const telegramLink = `https://t.me/PassareiBot?start=${activationCode}`;
+  const telegramLink = activationCode
+    ? `https://t.me/PassareiBot?start=${activationCode}`
+    : "https://t.me/PassareiBot";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex items-center justify-center p-4">
@@ -61,28 +66,33 @@ export default function Success() {
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
           {/* Header com gradiente */}
           <div
-            className={`bg-gradient-to-r ${planColor} p-8 text-center relative overflow-hidden`}
+            className={`bg-gradient-to-r ${headerColor} p-8 text-center relative overflow-hidden`}
           >
             {/* Efeito de brilho */}
             <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
 
             <div className="relative z-10">
-              {/* Ícone de sucesso */}
-              <div className="inline-flex items-center justify-center w-24 h-24 bg-white rounded-full mb-6 shadow-lg animate-bounce">
-                <CheckCircle2
-                  className="w-14 h-14 text-green-500"
-                  strokeWidth={2.5}
-                />
+              {/* Ícone - diferente para pendente */}
+              <div className={`inline-flex items-center justify-center w-24 h-24 bg-white rounded-full mb-6 shadow-lg ${isPending ? '' : 'animate-bounce'}`}>
+                {isPending ? (
+                  <Clock className="w-14 h-14 text-yellow-500" strokeWidth={2.5} />
+                ) : (
+                  <CheckCircle2 className="w-14 h-14 text-green-500" strokeWidth={2.5} />
+                )}
               </div>
 
-              {/* Título */}
+              {/* Título - diferente para pendente */}
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
-                🎉 Pagamento Confirmado!
+                {isPending ? "⏳ Pagamento Pendente" : "🎉 Pagamento Confirmado!"}
               </h1>
 
-              {/* Subtítulo */}
+              {/* Subtítulo - diferente para pendente */}
               <p className="text-xl text-white/90 font-medium">
-                Seu plano <strong>{planName}</strong> está ativo!
+                {isPending ? (
+                  <>Aguardando confirmação do <strong>PIX</strong></>
+                ) : (
+                  <>Seu plano <strong>{planName}</strong> está ativo!</>
+                )}
               </p>
 
               {/* Badge do plano */}
@@ -96,47 +106,88 @@ export default function Success() {
 
           {/* Conteúdo */}
           <div className="p-8 md:p-12">
-            {/* Próximo passo - DESTAQUE */}
-            <div className="bg-gradient-to-br from-[#18cb96]/10 to-[#14b584]/10 border-2 border-[#18cb96]/30 rounded-2xl p-6 md:p-8 mb-8">
-              <div className="flex items-start gap-4 mb-6">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-[#18cb96] rounded-full flex items-center justify-center">
-                    <ArrowRight className="w-6 h-6 text-white" />
+
+            {/* AVISO PARA PIX PENDENTE */}
+            {isPending && (
+              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-6 md:p-8 mb-8">
+                <div className="flex items-start gap-4">
+                  <AlertCircle className="w-8 h-8 text-yellow-600 flex-shrink-0" />
+                  <div>
+                    <h2 className="text-xl font-bold text-yellow-800 mb-2">
+                      Complete o pagamento PIX
+                    </h2>
+                    <p className="text-yellow-700 mb-4">
+                      O Mercado Pago enviou o <strong>código PIX</strong> para seu email.
+                      Após o pagamento, você receberá automaticamente:
+                    </p>
+                    <ul className="space-y-2 text-yellow-700">
+                      <li className="flex items-center gap-2">
+                        <span className="text-yellow-600">1.</span>
+                        Email de confirmação com código de ativação
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-yellow-600">2.</span>
+                        Link para acessar o bot do Telegram
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-yellow-600">3.</span>
+                        Seus créditos serão liberados automaticamente
+                      </li>
+                    </ul>
+                    <div className="mt-4 p-3 bg-yellow-100 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        <strong>Importante:</strong> Verifique seu email (inclusive SPAM)
+                        para encontrar o código PIX enviado pelo Mercado Pago.
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    📱 Próximo Passo: Acesse o Telegram
-                  </h2>
-                  <p className="text-gray-700 text-lg">
-                    Clique no botão abaixo para começar a estudar!
+              </div>
+            )}
+
+            {/* Próximo passo - SÓ PARA APROVADO */}
+            {!isPending && (
+              <div className="bg-gradient-to-br from-[#18cb96]/10 to-[#14b584]/10 border-2 border-[#18cb96]/30 rounded-2xl p-6 md:p-8 mb-8">
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-[#18cb96] rounded-full flex items-center justify-center">
+                      <ArrowRight className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                      📱 Próximo Passo: Acesse o Telegram
+                    </h2>
+                    <p className="text-gray-700 text-lg">
+                      Clique no botão abaixo para começar a estudar!
+                    </p>
+                  </div>
+                </div>
+
+                {/* Botão GRANDE do Telegram */}
+                <a
+                  href={telegramLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block w-full bg-gradient-to-r from-[#0088cc] to-[#0077b3] hover:from-[#0077b3] hover:to-[#006699] text-white font-bold py-5 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"
+                >
+                  <div className="flex items-center justify-center gap-3">
+                    <Send className="w-7 h-7" />
+                    <span className="text-xl">Telegram</span>
+                  </div>
+                </a>
+
+                {/* Instruções abaixo do botão */}
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-gray-600">
+                    👉 Clique no botão e envie o comando{" "}
+                    <code className="bg-gray-200 px-2 py-1 rounded font-mono text-[#18cb96]">
+                      /start
+                    </code>
                   </p>
                 </div>
               </div>
-
-              {/* Botão GRANDE do Telegram */}
-              <a
-                href={telegramLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group block w-full bg-gradient-to-r from-[#0088cc] to-[#0077b3] hover:from-[#0077b3] hover:to-[#006699] text-white font-bold py-5 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"
-              >
-                <div className="flex items-center justify-center gap-3">
-                  <Send className="w-7 h-7" />
-                  <span className="text-xl">Telegram</span>
-                </div>
-              </a>
-
-              {/* Instruções abaixo do botão */}
-              <div className="mt-4 text-center">
-                <p className="text-sm text-gray-600">
-                  👉 Clique no botão e envie o comando{" "}
-                  <code className="bg-gray-200 px-2 py-1 rounded font-mono text-[#18cb96]">
-                    /start
-                  </code>
-                </p>
-              </div>
-            </div>
+            )}
 
             {/* Informações do pedido */}
             <div className="bg-gray-50 rounded-xl p-6 mb-8">
@@ -161,108 +212,152 @@ export default function Success() {
                   <span className="text-gray-600">Valor:</span>
                   <span className="font-medium text-gray-900">{planPrice}</span>
                 </div>
+                <div className="flex justify-between border-b border-gray-200 pb-2">
+                  <span className="text-gray-600">Status:</span>
+                  <span className={`font-medium ${isPending ? 'text-yellow-600' : 'text-green-600'}`}>
+                    {isPending ? '⏳ Aguardando PIX' : '✅ Aprovado'}
+                  </span>
+                </div>
                 {paymentId && (
-                  <div className="flex justify-between border-b border-gray-200 pb-2">
+                  <div className="flex justify-between">
                     <span className="text-gray-600">ID do Pagamento:</span>
                     <span className="font-mono text-xs text-gray-500">
-                      {paymentId.substring(0, 20)}...
+                      {paymentId.length > 20 ? `${paymentId.substring(0, 20)}...` : paymentId}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Data:</span>
-                  <span className="font-medium text-gray-900">
-                    {new Date().toLocaleDateString("pt-BR", {
-                      day: "2-digit",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </span>
-                </div>
               </div>
             </div>
 
-            {/* Email enviado */}
-            <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-6 mb-8">
-              <div className="flex items-start gap-4">
-                <Mail className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
-                <div className="flex-1">
-                  <h3 className="font-bold text-green-900 mb-2">
-                    📧 Email Enviado!
-                  </h3>
-                  <p className="text-green-800 text-sm leading-relaxed">
-                    Enviamos um email para{" "}
-                    <strong>{userEmail || "você"}</strong> com:
-                  </p>
-                  <ul className="mt-3 space-y-2 text-sm text-green-700">
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      Link direto do bot Telegram
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      Guia de primeiros passos
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      Seus dados de acesso
-                    </li>
-                  </ul>
-                  <p className="text-xs text-green-600 mt-3">
-                    Não recebeu? Verifique seu <strong>SPAM</strong>
-                  </p>
+            {/* Email enviado - SÓ PARA APROVADO */}
+            {!isPending && (
+              <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-6 mb-8">
+                <div className="flex items-start gap-4">
+                  <Mail className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
+                  <div className="flex-1">
+                    <h3 className="font-bold text-green-900 mb-2">
+                      📧 Email Enviado!
+                    </h3>
+                    <p className="text-green-800 text-sm leading-relaxed">
+                      Enviamos um email para{" "}
+                      <strong>{userEmail || "você"}</strong> com:
+                    </p>
+                    <ul className="mt-3 space-y-2 text-sm text-green-700">
+                      <li className="flex items-center gap-2">
+                        <span className="text-green-500">✓</span>
+                        Link direto do bot Telegram
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-green-500">✓</span>
+                        Guia de primeiros passos
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-green-500">✓</span>
+                        Seus dados de acesso
+                      </li>
+                    </ul>
+                    <p className="text-xs text-green-600 mt-3">
+                      Não recebeu? Verifique seu <strong>SPAM</strong>
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Como funciona */}
+            {/* Como funciona - mostrar para ambos mas com texto diferente para pendente */}
             <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 mb-8">
               <h3 className="font-bold text-purple-900 mb-4 text-lg">
-                ✨ Como Funciona o Passarei
+                {isPending ? "📋 Próximos Passos" : "✨ Como Funciona o Passarei"}
               </h3>
               <div className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">
-                    1
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-purple-900 mb-1">
-                      Abra o Bot
-                    </h4>
-                    <p className="text-sm text-purple-700">
-                      Clique no botão acima e envie{" "}
-                      <code className="bg-purple-200 px-1 rounded">/start</code>
-                    </p>
-                  </div>
-                </div>
+                {isPending ? (
+                  <>
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-yellow-500 text-white rounded-full flex items-center justify-center font-bold">
+                        1
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-purple-900 mb-1">
+                          Pague o PIX
+                        </h4>
+                        <p className="text-sm text-purple-700">
+                          Use o código enviado para seu email pelo Mercado Pago
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">
+                        2
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-purple-900 mb-1">
+                          Aguarde Confirmação
+                        </h4>
+                        <p className="text-sm text-purple-700">
+                          Após o pagamento, você receberá email com código de ativação
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">
+                        3
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-purple-900 mb-1">
+                          Acesse o Bot
+                        </h4>
+                        <p className="text-sm text-purple-700">
+                          Use o código recebido no @PassareiBot no Telegram
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">
+                        1
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-purple-900 mb-1">
+                          Abra o Bot
+                        </h4>
+                        <p className="text-sm text-purple-700">
+                          Clique no botão acima e envie{" "}
+                          <code className="bg-purple-200 px-1 rounded">/start</code>
+                        </p>
+                      </div>
+                    </div>
 
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">
-                    2
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-purple-900 mb-1">
-                      Receba Conteúdo
-                    </h4>
-                    <p className="text-sm text-purple-700">
-                      Questões personalizadas de simulados no seu Telegram
-                    </p>
-                  </div>
-                </div>
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">
+                        2
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-purple-900 mb-1">
+                          Receba Conteúdo
+                        </h4>
+                        <p className="text-sm text-purple-700">
+                          Questões personalizadas de simulados no seu Telegram
+                        </p>
+                      </div>
+                    </div>
 
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">
-                    3
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-purple-900 mb-1">
-                      Estude e Evolua
-                    </h4>
-                    <p className="text-sm text-purple-700">
-                      Receba correções e acompanhe seu progresso
-                    </p>
-                  </div>
-                </div>
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">
+                        3
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-purple-900 mb-1">
+                          Estude e Evolua
+                        </h4>
+                        <p className="text-sm text-purple-700">
+                          Receba correções e acompanhe seu progresso
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
