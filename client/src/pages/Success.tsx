@@ -109,7 +109,7 @@ export default function Success() {
                     📱 Próximo Passo: Acesse o Telegram
                   </h2>
                   <p className="text-gray-700 text-lg">
-                    Clique no botão abaixo para começar a estudar agora mesmo!
+                    Clique no botão abaixo para começar a estudar!
                   </p>
                 </div>
               </div>
@@ -123,7 +123,7 @@ export default function Success() {
               >
                 <div className="flex items-center justify-center gap-3">
                   <Send className="w-7 h-7" />
-                  <span className="text-xl">Estude no Telegram</span>
+                  <span className="text-xl">Telegram</span>
                 </div>
               </a>
 
