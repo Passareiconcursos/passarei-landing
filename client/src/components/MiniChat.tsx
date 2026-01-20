@@ -190,10 +190,10 @@ const MATERIAS = [
 ];
 
 const TEMPO_PROVA = [
-  { id: "menos3meses", label: "⚡ Menos de 3 meses" },
-  { id: "3a6meses", label: "📅 3 a 6 meses" },
-  { id: "6a12meses", label: "📆 6 meses a 1 ano" },
-  { id: "mais1ano", label: "🗓️ Mais de 1 ano" },
+  { id: "menos de 3 meses", label: "⚡ Menos de 3 meses" },
+  { id: "3 a 6 meses", label: "📅 3 a 6 meses" },
+  { id: "6 a 12 meses", label: "📆 6 meses a 1 ano" },
+  { id: "mais de 1 ano", label: "🗓️ Mais de 1 ano" },
   { id: "indefinido", label: "❓ Ainda não sei" },
 ];
 
@@ -419,7 +419,8 @@ export function MiniChat() {
     setTimeout(() => {
       // Scroll apenas dentro do container do chat, não da página
       if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        chatContainerRef.current.scrollTop =
+          chatContainerRef.current.scrollHeight;
       }
     }, 100);
   };
@@ -1203,13 +1204,15 @@ export function MiniChat() {
           setActualScore((prev) => prev + 1);
 
           // Mostrar explicação da IA (mais rica que o fallback)
-          const explanation = data.explicacaoIA || data.explicacaoBase || "Parabéns!";
+          const explanation =
+            data.explicacaoIA || data.explicacaoBase || "Parabéns!";
           addBotMessage(`✅ **CORRETO!** 🎉\n\n${explanation}`);
 
           await wait(6000);
         } else {
           // Mostrar explicação detalhada da IA
-          const explanation = data.explicacaoIA || data.explicacaoBase || "Revise este conceito.";
+          const explanation =
+            data.explicacaoIA || data.explicacaoBase || "Revise este conceito.";
           addBotMessage(`❌ **Incorreto!**\n\n${explanation}`);
 
           await wait(8000);
@@ -1299,7 +1302,9 @@ export function MiniChat() {
     setIsTyping(true);
 
     try {
-      const response = await fetch(`/api/minichat/question/${chatState.sessionId}`);
+      const response = await fetch(
+        `/api/minichat/question/${chatState.sessionId}`,
+      );
       const data = await response.json();
 
       setIsTyping(false);
@@ -1762,10 +1767,7 @@ export function MiniChat() {
           </div>
 
           {/* Área de mensagens - SCROLL INTERNO (não afeta a página) */}
-          <div
-            ref={chatContainerRef}
-            className="flex-1 overflow-y-auto p-4"
-          >
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4">
             {messages.map(renderMessage)}
 
             {isTyping && (
