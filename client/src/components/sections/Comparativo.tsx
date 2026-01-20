@@ -41,7 +41,7 @@ export function Comparativo() {
     },
     {
       name: "Redação extra",
-      passarei: "Incluído",
+      passarei: "R$1,99",
       cursinhos: "R$ 5-10",
       livros: "x",
     },
