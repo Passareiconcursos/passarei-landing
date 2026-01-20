@@ -413,10 +413,14 @@ export function MiniChat() {
   const [currentApiQuestion, setCurrentApiQuestion] = useState<any>(null);
   const [totalQuestions, setTotalQuestions] = useState(5); // Padrão 5 para demo, API pode retornar 21
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      // Scroll apenas dentro do container do chat, não da página
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
     }, 100);
   };
 
@@ -1757,8 +1761,11 @@ export function MiniChat() {
             </div>
           </div>
 
-          {/* Área de mensagens - SCROLL ÚNICO */}
-          <div className="flex-1 overflow-y-auto p-4">
+          {/* Área de mensagens - SCROLL INTERNO (não afeta a página) */}
+          <div
+            ref={chatContainerRef}
+            className="flex-1 overflow-y-auto p-4"
+          >
             {messages.map(renderMessage)}
 
             {isTyping && (

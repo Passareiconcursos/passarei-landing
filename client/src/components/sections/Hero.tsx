@@ -90,14 +90,9 @@ export function Hero() {
             </div>
           </div>
 
-          {/* Coluna da direita - Mini-Chat ou Mockup */}
+          {/* Coluna da direita - Mockup (MiniChat abre em modal) */}
           <div className="flex justify-center">
-            {showMiniChat ? (
-              <div className="w-full max-w-md animate-fadeIn">
-                <MiniChat />
-              </div>
-            ) : (
-              <div
+            <div
                 className="relative max-w-[300px] mx-auto cursor-pointer group"
                 onClick={() => setShowMiniChat(true)}
               >
@@ -198,20 +193,23 @@ export function Hero() {
                   </p>
                 </div>
               </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Modal do Mini-Chat para Mobile */}
+      {/* Modal do Mini-Chat - Desktop e Mobile */}
       {showMiniChat && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="relative w-full max-w-md">
+            {/* Botão de fechar - posicionado fora do MiniChat */}
             <button
               onClick={() => setShowMiniChat(false)}
-              className="absolute top-2 right-2 text-white text-lg font-semibold hover:text-gray-300 bg-black/50 rounded-full w-10 h-10 flex items-center justify-center"
+              className="absolute -top-3 -right-3 z-10 bg-white text-gray-700 hover:text-red-500 hover:bg-red-50 rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-gray-200 hover:border-red-300 transition-all duration-200"
+              aria-label="Fechar chat"
             >
-              ✕ Fechar
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
             <MiniChat />
           </div>
