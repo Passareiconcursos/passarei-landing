@@ -663,11 +663,18 @@ export function MiniChat() {
         });
 
         try {
-          await fetch("/api/minichat/start", {
+          const response = await fetch("/api/minichat/start", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: userInput }),
           });
+          const data = await response.json();
+
+          // IMPORTANTE: Salvar o sessionId para usar nas questões da API
+          if (data.success && data.sessionId) {
+            setChatState((prev) => ({ ...prev, sessionId: data.sessionId }));
+            console.log("[MiniChat] Sessão iniciada:", data.sessionId);
+          }
         } catch (error) {
           console.error("Erro ao salvar lead:", error);
         }
@@ -1241,10 +1248,31 @@ export function MiniChat() {
     }
   };
 
-  const showResumo = () => {
+  const showResumo = async () => {
     setChatState((prev) => ({ ...prev, step: "resumo" }));
 
     const state = chatState;
+
+    // Enviar dados do onboarding para o backend (para personalizar questões)
+    if (chatState.sessionId) {
+      try {
+        await fetch("/api/minichat/onboarding", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: chatState.sessionId,
+            concurso: state.concurso,
+            cargo: state.cargo,
+            nivel: state.nivel,
+            facilidades: state.facilidade,
+            dificuldades: state.dificuldade,
+          }),
+        });
+        console.log("[MiniChat] Onboarding salvo no backend");
+      } catch (error) {
+        console.error("[MiniChat] Erro ao salvar onboarding:", error);
+      }
+    }
     const facilidadeLabels = state.facilidade
       .map((f) => MATERIAS.find((m) => m.id === f)?.label || f)
       .join(", ");
