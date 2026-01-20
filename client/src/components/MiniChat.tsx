@@ -410,6 +410,8 @@ export function MiniChat() {
   });
 
   const [actualScore, setActualScore] = useState(0);
+  const [currentApiQuestion, setCurrentApiQuestion] = useState<any>(null);
+  const [totalQuestions, setTotalQuestions] = useState(5); // Padrão 5 para demo, API pode retornar 21
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -1096,6 +1098,13 @@ export function MiniChat() {
   const handleQuestionAnswer = async (selectedIndex: number) => {
     if (isTyping || chatState.step !== "questions") return;
 
+    // Se temos questão da API, usar fluxo da API
+    if (currentApiQuestion && chatState.sessionId) {
+      await handleApiQuestionAnswer(selectedIndex);
+      return;
+    }
+
+    // Fallback: fluxo local com questões hardcoded
     const currentQ = QUESTOES_EXEMPLO[chatState.currentQuestion];
     const isCorrect = selectedIndex === currentQ.correta;
 
@@ -1161,6 +1170,70 @@ export function MiniChat() {
     }
   };
 
+  // ============================================
+  // INTEGRAÇÃO COM API - RESPONDER QUESTÃO
+  // ============================================
+  const handleApiQuestionAnswer = async (selectedIndex: number) => {
+    const question = currentApiQuestion;
+    if (!question) return;
+
+    addUserMessage(question.opcoes[selectedIndex]);
+    setIsTyping(true);
+
+    try {
+      const response = await fetch("/api/minichat/answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: chatState.sessionId,
+          questionId: question.id,
+          answer: selectedIndex,
+        }),
+      });
+
+      const data = await response.json();
+      setIsTyping(false);
+
+      if (data.success) {
+        if (data.correct) {
+          setActualScore((prev) => prev + 1);
+
+          // Mostrar explicação da IA (mais rica que o fallback)
+          const explanation = data.explicacaoIA || data.explicacaoBase || "Parabéns!";
+          addBotMessage(`✅ **CORRETO!** 🎉\n\n${explanation}`);
+
+          await wait(6000);
+        } else {
+          // Mostrar explicação detalhada da IA
+          const explanation = data.explicacaoIA || data.explicacaoBase || "Revise este conceito.";
+          addBotMessage(`❌ **Incorreto!**\n\n${explanation}`);
+
+          await wait(8000);
+        }
+
+        // Atualizar estado
+        setChatState((prev) => ({
+          ...prev,
+          currentQuestion: data.currentQuestion,
+          retryCount: 0,
+        }));
+
+        // Verificar se há mais questões
+        if (data.hasMore) {
+          addBotMessage("📚 Próxima questão chegando...");
+          await wait(3000);
+          await fetchAndShowQuestion();
+        } else {
+          finishQuiz();
+        }
+      }
+    } catch (error) {
+      console.error("[MiniChat] Erro ao enviar resposta:", error);
+      setIsTyping(false);
+      addBotMessage("⚠️ Erro ao processar resposta. Tente novamente.");
+    }
+  };
+
   const showResumo = () => {
     setChatState((prev) => ({ ...prev, step: "resumo" }));
 
@@ -1190,7 +1263,7 @@ export function MiniChat() {
     }, 1500);
   };
 
-  const startQuestions = () => {
+  const startQuestions = async () => {
     setChatState((prev) => ({
       ...prev,
       step: "questions",
@@ -1203,9 +1276,93 @@ export function MiniChat() {
       "🚀 **Começando suas questões!**\n\n📚 Leia com atenção e escolha a alternativa correta.",
     );
 
-    setTimeout(() => {
-      showQuestion(0);
+    // Buscar primeira questão da API
+    setTimeout(async () => {
+      await fetchAndShowQuestion();
     }, 2000);
+  };
+
+  // ============================================
+  // INTEGRAÇÃO COM API - BUSCAR QUESTÃO
+  // ============================================
+  const fetchAndShowQuestion = async () => {
+    if (!chatState.sessionId) {
+      // Fallback para questões locais se não tiver sessão
+      showQuestionLocal(chatState.currentQuestion);
+      return;
+    }
+
+    setIsTyping(true);
+
+    try {
+      const response = await fetch(`/api/minichat/question/${chatState.sessionId}`);
+      const data = await response.json();
+
+      setIsTyping(false);
+
+      if (data.finished || data.blocked) {
+        // Usuário atingiu limite de questões grátis
+        finishQuiz();
+        return;
+      }
+
+      if (data.success && data.question) {
+        setCurrentApiQuestion(data.question);
+        setTotalQuestions(data.totalQuestions || 21);
+
+        // Mostrar conteúdo enriquecido pela IA (se disponível)
+        let questionText = `📝 **QUESTÃO ${data.questionNumber}/${data.totalQuestions}**\n\n`;
+
+        // Adicionar tema/matéria
+        if (data.question.materia) {
+          questionText += `📚 *${data.question.materia}*\n`;
+        }
+        if (data.question.tema) {
+          questionText += `🎯 *${data.question.tema}*\n\n`;
+        }
+
+        // Mostrar pontos-chave da IA (se disponível)
+        if (data.question.pontosChave) {
+          addBotMessage(`💡 **Pontos-chave:**\n${data.question.pontosChave}`);
+          await wait(2000);
+        }
+
+        // Mostrar a pergunta
+        questionText += data.question.pergunta;
+
+        addQuestionMessage(
+          questionText,
+          data.question.opcoes,
+          -1, // Não revelar resposta correta no frontend
+        );
+      } else {
+        // Fallback para questões locais
+        showQuestionLocal(chatState.currentQuestion);
+      }
+    } catch (error) {
+      console.error("[MiniChat] Erro ao buscar questão:", error);
+      setIsTyping(false);
+      // Fallback para questões locais
+      showQuestionLocal(chatState.currentQuestion);
+    }
+  };
+
+  // Função de fallback para questões locais (caso API falhe)
+  const showQuestionLocal = (index: number) => {
+    if (index >= QUESTOES_EXEMPLO.length) {
+      finishQuiz();
+      return;
+    }
+    const question = QUESTOES_EXEMPLO[index];
+    const retryText = chatState.retryCount > 0 ? " _(2ª tentativa)_" : "";
+
+    simulateTyping(() => {
+      addQuestionMessage(
+        `📝 **QUESTÃO ${index + 1}/${QUESTOES_EXEMPLO.length}**${retryText}\n\n${question.pergunta}`,
+        question.opcoes,
+        question.correta,
+      );
+    }, 1500);
   };
 
   const showQuestion = (index: number) => {
@@ -1227,8 +1384,22 @@ export function MiniChat() {
     // Bloquear usuário após completar o teste
     blockUser();
 
+    // Notificar API que finalizou
+    if (chatState.sessionId) {
+      try {
+        await fetch("/api/minichat/finish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: chatState.sessionId }),
+        });
+      } catch (error) {
+        console.error("[MiniChat] Erro ao finalizar sessão:", error);
+      }
+    }
+
     const finalScore = actualScore;
-    const percentage = Math.round((finalScore / 5) * 100);
+    const questionsAnswered = chatState.currentQuestion || 5;
+    const percentage = Math.round((finalScore / questionsAnswered) * 100);
 
     let emoji = "🎉";
     let message = "";
@@ -1250,7 +1421,7 @@ export function MiniChat() {
 
     await wait(1500);
     addBotMessage(
-      `${emoji} **RESULTADO FINAL**\n\n📊 Você acertou **${finalScore}/5** questões (**${percentage}%**)\n\n${message}`,
+      `${emoji} **RESULTADO FINAL**\n\n📊 Você acertou **${finalScore}/${questionsAnswered}** questões (**${percentage}%**)\n\n${message}`,
     );
 
     // Adicione isto para notificar o Google Tag Manager
@@ -1258,6 +1429,7 @@ export function MiniChat() {
     (window as any).dataLayer.push({
       event: "quiz_completed",
       quiz_score: finalScore,
+      quiz_total: questionsAnswered,
       quiz_percentage: percentage,
     });
 
