@@ -140,7 +140,7 @@ export function Depoimentos() {
             className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
             data-testid="button-depoimentos-cta"
           >
-            🎯 Eu Também Quero Passar
+            Eu Também Quero Passar
           </Button>
         </div>
       </div>

@@ -79,7 +79,7 @@ export function Pricing() {
         <div className="text-center mb-16">
           <div className="inline-block mb-4">
             <span className="bg-[#18cb96]/10 text-[#18cb96] px-4 py-2 rounded-full text-sm font-semibold">
-              🊰 Preços acessíveis para sua aprovação
+              Preços acessíveis para sua aprovação
             </span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
@@ -202,7 +202,7 @@ export function Pricing() {
 
         <div className="text-center">
           <p className="text-gray-500 text-sm">
-            ✅ Satisfação garantida ou seu dinheiro de volta em até 7 dias
+            - Satisfação garantida ou seu dinheiro de volta em até 7 dias
           </p>
         </div>
       </div>
