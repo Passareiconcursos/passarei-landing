@@ -415,6 +415,9 @@ export function MiniChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
+  // useRef para sessionId - garante valor atualizado em callbacks assíncronos
+  const sessionIdRef = useRef<string>("");
+
   const scrollToBottom = () => {
     setTimeout(() => {
       // Scroll apenas dentro do container do chat, não da página
@@ -672,6 +675,8 @@ export function MiniChat() {
 
           // IMPORTANTE: Salvar o sessionId para usar nas questões da API
           if (data.success && data.sessionId) {
+            // Usar ref para garantir valor atualizado em callbacks assíncronos
+            sessionIdRef.current = data.sessionId;
             setChatState((prev) => ({ ...prev, sessionId: data.sessionId }));
             console.log("[MiniChat] Sessão iniciada:", data.sessionId);
           }
@@ -978,6 +983,9 @@ export function MiniChat() {
           }));
           setSelectedMaterias([]);
 
+          // Guardar facilidades selecionadas para filtrar na próxima pergunta
+          const facilidadesSelecionadas = [...selectedMaterias];
+
           simulateTyping(() => {
             addBotMessage(`✅ Facilidades registradas!`);
             setTimeout(() => {
@@ -985,9 +993,13 @@ export function MiniChat() {
                 "📝 **PERGUNTA 6/8** 🎯\n\nEm qual área você **TEM MAIS DIFICULDADE**?\n\nVamos focar mais tempo nela!\n\n_(Toque para selecionar, toque novamente para desmarcar)_",
               );
               setTimeout(() => {
+                // FILTRAR matérias que já foram selecionadas como facilidade
+                const materiasDisponiveis = MATERIAS.filter(
+                  (m) => !facilidadesSelecionadas.includes(m.id)
+                );
                 addBotMessage(
                   "Selecione as matérias:",
-                  MATERIAS.map((m) => ({ id: m.id, label: m.label })),
+                  materiasDisponiveis.map((m) => ({ id: m.id, label: m.label })),
                   "multi",
                 );
                 setChatState((prev) => ({
@@ -1110,8 +1122,8 @@ export function MiniChat() {
   const handleQuestionAnswer = async (selectedIndex: number) => {
     if (isTyping || chatState.step !== "questions") return;
 
-    // Se temos questão da API, usar fluxo da API
-    if (currentApiQuestion && chatState.sessionId) {
+    // Se temos questão da API, usar fluxo da API (usar ref para valor atualizado)
+    if (currentApiQuestion && sessionIdRef.current) {
       await handleApiQuestionAnswer(selectedIndex);
       return;
     }
@@ -1197,7 +1209,7 @@ export function MiniChat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId: chatState.sessionId,
+          sessionId: sessionIdRef.current, // Usar ref para valor atualizado
           questionId: question.id,
           answer: selectedIndex,
         }),
@@ -1254,13 +1266,15 @@ export function MiniChat() {
     const state = chatState;
 
     // Enviar dados do onboarding para o backend (para personalizar questões)
-    if (chatState.sessionId) {
+    // Usar sessionIdRef.current para garantir valor atualizado
+    const currentSessionId = sessionIdRef.current;
+    if (currentSessionId) {
       try {
         await fetch("/api/minichat/onboarding", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            sessionId: chatState.sessionId,
+            sessionId: currentSessionId,
             concurso: state.concurso,
             cargo: state.cargo,
             nivel: state.nivel,
@@ -1268,23 +1282,30 @@ export function MiniChat() {
             dificuldades: state.dificuldade,
           }),
         });
-        console.log("[MiniChat] Onboarding salvo no backend");
+        console.log("[MiniChat] Onboarding salvo no backend, sessionId:", currentSessionId);
       } catch (error) {
         console.error("[MiniChat] Erro ao salvar onboarding:", error);
       }
+    } else {
+      console.warn("[MiniChat] SessionId não disponível para onboarding");
     }
+
+    // Converter IDs para labels legíveis
     const facilidadeLabels = state.facilidade
       .map((f) => MATERIAS.find((m) => m.id === f)?.label || f)
       .join(", ");
     const dificuldadeLabels = state.dificuldade
       .map((d) => MATERIAS.find((m) => m.id === d)?.label || d)
       .join(", ");
+    const nivelLabel = NIVEIS.find((n) => n.id === state.nivel)?.label || state.nivel;
+    const tempoLabel = TEMPO_PROVA.find((t) => t.id === state.tempoProva)?.label || state.tempoProva;
+    const horarioLabel = HORARIO_ESTUDO.find((h) => h.id === state.horarioEstudo)?.label || state.horarioEstudo;
 
     addBotMessage("🎉 **PERFIL CRIADO COM SUCESSO!**");
 
     setTimeout(() => {
       addBotMessage(
-        `📋 **RESUMO DO SEU PLANO DE ESTUDOS:**\n\n🎯 Concurso: **${state.concursoLabel}**\n📍 Local: **${state.estado}**\n👮 Cargo: **${state.cargo}**\n📊 Nível: **${state.nivel}**\n💚 Facilidades: ${facilidadeLabels || "Nenhuma"}\n🎯 Focar em: ${dificuldadeLabels || "Nenhuma"}\n📅 Tempo: **${state.tempoProva}**\n⏰ Horário: **${state.horarioEstudo}**\n\n━━━━━━━━━━━━━━━━`,
+        `📋 **RESUMO DO SEU PLANO DE ESTUDOS:**\n\n🎯 Concurso: **${state.concursoLabel}**\n📍 Local: **${state.estado}**\n👮 Cargo: **${state.cargo}**\n📊 Nível: **${nivelLabel}**\n💚 Facilidades: ${facilidadeLabels || "Nenhuma"}\n🎯 Focar em: ${dificuldadeLabels || "Nenhuma"}\n📅 Tempo até a prova: **${tempoLabel}**\n⏰ Horário preferido: **${horarioLabel}**\n\n━━━━━━━━━━━━━━━━`,
       );
 
       setTimeout(() => {
@@ -1321,7 +1342,11 @@ export function MiniChat() {
   // INTEGRAÇÃO COM API - BUSCAR QUESTÃO
   // ============================================
   const fetchAndShowQuestion = async () => {
-    if (!chatState.sessionId) {
+    // Usar sessionIdRef.current para garantir valor atualizado
+    const currentSessionId = sessionIdRef.current;
+
+    if (!currentSessionId) {
+      console.warn("[MiniChat] SessionId não disponível, usando questões locais");
       // Fallback para questões locais se não tiver sessão
       showQuestionLocal(chatState.currentQuestion);
       return;
@@ -1330,8 +1355,9 @@ export function MiniChat() {
     setIsTyping(true);
 
     try {
+      console.log("[MiniChat] Buscando questão da API, sessionId:", currentSessionId);
       const response = await fetch(
-        `/api/minichat/question/${chatState.sessionId}`,
+        `/api/minichat/question/${currentSessionId}`,
       );
       const data = await response.json();
 
@@ -1421,13 +1447,13 @@ export function MiniChat() {
     // Bloquear usuário após completar o teste
     blockUser();
 
-    // Notificar API que finalizou
-    if (chatState.sessionId) {
+    // Notificar API que finalizou (usar ref para valor atualizado)
+    if (sessionIdRef.current) {
       try {
         await fetch("/api/minichat/finish", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: chatState.sessionId }),
+          body: JSON.stringify({ sessionId: sessionIdRef.current }),
         });
       } catch (error) {
         console.error("[MiniChat] Erro ao finalizar sessão:", error);
