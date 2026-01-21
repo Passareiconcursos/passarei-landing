@@ -418,6 +418,19 @@ export function MiniChat() {
   // useRef para sessionId - garante valor atualizado em callbacks assíncronos
   const sessionIdRef = useRef<string>("");
 
+  // useRef para dados do onboarding - garante valores atualizados em callbacks
+  const onboardingDataRef = useRef({
+    concurso: "",
+    concursoLabel: "",
+    estado: "",
+    cargo: "",
+    nivel: "",
+    facilidade: [] as string[],
+    dificuldade: [] as string[],
+    tempoProva: "",
+    horarioEstudo: "",
+  });
+
   const scrollToBottom = () => {
     setTimeout(() => {
       // Scroll apenas dentro do container do chat, não da página
@@ -716,6 +729,8 @@ export function MiniChat() {
     } else if (chatState.step === "onboarding_estado") {
       if (isValidEstado(userInput)) {
         const estadoUpper = userInput.toUpperCase();
+        // Atualizar ref IMEDIATAMENTE
+        onboardingDataRef.current.estado = estadoUpper;
         setChatState((prev) => ({ ...prev, estado: estadoUpper }));
 
         simulateTyping(() => {
@@ -850,6 +865,10 @@ export function MiniChat() {
         const concursoSelecionado = CONCURSOS.find((c) => c.id === optionId);
         if (!concursoSelecionado) return;
 
+        // Atualizar ref IMEDIATAMENTE (antes do setState assíncrono)
+        onboardingDataRef.current.concurso = optionId;
+        onboardingDataRef.current.concursoLabel = concursoSelecionado.label;
+
         setChatState((prev) => ({
           ...prev,
           concurso: optionId,
@@ -867,6 +886,7 @@ export function MiniChat() {
           addBotMessage(`✅ ${optionLabel}`);
           setTimeout(() => {
             if (isFederal) {
+              onboardingDataRef.current.estado = "NACIONAL";
               setChatState((prev) => ({ ...prev, estado: "NACIONAL" }));
               addBotMessage(
                 "📝 **PERGUNTA 2/8** 📍\n\n🇧🇷 **Abrangência: NACIONAL**\n\nConcursos federais têm validade em todo o território brasileiro!",
@@ -905,6 +925,8 @@ export function MiniChat() {
 
       case "onboarding_cargo":
         addUserMessage(optionLabel);
+        // Atualizar ref IMEDIATAMENTE
+        onboardingDataRef.current.cargo = optionLabel;
         setChatState((prev) => ({
           ...prev,
           cargo: optionLabel,
@@ -938,6 +960,8 @@ export function MiniChat() {
 
       case "onboarding_nivel":
         addUserMessage(optionLabel);
+        // Atualizar ref IMEDIATAMENTE
+        onboardingDataRef.current.nivel = optionId;
         setChatState((prev) => ({
           ...prev,
           nivel: optionId,
@@ -976,15 +1000,19 @@ export function MiniChat() {
             .map((m) => MATERIAS.find((mat) => mat.id === m)?.label)
             .join(", ");
           addUserMessage(labels);
+
+          // Guardar facilidades selecionadas para filtrar na próxima pergunta
+          const facilidadesSelecionadas = [...selectedMaterias];
+
+          // Atualizar ref IMEDIATAMENTE (antes do setState)
+          onboardingDataRef.current.facilidade = [...selectedMaterias];
+
           setChatState((prev) => ({
             ...prev,
             facilidade: [...selectedMaterias],
             waitingForSelection: false,
           }));
           setSelectedMaterias([]);
-
-          // Guardar facilidades selecionadas para filtrar na próxima pergunta
-          const facilidadesSelecionadas = [...selectedMaterias];
 
           simulateTyping(() => {
             addBotMessage(`✅ Facilidades registradas!`);
@@ -1038,6 +1066,9 @@ export function MiniChat() {
             saveUserContext("LAST_TOPIC", firstDifficulty.label);
           }
 
+          // Atualizar ref IMEDIATAMENTE (antes do setState)
+          onboardingDataRef.current.dificuldade = [...selectedMaterias];
+
           setChatState((prev) => ({
             ...prev,
             dificuldade: [...selectedMaterias],
@@ -1076,6 +1107,8 @@ export function MiniChat() {
 
       case "onboarding_tempo":
         addUserMessage(optionLabel);
+        // Atualizar ref IMEDIATAMENTE
+        onboardingDataRef.current.tempoProva = optionId;
         setChatState((prev) => ({
           ...prev,
           tempoProva: optionId,
@@ -1106,6 +1139,8 @@ export function MiniChat() {
 
       case "onboarding_horario":
         addUserMessage(optionLabel);
+        // Atualizar ref IMEDIATAMENTE (ANTES do setState assíncrono)
+        onboardingDataRef.current.horarioEstudo = optionId;
         setChatState((prev) => ({
           ...prev,
           horarioEstudo: optionId,
@@ -1263,10 +1298,10 @@ export function MiniChat() {
   const showResumo = async () => {
     setChatState((prev) => ({ ...prev, step: "resumo" }));
 
-    const state = chatState;
+    // USAR onboardingDataRef para garantir valores atualizados (não chatState que é assíncrono)
+    const data = onboardingDataRef.current;
 
     // Enviar dados do onboarding para o backend (para personalizar questões)
-    // Usar sessionIdRef.current para garantir valor atualizado
     const currentSessionId = sessionIdRef.current;
     if (currentSessionId) {
       try {
@@ -1275,14 +1310,18 @@ export function MiniChat() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sessionId: currentSessionId,
-            concurso: state.concurso,
-            cargo: state.cargo,
-            nivel: state.nivel,
-            facilidades: state.facilidade,
-            dificuldades: state.dificuldade,
+            concurso: data.concurso,
+            cargo: data.cargo,
+            nivel: data.nivel,
+            facilidades: data.facilidade,
+            dificuldades: data.dificuldade,
           }),
         });
-        console.log("[MiniChat] Onboarding salvo no backend, sessionId:", currentSessionId);
+        console.log("[MiniChat] Onboarding salvo no backend:", {
+          sessionId: currentSessionId,
+          concurso: data.concurso,
+          horario: data.horarioEstudo,
+        });
       } catch (error) {
         console.error("[MiniChat] Erro ao salvar onboarding:", error);
       }
@@ -1290,22 +1329,22 @@ export function MiniChat() {
       console.warn("[MiniChat] SessionId não disponível para onboarding");
     }
 
-    // Converter IDs para labels legíveis
-    const facilidadeLabels = state.facilidade
+    // Converter IDs para labels legíveis (usando o ref com valores atualizados)
+    const facilidadeLabels = data.facilidade
       .map((f) => MATERIAS.find((m) => m.id === f)?.label || f)
       .join(", ");
-    const dificuldadeLabels = state.dificuldade
+    const dificuldadeLabels = data.dificuldade
       .map((d) => MATERIAS.find((m) => m.id === d)?.label || d)
       .join(", ");
-    const nivelLabel = NIVEIS.find((n) => n.id === state.nivel)?.label || state.nivel;
-    const tempoLabel = TEMPO_PROVA.find((t) => t.id === state.tempoProva)?.label || state.tempoProva;
-    const horarioLabel = HORARIO_ESTUDO.find((h) => h.id === state.horarioEstudo)?.label || state.horarioEstudo;
+    const nivelLabel = NIVEIS.find((n) => n.id === data.nivel)?.label || data.nivel;
+    const tempoLabel = TEMPO_PROVA.find((t) => t.id === data.tempoProva)?.label || data.tempoProva;
+    const horarioLabel = HORARIO_ESTUDO.find((h) => h.id === data.horarioEstudo)?.label || data.horarioEstudo;
 
     addBotMessage("🎉 **PERFIL CRIADO COM SUCESSO!**");
 
     setTimeout(() => {
       addBotMessage(
-        `📋 **RESUMO DO SEU PLANO DE ESTUDOS:**\n\n🎯 Concurso: **${state.concursoLabel}**\n📍 Local: **${state.estado}**\n👮 Cargo: **${state.cargo}**\n📊 Nível: **${nivelLabel}**\n💚 Facilidades: ${facilidadeLabels || "Nenhuma"}\n🎯 Focar em: ${dificuldadeLabels || "Nenhuma"}\n📅 Tempo até a prova: **${tempoLabel}**\n⏰ Horário preferido: **${horarioLabel}**\n\n━━━━━━━━━━━━━━━━`,
+        `📋 **RESUMO DO SEU PLANO DE ESTUDOS:**\n\n🎯 Concurso: **${data.concursoLabel}**\n📍 Local: **${data.estado}**\n👮 Cargo: **${data.cargo}**\n📊 Nível: **${nivelLabel}**\n💚 Facilidades: ${facilidadeLabels || "Nenhuma"}\n🎯 Focar em: ${dificuldadeLabels || "Nenhuma"}\n📅 Tempo até a prova: **${tempoLabel}**\n⏰ Horário preferido: **${horarioLabel}**\n\n━━━━━━━━━━━━━━━━`,
       );
 
       setTimeout(() => {
