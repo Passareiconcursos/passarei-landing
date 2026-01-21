@@ -202,7 +202,7 @@ export function Pricing() {
 
         <div className="text-center">
           <p className="text-gray-500 text-sm">
-            - Satisfação garantida ou seu dinheiro de volta em até 7 dias
+            ✅ Satisfação garantida ou seu dinheiro de volta em até 7 dias
           </p>
         </div>
       </div>
