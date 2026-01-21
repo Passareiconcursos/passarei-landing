@@ -39,6 +39,18 @@ export function Footer() {
               </a>
             </div>
 
+            <div className="flex flex-wrap gap-3 mt-6">
+              <a
+                href="https://www.facebook.com/profile.php?id=61582389145624"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-[#18cb96] transition-colors"
+                aria-label="Siga no Facebook"
+              >
+                <Facebook className="w-5 h-5" />
+              </a>
+            </div>
+
             <p className="text-gray-400 text-sm mt-4">
               Siga para dicas diárias!
             </p>

@@ -43,7 +43,7 @@ export function Concursos() {
         <div className="text-center mb-16">
           <div className="inline-block mb-4">
             <span className="bg-[#18cb96]/10 text-[#18cb96] px-4 py-2 rounded-full text-sm font-semibold">
-              🎯 10 Carreiras Policiais
+              10 Carreiras Policiais
             </span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
@@ -73,7 +73,7 @@ export function Concursos() {
 
         <div className="text-center mt-12">
           <p className="text-gray-600 mb-4">
-            📚 Conteúdo específico para cada concurso • 🎯 Baseado nos editais
+            • Conteúdo específico para cada concurso • Baseado nos editais
             oficiais
           </p>
         </div>
