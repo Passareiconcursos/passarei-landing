@@ -6,7 +6,8 @@ import { sql } from "drizzle-orm";
 // ============================================
 const FREE_QUESTIONS_FIRST_DAY = 21; // Questões grátis no primeiro dia
 const PRICE_PER_QUESTION = 0.99; // R$ 0,99 por questão
-const VETERANO_DAILY_LIMIT = 10; // 300 questões/mês para Veterano
+const CALOURO_DAILY_LIMIT = 10; // 10 questões/dia para Calouro (300/mês)
+const VETERANO_DAILY_LIMIT = 30; // 30 questões/dia para Veterano (900/mês)
 
 // ============================================
 // BUSCAR CONTEÚDO
@@ -110,11 +111,14 @@ export interface QuestionAccessResult {
   reason:
     | "free_first_day"
     | "has_credits"
+    | "calouro"
     | "veterano"
     | "no_credits"
     | "limit_reached";
   freeRemaining?: number;
   credits?: number;
+  dailyRemaining?: number;
+  dailyLimit?: number;
   message?: string;
 }
 
@@ -161,24 +165,51 @@ export async function checkQuestionAccess(
       user.dailyContentCount = 0;
     }
 
-    // 1. VETERANO - tem limite diário de 10 questões
+    // 1. VETERANO - tem limite diário de 30 questões
     if (user.plan === "VETERANO") {
-      if (user.dailyContentCount < VETERANO_DAILY_LIMIT) {
+      const remaining = VETERANO_DAILY_LIMIT - user.dailyContentCount;
+      if (remaining > 0) {
         return {
           canAccess: true,
           reason: "veterano",
-          message: `✅ Plano Veterano: ${VETERANO_DAILY_LIMIT - user.dailyContentCount} questões restantes hoje`,
+          dailyRemaining: remaining,
+          dailyLimit: VETERANO_DAILY_LIMIT,
+          message: `✅ Plano Veterano: ${remaining} questões restantes hoje`,
         };
       } else {
         return {
           canAccess: false,
           reason: "limit_reached",
-          message: `⏰ Você atingiu o limite de ${VETERANO_DAILY_LIMIT} questões hoje!\n\nVolte amanhã ou faça upgrade para mais questões.`,
+          dailyRemaining: 0,
+          dailyLimit: VETERANO_DAILY_LIMIT,
+          message: `⏰ Você atingiu o limite de ${VETERANO_DAILY_LIMIT} questões hoje!\n\nVolte amanhã para continuar estudando.`,
         };
       }
     }
 
-    // 2. PRIMEIRO DIA - 3 questões grátis
+    // 2. CALOURO - tem limite diário de 10 questões
+    if (user.plan === "CALOURO") {
+      const remaining = CALOURO_DAILY_LIMIT - user.dailyContentCount;
+      if (remaining > 0) {
+        return {
+          canAccess: true,
+          reason: "calouro",
+          dailyRemaining: remaining,
+          dailyLimit: CALOURO_DAILY_LIMIT,
+          message: `✅ Plano Calouro: ${remaining} questões restantes hoje`,
+        };
+      } else {
+        return {
+          canAccess: false,
+          reason: "limit_reached",
+          dailyRemaining: 0,
+          dailyLimit: CALOURO_DAILY_LIMIT,
+          message: `⏰ Você atingiu o limite de ${CALOURO_DAILY_LIMIT} questões hoje!\n\nVolte amanhã ou faça upgrade para o plano Veterano (30 questões/dia).`,
+        };
+      }
+    }
+
+    // 3. PRIMEIRO DIA (FREE) - 21 questões grátis
     const isFirstDay = firstDay === today;
     const freeUsed = user.firstDayFreeUsed || 0;
     const freeRemaining = FREE_QUESTIONS_FIRST_DAY - freeUsed;
@@ -192,7 +223,7 @@ export async function checkQuestionAccess(
       };
     }
 
-    // 3. TEM CRÉDITOS - pode usar
+    // 4. TEM CRÉDITOS - pode usar (pay-per-use)
     const credits = parseFloat(user.credits) || 0;
     if (credits >= PRICE_PER_QUESTION) {
       return {
@@ -203,7 +234,7 @@ export async function checkQuestionAccess(
       };
     }
 
-    // 4. SEM CRÉDITOS - precisa comprar
+    // 5. SEM CRÉDITOS - precisa comprar ou assinar plano
     return {
       canAccess: false,
       reason: "no_credits",
@@ -229,20 +260,23 @@ Você aproveitou bem o teste! Agora escolha como continuar:
 
 ━━━━━━━━━━━━━━━━
 
-💳 *PAY-PER-USE*
-R$ 0,99 por questão
-Depósito mínimo R$ 5,00 via PIX
+🎓 *PLANO CALOURO*
+R$ 89,90/mês
+✅ 10 questões/dia (300/mês)
+✅ Explicações com IA
+✅ Cancele quando quiser
 
 ⭐ *PLANO VETERANO* (RECOMENDADO)
-R$ 49,90/mês
-✅ 300 questões personalizadas/mês
-✅ 2 correções de redação/mês com IA
-✅ Todas as apostilas inclusas
+R$ 44,90/mês (anual)
+✅ 30 questões/dia (900/mês)
+✅ 2 correções de redação/mês
 ✅ Revisão inteligente SM2
+✅ Economia de 50%
+
+💳 *PAY-PER-USE*
+R$ 0,99 por questão avulsa
 
 ━━━━━━━━━━━━━━━━
-
-_62% mais barato que a concorrência!_
 
 👇 Clique abaixo para continuar estudando:`;
 }
@@ -282,7 +316,7 @@ export async function consumeQuestion(
       );
     } else if (accessType === "veterano") {
       await db.execute(sql`
-        UPDATE "User" 
+        UPDATE "User"
         SET "dailyContentCount" = COALESCE("dailyContentCount", 0) + 1,
             "lastContentDate" = CURRENT_DATE,
             "totalQuestionsAnswered" = COALESCE("totalQuestionsAnswered", 0) + 1,
@@ -290,6 +324,16 @@ export async function consumeQuestion(
         WHERE "telegramId" = ${telegramId}
       `);
       console.log(`⭐ Questão Veterano consumida para ${telegramId}`);
+    } else if (accessType === "calouro") {
+      await db.execute(sql`
+        UPDATE "User"
+        SET "dailyContentCount" = COALESCE("dailyContentCount", 0) + 1,
+            "lastContentDate" = CURRENT_DATE,
+            "totalQuestionsAnswered" = COALESCE("totalQuestionsAnswered", 0) + 1,
+            "updatedAt" = NOW()
+        WHERE "telegramId" = ${telegramId}
+      `);
+      console.log(`🎓 Questão Calouro consumida para ${telegramId}`);
     }
 
     return true;
@@ -351,12 +395,31 @@ export async function getUserBalance(
 }
 
 // ============================================
+// UPGRADE PARA CALOURO
+// ============================================
+export async function upgradeToCalouro(telegramId: string): Promise<boolean> {
+  try {
+    await db.execute(sql`
+      UPDATE "User"
+      SET "plan" = 'CALOURO',
+          "updatedAt" = NOW()
+      WHERE "telegramId" = ${telegramId}
+    `);
+    console.log(`🎓 Usuário ${telegramId} fez upgrade para CALOURO`);
+    return true;
+  } catch (error) {
+    console.error("❌ Erro ao fazer upgrade para Calouro:", error);
+    return false;
+  }
+}
+
+// ============================================
 // UPGRADE PARA VETERANO
 // ============================================
 export async function upgradeToVeterano(telegramId: string): Promise<boolean> {
   try {
     await db.execute(sql`
-      UPDATE "User" 
+      UPDATE "User"
       SET "plan" = 'VETERANO',
           "updatedAt" = NOW()
       WHERE "telegramId" = ${telegramId}
@@ -364,7 +427,7 @@ export async function upgradeToVeterano(telegramId: string): Promise<boolean> {
     console.log(`⭐ Usuário ${telegramId} fez upgrade para VETERANO`);
     return true;
   } catch (error) {
-    console.error("❌ Erro ao fazer upgrade:", error);
+    console.error("❌ Erro ao fazer upgrade para Veterano:", error);
     return false;
   }
 }
