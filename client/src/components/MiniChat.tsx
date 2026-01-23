@@ -1240,17 +1240,33 @@ export function MiniChat() {
     setIsTyping(true);
 
     try {
+      // Preparar dados para enviar - incluir dados extras para questões geradas por IA
+      const requestBody: any = {
+        sessionId: sessionIdRef.current,
+        questionId: question.id,
+        answer: selectedIndex,
+      };
+
+      // Se for questão gerada por IA, enviar dados adicionais para o backend processar
+      if (question.isAIGenerated || question.id?.startsWith("ai_generated_") || question.id?.startsWith("fallback_")) {
+        requestBody.options = question.opcoes;
+        requestBody.tema = question.tema;
+        requestBody.conteudo = question.conteudo || "";
+        requestBody.explicacao = question.explicacaoBase || "";
+        // Para questões de IA, precisamos saber qual é a resposta correta
+        // O backend pode ter armazenado isso ou vamos assumir índice 0 como fallback
+      }
+
+      console.log("[MiniChat] Enviando resposta:", requestBody);
+
       const response = await fetch("/api/minichat/answer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: sessionIdRef.current, // Usar ref para valor atualizado
-          questionId: question.id,
-          answer: selectedIndex,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
+      console.log("[MiniChat] Resposta do backend:", data);
       setIsTyping(false);
 
       if (data.success) {
@@ -1259,8 +1275,8 @@ export function MiniChat() {
 
           // Mostrar explicação da IA (mais rica que o fallback)
           const explanation =
-            data.explicacaoIA || data.explicacaoBase || "Parabéns!";
-          addBotMessage(`✅ **CORRETO!** 🎉\n\n${explanation}`);
+            data.explicacaoIA || data.explicacaoBase || "Parabens!";
+          addBotMessage(`✅ **CORRETO!**\n\n${explanation}`);
 
           await wait(6000);
         } else {
@@ -1281,7 +1297,7 @@ export function MiniChat() {
 
         // Verificar se há mais questões
         if (data.hasMore) {
-          addBotMessage("📚 Próxima questão chegando...");
+          addBotMessage("📚 Proxima questao chegando...");
           await wait(3000);
           await fetchAndShowQuestion();
         } else {
@@ -1291,7 +1307,7 @@ export function MiniChat() {
     } catch (error) {
       console.error("[MiniChat] Erro ao enviar resposta:", error);
       setIsTyping(false);
-      addBotMessage("⚠️ Erro ao processar resposta. Tente novamente.");
+      addBotMessage("Erro ao processar resposta. Tente novamente.");
     }
   };
 
@@ -1385,7 +1401,7 @@ export function MiniChat() {
     const currentSessionId = sessionIdRef.current;
 
     if (!currentSessionId) {
-      console.warn("[MiniChat] SessionId não disponível, usando questões locais");
+      console.warn("[MiniChat] SessionId nao disponivel, usando questoes locais");
       // Fallback para questões locais se não tiver sessão
       showQuestionLocal(chatState.currentQuestion);
       return;
@@ -1394,21 +1410,26 @@ export function MiniChat() {
     setIsTyping(true);
 
     try {
-      console.log("[MiniChat] Buscando questão da API, sessionId:", currentSessionId);
+      console.log("[MiniChat] Buscando questao da API, sessionId:", currentSessionId);
       const response = await fetch(
         `/api/minichat/question/${currentSessionId}`,
       );
+
+      console.log("[MiniChat] Response status:", response.status);
       const data = await response.json();
+      console.log("[MiniChat] Response data:", JSON.stringify(data, null, 2));
 
       setIsTyping(false);
 
       if (data.finished || data.blocked) {
         // Usuário atingiu limite de questões grátis
+        console.log("[MiniChat] Quiz finalizado ou bloqueado");
         finishQuiz();
         return;
       }
 
       if (data.success && data.question) {
+        console.log("[MiniChat] Questao recebida da API com sucesso!");
         setCurrentApiQuestion(data.question);
         setTotalQuestions(data.totalQuestions || 21);
 
@@ -1438,13 +1459,15 @@ export function MiniChat() {
           -1, // Não revelar resposta correta no frontend
         );
       } else {
-        // Fallback para questões locais
+        // Fallback para questões locais - LOGAR MOTIVO
+        console.warn("[MiniChat] API retornou sem questao. Usando fallback local. Motivo:", data.error || "desconhecido");
         showQuestionLocal(chatState.currentQuestion);
       }
     } catch (error) {
-      console.error("[MiniChat] Erro ao buscar questão:", error);
+      console.error("[MiniChat] Erro ao buscar questao:", error);
       setIsTyping(false);
       // Fallback para questões locais
+      console.warn("[MiniChat] Usando fallback local devido a erro de rede/API");
       showQuestionLocal(chatState.currentQuestion);
     }
   };
