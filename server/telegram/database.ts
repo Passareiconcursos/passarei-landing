@@ -9,6 +9,20 @@ const PRICE_PER_QUESTION = 0.99; // R$ 0,99 por questão
 const CALOURO_DAILY_LIMIT = 10; // 10 questões/dia para Calouro (300/mês)
 const VETERANO_DAILY_LIMIT = 30; // 30 questões/dia para Veterano (900/mês)
 
+// Redação
+const VETERANO_MONTHLY_ESSAYS = 2; // 2 redações grátis/mês para Veterano
+const PRICE_PER_ESSAY = 1.99; // R$ 1,99 por redação extra
+
+// Exportar constantes para uso externo
+export const PLAN_LIMITS = {
+  FREE_QUESTIONS_FIRST_DAY,
+  PRICE_PER_QUESTION,
+  CALOURO_DAILY_LIMIT,
+  VETERANO_DAILY_LIMIT,
+  VETERANO_MONTHLY_ESSAYS,
+  PRICE_PER_ESSAY,
+};
+
 // ============================================
 // BUSCAR CONTEÚDO
 // ============================================
@@ -477,7 +491,7 @@ export async function checkUserLimit(telegramId: string): Promise<boolean> {
 export async function incrementUserCount(telegramId: string) {
   try {
     await db.execute(sql`
-      UPDATE "User" 
+      UPDATE "User"
       SET "dailyContentCount" = COALESCE("dailyContentCount", 0) + 1,
           "lastContentDate" = CURRENT_DATE,
           "updatedAt" = NOW()
@@ -485,5 +499,203 @@ export async function incrementUserCount(telegramId: string) {
     `);
   } catch (error) {
     console.error("❌ Erro ao incrementar contador:", error);
+  }
+}
+
+// ============================================
+// REDAÇÃO - VERIFICAR ACESSO
+// ============================================
+export interface EssayAccessResult {
+  canAccess: boolean;
+  reason: "veterano_free" | "paid" | "no_access" | "no_credits";
+  freeRemaining?: number;
+  credits?: number;
+  price?: number;
+  message?: string;
+}
+
+export async function checkEssayAccess(
+  telegramId: string,
+): Promise<EssayAccessResult> {
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        "plan",
+        "credits",
+        "monthlyEssaysUsed",
+        "lastEssayMonth"
+      FROM "User"
+      WHERE "telegramId" = ${telegramId}
+    `);
+
+    if (result.length === 0) {
+      return {
+        canAccess: false,
+        reason: "no_access",
+        message: "Usuário não encontrado",
+      };
+    }
+
+    const user = result[0] as any;
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const lastMonth = user.lastEssayMonth || "";
+
+    // Reset contador mensal se mudou de mês
+    let essaysUsed = user.monthlyEssaysUsed || 0;
+    if (lastMonth !== currentMonth) {
+      await db.execute(sql`
+        UPDATE "User"
+        SET "monthlyEssaysUsed" = 0, "lastEssayMonth" = ${currentMonth}
+        WHERE "telegramId" = ${telegramId}
+      `);
+      essaysUsed = 0;
+    }
+
+    // 1. VETERANO - tem 2 redações grátis/mês
+    if (user.plan === "VETERANO") {
+      const freeRemaining = VETERANO_MONTHLY_ESSAYS - essaysUsed;
+      if (freeRemaining > 0) {
+        return {
+          canAccess: true,
+          reason: "veterano_free",
+          freeRemaining: freeRemaining,
+          message: `✅ Redação GRÁTIS do plano Veterano! (${freeRemaining} restante${freeRemaining > 1 ? "s" : ""} este mês)`,
+        };
+      }
+    }
+
+    // 2. TEM CRÉDITOS - pode pagar R$ 1,99
+    const credits = parseFloat(user.credits) || 0;
+    if (credits >= PRICE_PER_ESSAY) {
+      return {
+        canAccess: true,
+        reason: "paid",
+        credits: credits,
+        price: PRICE_PER_ESSAY,
+        message: `💰 Correção de redação: R$ ${PRICE_PER_ESSAY.toFixed(2)} (Saldo atual: R$ ${credits.toFixed(2)})`,
+      };
+    }
+
+    // 3. SEM ACESSO - precisa de créditos ou plano
+    return {
+      canAccess: false,
+      reason: "no_credits",
+      credits: credits,
+      price: PRICE_PER_ESSAY,
+      message: getNoEssayCreditsMessage(user.plan, credits),
+    };
+  } catch (error) {
+    console.error("❌ Erro ao verificar acesso à redação:", error);
+    return { canAccess: false, reason: "no_access", message: "Erro interno" };
+  }
+}
+
+function getNoEssayCreditsMessage(plan: string, credits: number): string {
+  if (plan === "VETERANO") {
+    return `📝 *SUAS REDAÇÕES GRÁTIS ACABARAM!*
+
+Você já usou suas 2 correções grátis este mês.
+
+💰 *Redação extra:* R$ ${PRICE_PER_ESSAY.toFixed(2)}
+💳 *Seu saldo:* R$ ${credits.toFixed(2)}
+
+Adicione créditos para continuar! 👇`;
+  }
+
+  return `📝 *CORREÇÃO DE REDAÇÃO*
+
+A correção de redações está disponível para:
+
+⭐ *PLANO VETERANO*
+✅ 2 correções GRÁTIS por mês
+✅ Extras por R$ ${PRICE_PER_ESSAY.toFixed(2)} cada
+
+💳 *PAY-PER-USE*
+R$ ${PRICE_PER_ESSAY.toFixed(2)} por correção
+
+Seu saldo atual: R$ ${credits.toFixed(2)}
+
+👇 Escolha uma opção para continuar:`;
+}
+
+// ============================================
+// REDAÇÃO - CONSUMIR (DEBITAR)
+// ============================================
+export async function consumeEssay(
+  telegramId: string,
+  accessType: EssayAccessResult["reason"],
+): Promise<boolean> {
+  try {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+
+    if (accessType === "veterano_free") {
+      await db.execute(sql`
+        UPDATE "User"
+        SET "monthlyEssaysUsed" = COALESCE("monthlyEssaysUsed", 0) + 1,
+            "lastEssayMonth" = ${currentMonth},
+            "totalEssaysSubmitted" = COALESCE("totalEssaysSubmitted", 0) + 1,
+            "updatedAt" = NOW()
+        WHERE "telegramId" = ${telegramId}
+      `);
+      console.log(`📝 Redação grátis consumida para ${telegramId}`);
+    } else if (accessType === "paid") {
+      await db.execute(sql`
+        UPDATE "User"
+        SET "credits" = COALESCE("credits", 0) - ${PRICE_PER_ESSAY},
+            "monthlyEssaysUsed" = COALESCE("monthlyEssaysUsed", 0) + 1,
+            "lastEssayMonth" = ${currentMonth},
+            "totalEssaysSubmitted" = COALESCE("totalEssaysSubmitted", 0) + 1,
+            "totalSpent" = COALESCE("totalSpent", 0) + ${PRICE_PER_ESSAY},
+            "updatedAt" = NOW()
+        WHERE "telegramId" = ${telegramId}
+      `);
+      console.log(`💰 Redação paga consumida para ${telegramId}: R$ ${PRICE_PER_ESSAY}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("❌ Erro ao consumir redação:", error);
+    return false;
+  }
+}
+
+// ============================================
+// REDAÇÃO - OBTER STATUS DO MÊS
+// ============================================
+export async function getEssayStatus(
+  telegramId: string,
+): Promise<{ plan: string; used: number; freeLimit: number; credits: number }> {
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        "plan",
+        "credits",
+        "monthlyEssaysUsed",
+        "lastEssayMonth"
+      FROM "User"
+      WHERE "telegramId" = ${telegramId}
+    `);
+
+    if (result.length === 0) {
+      return { plan: "FREE", used: 0, freeLimit: 0, credits: 0 };
+    }
+
+    const user = result[0] as any;
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const lastMonth = user.lastEssayMonth || "";
+
+    // Se mudou de mês, contador reseta
+    const essaysUsed = lastMonth === currentMonth ? (user.monthlyEssaysUsed || 0) : 0;
+    const freeLimit = user.plan === "VETERANO" ? VETERANO_MONTHLY_ESSAYS : 0;
+
+    return {
+      plan: user.plan || "FREE",
+      used: essaysUsed,
+      freeLimit: freeLimit,
+      credits: parseFloat(user.credits) || 0,
+    };
+  } catch (error) {
+    console.error("❌ Erro ao buscar status de redação:", error);
+    return { plan: "FREE", used: 0, freeLimit: 0, credits: 0 };
   }
 }

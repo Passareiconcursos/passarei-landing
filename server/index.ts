@@ -9,7 +9,7 @@ import { registerEditalRoutes } from "./edital-routes";
 // import { registerPrismaRoutes } from "./routes-prisma"; // DESABILITADO - usando Supabase
 import { registerSupabaseRoutes } from "./routes-supabase";
 import { registerMiniChatRoutes } from "./minichat-routes";
-import paymentRoutes from "./payment/routes";
+import { registerEssayRoutes } from "./essay-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startTelegramBot } from "./telegram/bot";
 
@@ -53,6 +53,7 @@ app.use((req, res, next) => {
   registerSupabaseRoutes(app);
   registerEditalRoutes(app);
   registerMiniChatRoutes(app);
+  registerEssayRoutes(app);
   app.use("/api/payment", paymentRoutes);
   app.use("/api/email", emailTestRouter);
 

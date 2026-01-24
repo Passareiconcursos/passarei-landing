@@ -268,6 +268,11 @@ export const users = pgTable("User", {
   currentPeriodEnd: timestamp("current_period_end"),
   cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
 
+  // Redação - controle mensal
+  monthlyEssaysUsed: integer("monthly_essays_used").notNull().default(0),
+  lastEssayMonth: varchar("last_essay_month", { length: 7 }), // YYYY-MM
+  totalEssaysSubmitted: integer("total_essays_submitted").notNull().default(0),
+
   // Origem
   leadOriginId: uuid("lead_origin_id")
     .unique()
@@ -314,6 +319,62 @@ export const subscriptions = pgTable("subscriptions", {
   nextPaymentAt: timestamp("next_payment_at"),
 
   // Auditoria
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ============================================
+// ESSAYS - Redações e Correções
+// ============================================
+
+export const essayStatusEnum = pgEnum("essay_status", [
+  "DRAFT",      // Rascunho
+  "SUBMITTED",  // Enviada para correção
+  "CORRECTING", // Em correção pela IA
+  "CORRECTED",  // Corrigida
+  "ERROR",      // Erro na correção
+]);
+
+export const essays = pgTable("essays", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+
+  // Tema e texto
+  theme: text("theme").notNull(),
+  prompt: text("prompt"), // Proposta de redação
+  text: text("text").notNull(),
+  wordCount: integer("word_count").notNull().default(0),
+
+  // Status
+  status: essayStatusEnum("status").notNull().default("SUBMITTED"),
+
+  // Notas (5 critérios ENEM: 0-200 cada)
+  score1: integer("score_1"), // Competência 1: Domínio da norma culta
+  score2: integer("score_2"), // Competência 2: Compreensão do tema
+  score3: integer("score_3"), // Competência 3: Seleção e organização
+  score4: integer("score_4"), // Competência 4: Coesão textual
+  score5: integer("score_5"), // Competência 5: Proposta de intervenção
+  totalScore: integer("total_score"), // Nota total (0-1000)
+
+  // Feedback da IA
+  feedback: text("feedback"), // Feedback geral
+  feedbackComp1: text("feedback_comp_1"),
+  feedbackComp2: text("feedback_comp_2"),
+  feedbackComp3: text("feedback_comp_3"),
+  feedbackComp4: text("feedback_comp_4"),
+  feedbackComp5: text("feedback_comp_5"),
+
+  // Pagamento
+  wasFree: boolean("was_free").notNull().default(false),
+  amountPaid: real("amount_paid").default(0),
+
+  // Timestamps
+  submittedAt: timestamp("submitted_at").notNull().defaultNow(),
+  correctedAt: timestamp("corrected_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

@@ -1659,23 +1659,23 @@ export function MiniChat() {
         return (
           <div className="bg-white border-2 border-gray-200 rounded-2xl p-4 mb-3 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xl">💰</span>
+              <span className="text-xl">🎓</span>
               <p className="font-bold text-gray-800">PLANO CALOURO</p>
             </div>
             <p className="text-2xl font-bold text-[#18cb96] mb-2">
               R$ 89,90{" "}
-              <span className="text-sm font-normal text-gray-500">por mês</span>
+              <span className="text-sm font-normal text-gray-500">por mes</span>
             </p>
             <ul className="text-xs text-gray-600 space-y-1 mb-3">
-              <li>• 300 Questões mês</li>
-              <li>• Sem compromisso, cancele quando quiser</li>
-              <li>• Acesso completo à plataforma</li>
+              <li>• 10 questoes/dia (300/mes)</li>
+              <li>• Explicacoes com IA</li>
+              <li>• Cancele quando quiser</li>
             </ul>
             <button
               onClick={() => handlePayment("calouro")}
               className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2.5 px-4 rounded-xl transition-all text-sm"
             >
-              💳 Assinar Agora
+              Assinar Agora
             </button>
           </div>
         );
@@ -1694,18 +1694,18 @@ export function MiniChat() {
             </div>
             <p className="text-2xl font-bold text-white mb-2">
               R$ 44,90{" "}
-              <span className="text-sm font-normal text-white/80">/mês</span>
+              <span className="text-sm font-normal text-white/80">/mes</span>
             </p>
             <p className="text-xs text-white/80 mb-2">
               (plano anual = R$ 538,80)
             </p>
             <ul className="text-xs text-white/90 space-y-1 mb-3">
-              <li>• + de 10 mil Questões ano!</li>
-              <li>• Correção de 2 redações mês</li>
-              <li>• Intensivo de aprendizado</li>
-              <li>• Revisão espaçada inteligente</li>
-              <li>• Suporte prioritário</li>
-              <li>• Economia de 50% vs mensal</li>
+              <li>• 30 questoes/dia (900/mes)</li>
+              <li>• 2 correcoes de redacao/mes</li>
+              <li>• Revisao espaçada SM2</li>
+              <li>• Simulados mensais</li>
+              <li>• Redacao extra R$ 1,99</li>
+              <li>• Economia de 50%</li>
             </ul>
             <button
               onClick={() => handlePayment("veterano")}
