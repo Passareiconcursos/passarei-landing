@@ -699,3 +699,274 @@ export async function getEssayStatus(
     return { plan: "FREE", used: 0, freeLimit: 0, credits: 0 };
   }
 }
+
+// ============================================
+// SM2 - REVISÃO ESPAÇADA (VETERANO EXCLUSIVO)
+// ============================================
+
+export interface SM2Result {
+  easeFactor: number;
+  interval: number;
+  repetitions: number;
+  nextReviewDate: Date;
+}
+
+/**
+ * Calcula os novos parâmetros SM2 baseado na qualidade da resposta
+ * @param quality - Qualidade da resposta (0-5)
+ *   0 - Resposta errada, não lembrou nada
+ *   1 - Resposta errada, mas reconheceu após ver
+ *   2 - Resposta errada, mas era familiar
+ *   3 - Resposta correta com dificuldade
+ *   4 - Resposta correta após hesitação
+ *   5 - Resposta correta imediatamente
+ * @param currentEF - Ease Factor atual (1.3 a 5.0)
+ * @param currentInterval - Intervalo atual em dias
+ * @param repetitions - Número de repetições consecutivas corretas
+ */
+export function calculateSM2(
+  quality: number,
+  currentEF: number = 2.5,
+  currentInterval: number = 1,
+  repetitions: number = 0,
+): SM2Result {
+  // Limitar quality entre 0 e 5
+  quality = Math.max(0, Math.min(5, Math.round(quality)));
+
+  // Novo Ease Factor
+  let newEF =
+    currentEF + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+
+  // EF mínimo é 1.3
+  newEF = Math.max(1.3, newEF);
+
+  let newInterval: number;
+  let newRepetitions: number;
+
+  if (quality < 3) {
+    // Resposta incorreta - reiniciar
+    newRepetitions = 0;
+    newInterval = 1;
+  } else {
+    // Resposta correta - progresso
+    newRepetitions = repetitions + 1;
+
+    if (newRepetitions === 1) {
+      newInterval = 1;
+    } else if (newRepetitions === 2) {
+      newInterval = 6;
+    } else {
+      newInterval = Math.round(currentInterval * newEF);
+    }
+  }
+
+  // Calcular próxima data de revisão
+  const nextReviewDate = new Date();
+  nextReviewDate.setDate(nextReviewDate.getDate() + newInterval);
+
+  return {
+    easeFactor: Math.round(newEF * 100) / 100,
+    interval: newInterval,
+    repetitions: newRepetitions,
+    nextReviewDate: nextReviewDate,
+  };
+}
+
+/**
+ * Converte acerto/erro simples em quality SM2
+ * @param correct - Se acertou a questão
+ * @param responseTimeMs - Tempo de resposta em ms (opcional)
+ */
+export function getQualityFromAnswer(
+  correct: boolean,
+  responseTimeMs?: number,
+): number {
+  if (!correct) {
+    return 1; // Errou, mas viu a resposta
+  }
+
+  // Se acertou, classificar pela velocidade
+  if (responseTimeMs) {
+    if (responseTimeMs < 5000) return 5; // < 5s = perfeito
+    if (responseTimeMs < 15000) return 4; // < 15s = bom
+    if (responseTimeMs < 30000) return 3; // < 30s = ok
+  }
+
+  return 4; // Default para acertos
+}
+
+/**
+ * Registra ou atualiza revisão SM2 para um conteúdo
+ */
+export async function recordSM2Review(
+  telegramId: string,
+  contentId: string,
+  correct: boolean,
+  responseTimeMs?: number,
+): Promise<boolean> {
+  try {
+    // Buscar userId
+    const userResult = await db.execute(sql`
+      SELECT "id", "plan" FROM "User" WHERE "telegramId" = ${telegramId}
+    `);
+
+    if (userResult.length === 0) return false;
+    const user = userResult[0] as any;
+
+    // SM2 é exclusivo para VETERANO
+    if (user.plan !== "VETERANO") {
+      console.log(`[SM2] Usuário ${telegramId} não é VETERANO, pulando SM2`);
+      return true;
+    }
+
+    const quality = getQualityFromAnswer(correct, responseTimeMs);
+
+    // Verificar se já existe registro SM2 para este conteúdo
+    const existingResult = await db.execute(sql`
+      SELECT * FROM "sm2_reviews"
+      WHERE "user_id" = ${user.id} AND "content_id" = ${contentId}
+    `);
+
+    if (existingResult.length > 0) {
+      // Atualizar registro existente
+      const existing = existingResult[0] as any;
+      const sm2 = calculateSM2(
+        quality,
+        existing.ease_factor || 2.5,
+        existing.interval || 1,
+        existing.repetitions || 0,
+      );
+
+      await db.execute(sql`
+        UPDATE "sm2_reviews"
+        SET
+          "ease_factor" = ${sm2.easeFactor},
+          "interval" = ${sm2.interval},
+          "repetitions" = ${sm2.repetitions},
+          "next_review_date" = ${sm2.nextReviewDate},
+          "last_quality" = ${quality},
+          "times_correct" = "times_correct" + ${correct ? 1 : 0},
+          "times_incorrect" = "times_incorrect" + ${correct ? 0 : 1},
+          "total_reviews" = "total_reviews" + 1,
+          "last_reviewed_at" = NOW(),
+          "updated_at" = NOW()
+        WHERE "user_id" = ${user.id} AND "content_id" = ${contentId}
+      `);
+
+      console.log(
+        `[SM2] Atualizado: ${contentId} | EF: ${sm2.easeFactor} | Intervalo: ${sm2.interval}d | Próxima: ${sm2.nextReviewDate.toISOString().split("T")[0]}`,
+      );
+    } else {
+      // Criar novo registro
+      const sm2 = calculateSM2(quality);
+
+      await db.execute(sql`
+        INSERT INTO "sm2_reviews" (
+          "user_id", "content_id",
+          "ease_factor", "interval", "repetitions", "next_review_date",
+          "last_quality", "times_correct", "times_incorrect", "total_reviews",
+          "first_seen_at", "last_reviewed_at"
+        ) VALUES (
+          ${user.id}, ${contentId},
+          ${sm2.easeFactor}, ${sm2.interval}, ${sm2.repetitions}, ${sm2.nextReviewDate},
+          ${quality}, ${correct ? 1 : 0}, ${correct ? 0 : 1}, 1,
+          NOW(), NOW()
+        )
+      `);
+
+      console.log(
+        `[SM2] Novo registro: ${contentId} | Próxima revisão: ${sm2.nextReviewDate.toISOString().split("T")[0]}`,
+      );
+    }
+
+    return true;
+  } catch (error) {
+    console.error("❌ [SM2] Erro ao registrar revisão:", error);
+    return false;
+  }
+}
+
+/**
+ * Busca conteúdos pendentes de revisão para usuário VETERANO
+ * Retorna os que precisam ser revisados (nextReviewDate <= hoje)
+ */
+export async function getSM2DueReviews(
+  telegramId: string,
+  examType: string,
+  limit: number = 10,
+): Promise<string[]> {
+  try {
+    // Buscar userId
+    const userResult = await db.execute(sql`
+      SELECT "id", "plan" FROM "User" WHERE "telegramId" = ${telegramId}
+    `);
+
+    if (userResult.length === 0) return [];
+    const user = userResult[0] as any;
+
+    // SM2 é exclusivo para VETERANO
+    if (user.plan !== "VETERANO") return [];
+
+    // Buscar conteúdos pendentes de revisão
+    const dueResult = await db.execute(sql`
+      SELECT r."content_id"
+      FROM "sm2_reviews" r
+      JOIN "Content" c ON r."content_id" = c."id"
+      WHERE r."user_id" = ${user.id}
+        AND r."next_review_date" <= NOW()
+        AND c."examType" = ${examType}
+        AND c."isActive" = true
+      ORDER BY r."next_review_date" ASC
+      LIMIT ${limit}
+    `);
+
+    return dueResult.map((r: any) => r.content_id);
+  } catch (error) {
+    console.error("❌ [SM2] Erro ao buscar revisões pendentes:", error);
+    return [];
+  }
+}
+
+/**
+ * Obtém estatísticas SM2 do usuário
+ */
+export async function getSM2Stats(telegramId: string): Promise<{
+  totalCards: number;
+  dueToday: number;
+  averageEF: number;
+  longestStreak: number;
+}> {
+  try {
+    const userResult = await db.execute(sql`
+      SELECT "id" FROM "User" WHERE "telegramId" = ${telegramId}
+    `);
+
+    if (userResult.length === 0) {
+      return { totalCards: 0, dueToday: 0, averageEF: 2.5, longestStreak: 0 };
+    }
+
+    const user = userResult[0] as any;
+
+    const statsResult = await db.execute(sql`
+      SELECT
+        COUNT(*) as total_cards,
+        COUNT(CASE WHEN "next_review_date" <= NOW() THEN 1 END) as due_today,
+        COALESCE(AVG("ease_factor"), 2.5) as avg_ef,
+        COALESCE(MAX("repetitions"), 0) as longest_streak
+      FROM "sm2_reviews"
+      WHERE "user_id" = ${user.id}
+    `);
+
+    const stats = statsResult[0] as any;
+
+    return {
+      totalCards: parseInt(stats.total_cards) || 0,
+      dueToday: parseInt(stats.due_today) || 0,
+      averageEF: parseFloat(stats.avg_ef) || 2.5,
+      longestStreak: parseInt(stats.longest_streak) || 0,
+    };
+  } catch (error) {
+    console.error("❌ [SM2] Erro ao buscar estatísticas:", error);
+    return { totalCards: 0, dueToday: 0, averageEF: 2.5, longestStreak: 0 };
+  }
+}

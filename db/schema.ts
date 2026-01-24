@@ -672,6 +672,38 @@ export const userAnswers = pgTable("user_answers", {
     .notNull(),
 });
 
+// ============================================
+// SM2 - REVISÃO ESPAÇADA (VETERANO)
+// ============================================
+
+export const sm2Reviews = pgTable("sm2_reviews", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  contentId: varchar("content_id", { length: 255 }).notNull(),
+
+  // Campos do algoritmo SM2
+  easeFactor: real("ease_factor").notNull().default(2.5), // 1.3 a 5.0
+  interval: integer("interval").notNull().default(1), // dias até próxima revisão
+  repetitions: integer("repetitions").notNull().default(0), // vezes revisada
+  nextReviewDate: timestamp("next_review_date").notNull(), // quando revisar
+
+  // Histórico
+  lastQuality: integer("last_quality"), // 0-5 qualidade da resposta
+  timesCorrect: integer("times_correct").notNull().default(0),
+  timesIncorrect: integer("times_incorrect").notNull().default(0),
+  totalReviews: integer("total_reviews").notNull().default(0),
+
+  // Timestamps
+  firstSeenAt: timestamp("first_seen_at").notNull().defaultNow(),
+  lastReviewedAt: timestamp("last_reviewed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // Types para TypeScript
 export type EditalSubject = {
   name: string;

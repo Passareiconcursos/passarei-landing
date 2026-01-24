@@ -6,6 +6,8 @@ import {
   checkQuestionAccess,
   consumeQuestion,
   QuestionAccessResult,
+  recordSM2Review,
+  getSM2DueReviews,
 } from "./database";
 
 interface LearningSession {
@@ -83,7 +85,39 @@ async function getSmartContent(session: LearningSession) {
   try {
     let result;
 
-    // Buscar conteúdo que ainda não foi usado nesta sessão
+    // ============================================
+    // SM2: PRIORIZAR REVISÕES PENDENTES (VETERANO)
+    // ============================================
+    const dueReviews = await getSM2DueReviews(
+      session.userId,
+      session.examType,
+      5,
+    );
+
+    // Filtrar revisões que ainda não foram usadas nesta sessão
+    const availableDueReviews = dueReviews.filter(
+      (id) => !session.usedContentIds.includes(id),
+    );
+
+    if (availableDueReviews.length > 0) {
+      const dueContentId = availableDueReviews[0];
+      console.log(`📚 [SM2] Revisão pendente encontrada: ${dueContentId}`);
+
+      result = await db.execute(sql`
+        SELECT * FROM "Content"
+        WHERE "id" = ${dueContentId}
+        LIMIT 1
+      `);
+
+      if (result.length > 0) {
+        console.log(`✅ [SM2] Revisão: ${result[0].title}`);
+        return result[0];
+      }
+    }
+
+    // ============================================
+    // BUSCA NORMAL: CONTEÚDO NÃO USADO
+    // ============================================
     if (session.usedContentIds.length > 0) {
       result = await db.execute(sql`
         SELECT * FROM "Content"
@@ -428,7 +462,7 @@ export async function handleLearningCallback(
       });
     }
 
-    // 💾 SALVAR RESPOSTA NO BANCO (NOVO CÓDIGO!)
+    // 💾 SALVAR RESPOSTA NO BANCO
     try {
       // Buscar userId do banco
       const userData = await db.execute(sql`
@@ -451,6 +485,18 @@ VALUES (${userId}, ${session.currentContent.id}, ${answerIdx}, ${isCorrect}, NOW
     } catch (error) {
       console.error("❌ [Learning] Erro ao salvar resposta:", error);
       // Não bloqueia o fluxo se falhar
+    }
+
+    // 📚 SM2: REGISTRAR REVISÃO ESPAÇADA (VETERANO)
+    try {
+      await recordSM2Review(
+        telegramId,
+        session.currentContent.id,
+        isCorrect,
+      );
+    } catch (sm2Error) {
+      console.error("❌ [SM2] Erro ao registrar revisão:", sm2Error);
+      // Não bloqueia o fluxo
     }
 
     await new Promise((r) => setTimeout(r, 2000));

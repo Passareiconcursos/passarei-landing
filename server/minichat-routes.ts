@@ -790,5 +790,52 @@ Seja motivador!`,
     });
   });
 
-  console.log("✅ Rotas do Mini-Chat registradas (com IA integrada)!");
+  // ============================================
+  // SM2 - ESTATÍSTICAS DE REVISÃO ESPAÇADA
+  // ============================================
+  app.get("/api/sm2/stats/:telegramId", async (req, res) => {
+    try {
+      const { telegramId } = req.params;
+
+      // Importar função de estatísticas SM2
+      const { getSM2Stats } = await import("./telegram/database");
+      const stats = await getSM2Stats(telegramId);
+
+      res.json({
+        success: true,
+        stats: {
+          totalCards: stats.totalCards,
+          dueToday: stats.dueToday,
+          averageEF: stats.averageEF.toFixed(2),
+          longestStreak: stats.longestStreak,
+          isActive: stats.totalCards > 0,
+        },
+      });
+    } catch (error) {
+      console.error("[SM2] Erro ao buscar estatísticas:", error);
+      res.status(500).json({ error: "Erro interno" });
+    }
+  });
+
+  // Buscar próximas revisões pendentes
+  app.get("/api/sm2/due/:telegramId", async (req, res) => {
+    try {
+      const { telegramId } = req.params;
+      const examType = (req.query.examType as string) || "concurso policial";
+
+      const { getSM2DueReviews } = await import("./telegram/database");
+      const dueIds = await getSM2DueReviews(telegramId, examType, 10);
+
+      res.json({
+        success: true,
+        dueCount: dueIds.length,
+        contentIds: dueIds,
+      });
+    } catch (error) {
+      console.error("[SM2] Erro ao buscar revisões:", error);
+      res.status(500).json({ error: "Erro interno" });
+    }
+  });
+
+  console.log("✅ Rotas do Mini-Chat registradas (com IA e SM2 integradas)!");
 }
