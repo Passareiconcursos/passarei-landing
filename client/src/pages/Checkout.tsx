@@ -25,6 +25,7 @@ export default function Checkout() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [buyerName, setBuyerName] = useState("");
 
   // Aceitar tanto 'pkg' quanto 'plan'
   const pkgParam =
@@ -99,11 +100,19 @@ export default function Checkout() {
               // Obter device_id do SDK para prevenção de fraude
               const deviceId = mp.getDeviceId?.() || null;
 
+              // Separar nome e sobrenome
+              const nameParts = buyerName.trim().split(" ");
+              const firstName = nameParts[0] || "";
+              const lastName = nameParts.slice(1).join(" ") || "";
+
               console.log("🔍 Dados enviados:", {
                 ...formData,
                 telegramId: userId,
                 packageId: pkg,
                 deviceId,
+                buyerName,
+                firstName,
+                lastName,
               });
               const response = await fetch("/api/payment/process-brick", {
                 method: "POST",
@@ -114,6 +123,8 @@ export default function Checkout() {
                   packageId: pkg,
                   userEmail: formData?.email,
                   deviceId,
+                  buyerFirstName: firstName,
+                  buyerLastName: lastName,
                 }),
               });
               const result = await response.json();
@@ -223,6 +234,21 @@ export default function Checkout() {
               R$ {packageInfo.amount.toFixed(2)}
             </span>
           </div>
+        </div>
+
+        {/* Campo de nome do comprador */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Nome completo (como está no cartão)
+          </label>
+          <input
+            type="text"
+            value={buyerName}
+            onChange={(e) => setBuyerName(e.target.value)}
+            placeholder="Ex: João da Silva"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            required
+          />
         </div>
 
         {/* Brick de pagamento */}

@@ -518,6 +518,8 @@ router.post("/process-brick", async (req: Request, res: Response) => {
       packageId,
       payer,
       deviceId,
+      buyerFirstName,
+      buyerLastName,
     } = req.body;
 
     // Capturar IP do usuário para prevenção de fraude
@@ -557,8 +559,8 @@ router.post("/process-brick", async (req: Request, res: Response) => {
       external_reference: `${telegramId}|${packageId}|${payer?.email || ""}|${Date.now()}`,
       payer: {
         email: payer?.email || "suporte@passarei.com.br",
-        first_name: payer?.first_name || payer?.firstName || "",
-        last_name: payer?.last_name || payer?.lastName || "",
+        first_name: buyerFirstName || payer?.first_name || payer?.firstName || "",
+        last_name: buyerLastName || payer?.last_name || payer?.lastName || "",
         identification: payer?.identification || {
           type: "CPF",
           number: "00000000000",
@@ -588,8 +590,8 @@ router.post("/process-brick", async (req: Request, res: Response) => {
           },
         ],
         payer: {
-          first_name: payer?.first_name || payer?.firstName || "",
-          last_name: payer?.last_name || payer?.lastName || "",
+          first_name: buyerFirstName || payer?.first_name || payer?.firstName || "",
+          last_name: buyerLastName || payer?.last_name || payer?.lastName || "",
           registration_date: new Date().toISOString(),
         },
         ip_address: clientIp || undefined,
