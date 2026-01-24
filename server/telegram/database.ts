@@ -447,6 +447,130 @@ export async function upgradeToVeterano(telegramId: string): Promise<boolean> {
 }
 
 // ============================================
+// VERIFICAR SE USUÁRIO TEM ACESSO (ATIVO)
+// ============================================
+export interface UserActiveStatus {
+  isActive: boolean;
+  reason:
+    | "has_plan" // CALOURO ou VETERANO
+    | "first_day" // Primeiro dia com questões grátis
+    | "has_credits" // Tem créditos
+    | "inactive"; // Sem acesso
+  plan?: string;
+  freeRemaining?: number;
+  credits?: number;
+  message?: string;
+}
+
+export async function isUserActive(telegramId: string): Promise<UserActiveStatus> {
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        "plan",
+        "credits",
+        "firstDayFreeUsed",
+        "firstInteractionDate",
+        "planStatus"
+      FROM "User"
+      WHERE "telegramId" = ${telegramId}
+    `);
+
+    if (result.length === 0) {
+      return {
+        isActive: false,
+        reason: "inactive",
+        message: "❌ Usuário não encontrado. Use /start para começar.",
+      };
+    }
+
+    const user = result[0] as any;
+    const today = new Date().toISOString().split("T")[0];
+    const firstDay = user.firstInteractionDate
+      ? new Date(user.firstInteractionDate).toISOString().split("T")[0]
+      : today;
+
+    // 1. PLANO ATIVO (VETERANO ou CALOURO)
+    if (user.plan === "VETERANO" || user.plan === "CALOURO") {
+      return {
+        isActive: true,
+        reason: "has_plan",
+        plan: user.plan,
+        message: `✅ Plano ${user.plan} ativo`,
+      };
+    }
+
+    // 2. PRIMEIRO DIA - questões grátis
+    const isFirstDay = firstDay === today;
+    const freeUsed = user.firstDayFreeUsed || 0;
+    const freeRemaining = FREE_QUESTIONS_FIRST_DAY - freeUsed;
+
+    if (isFirstDay && freeRemaining > 0) {
+      return {
+        isActive: true,
+        reason: "first_day",
+        freeRemaining: freeRemaining,
+        message: `🎁 ${freeRemaining} questões grátis restantes hoje`,
+      };
+    }
+
+    // 3. TEM CRÉDITOS
+    const credits = parseFloat(user.credits) || 0;
+    if (credits >= PRICE_PER_QUESTION) {
+      return {
+        isActive: true,
+        reason: "has_credits",
+        credits: credits,
+        message: `💰 Saldo: R$ ${credits.toFixed(2)}`,
+      };
+    }
+
+    // 4. SEM ACESSO
+    return {
+      isActive: false,
+      reason: "inactive",
+      credits: credits,
+      message: getInactiveMessage(freeRemaining <= 0 && !isFirstDay),
+    };
+  } catch (error) {
+    console.error("❌ Erro ao verificar status do usuário:", error);
+    return {
+      isActive: false,
+      reason: "inactive",
+      message: "❌ Erro ao verificar status. Tente novamente.",
+    };
+  }
+}
+
+function getInactiveMessage(expiredFreeQuestions: boolean): string {
+  if (expiredFreeQuestions) {
+    return `⏰ *SUAS QUESTÕES GRÁTIS EXPIRARAM!*
+
+Suas 21 questões grátis eram válidas apenas no primeiro dia.
+
+🎓 *PLANO CALOURO* - R$ 89,90/mês
+✅ 10 questões por dia (300/mês)
+
+⭐ *PLANO VETERANO* - R$ 44,90/mês
+✅ 30 questões por dia (900/mês)
+✅ 2 correções de redação/mês
+✅ Simulados mensais
+✅ Revisão espaçada SM2
+
+Acesse passarei.com.br para assinar! 🚀`;
+  }
+
+  return `❌ *ACESSO INATIVO*
+
+Para continuar estudando, você precisa:
+
+💳 Adicionar créditos (R$ 0,99/questão)
+🎓 Assinar o plano Calouro
+⭐ Assinar o plano Veterano
+
+Acesse passarei.com.br para ativar! 🚀`;
+}
+
+// ============================================
 // ATUALIZAR DADOS DO ONBOARDING
 // ============================================
 export async function updateUserOnboarding(

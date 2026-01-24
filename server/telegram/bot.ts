@@ -6,6 +6,7 @@ import {
   createOrGetUser,
   checkUserLimit,
   incrementUserCount,
+  isUserActive,
 } from "./database";
 import {
   startOnboarding,
@@ -44,7 +45,25 @@ export async function startTelegramBot() {
 
       if (data === "menu_estudar") {
         console.log(`📚 [Bot] Menu Estudar clicado por ${telegramId}`);
-        // Chamar função de estudar diretamente
+
+        // VERIFICAR SE USUÁRIO TEM ACESSO
+        const status = await isUserActive(telegramId);
+
+        if (!status.isActive) {
+          console.log(`🚫 [Bot] Usuário ${telegramId} sem acesso via menu`);
+          const keyboard = {
+            inline_keyboard: [
+              [{ text: "🌐 Acessar passarei.com.br", url: "https://passarei.com.br" }],
+              [{ text: "📊 Ver meu progresso", callback_data: "menu_progresso" }],
+            ],
+          };
+          await bot!.sendMessage(chatId, status.message || "Acesso inativo", {
+            parse_mode: "Markdown",
+            reply_markup: keyboard,
+          });
+          return;
+        }
+
         const { startLearningSession } = await import(
           "../telegram/learning-session"
         );
@@ -54,6 +73,28 @@ export async function startTelegramBot() {
 
       if (data === "menu_concurso") {
         console.log(`🎯 [Bot] Menu Concurso clicado por ${telegramId}`);
+
+        // VERIFICAR SE USUÁRIO TEM ACESSO
+        const status = await isUserActive(telegramId);
+
+        if (!status.isActive) {
+          console.log(`🚫 [Bot] Usuário ${telegramId} sem acesso para concurso`);
+          const keyboard = {
+            inline_keyboard: [
+              [{ text: "🌐 Acessar passarei.com.br", url: "https://passarei.com.br" }],
+            ],
+          };
+          await bot!.sendMessage(
+            chatId,
+            "❌ *Você precisa de uma conta ativa para escolher concurso.*\n\nAcesse passarei.com.br para ativar sua conta!",
+            {
+              parse_mode: "Markdown",
+              reply_markup: keyboard,
+            },
+          );
+          return;
+        }
+
         // Mostrar lista de concursos
         const concursos = [
           { id: "PM-ES", nome: "Polícia Militar do Espírito Santo" },
@@ -202,6 +243,17 @@ export async function startTelegramBot() {
 
     // 4. Processar concurso
     if (data.startsWith("concurso_")) {
+      // VERIFICAR SE USUÁRIO TEM ACESSO
+      const status = await isUserActive(telegramId);
+
+      if (!status.isActive) {
+        await bot!.answerCallbackQuery(query.id, {
+          text: "❌ Conta inativa",
+          show_alert: true,
+        });
+        return;
+      }
+
       const concursoId = data.replace("concurso_", "");
       console.log(
         `✅ [Bot] Concurso escolhido: ${concursoId} por ${telegramId}`,
@@ -210,7 +262,7 @@ export async function startTelegramBot() {
       try {
         await db.execute(sql`
           UPDATE "User"
-          SET 
+          SET
             "examType" = ${concursoId},
             "updatedAt" = NOW()
           WHERE "telegramId" = ${telegramId}
@@ -415,6 +467,24 @@ export async function startTelegramBot() {
     console.log(`📚 [Bot] Comando /estudar recebido de ${telegramId}`);
 
     try {
+      // VERIFICAR SE USUÁRIO TEM ACESSO
+      const status = await isUserActive(telegramId);
+
+      if (!status.isActive) {
+        console.log(`🚫 [Bot] Usuário ${telegramId} sem acesso: ${status.reason}`);
+        const keyboard = {
+          inline_keyboard: [
+            [{ text: "🌐 Acessar passarei.com.br", url: "https://passarei.com.br" }],
+            [{ text: "📊 Ver meu progresso", callback_data: "menu_progresso" }],
+          ],
+        };
+        await bot!.sendMessage(chatId, status.message || "Acesso inativo", {
+          parse_mode: "Markdown",
+          reply_markup: keyboard,
+        });
+        return;
+      }
+
       const { startLearningSession } = await import("./learning-session");
       await startLearningSession(bot!, chatId, telegramId);
     } catch (error: any) {
