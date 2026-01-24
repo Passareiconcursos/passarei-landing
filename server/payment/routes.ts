@@ -7,6 +7,7 @@ import {
   getSubscriptionStatus,
   cancelSubscription,
   CREDIT_PACKAGES,
+  payment as mpPayment,
 } from "./mercadopago";
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
@@ -604,27 +605,23 @@ router.post("/process-brick", async (req: Request, res: Response) => {
     }
 
     console.log(
-      "📦 Payload enviado ao MP:",
+      "📦 Payload enviado ao MP (via SDK):",
       JSON.stringify(payloadMP, null, 2),
     );
 
-    const response = await fetch("https://api.mercadopago.com/v1/payments", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
-        "Content-Type": "application/json",
-        "X-Idempotency-Key": `${telegramId}-${Date.now()}`,
+    // Usar SDK oficial do Mercado Pago (requisito de escalabilidade)
+    const paymentData = await mpPayment.create({
+      body: payloadMP,
+      requestOptions: {
+        idempotencyKey: `${telegramId}-${Date.now()}`,
       },
-      body: JSON.stringify(payloadMP),
     });
-
-    const paymentData = await response.json();
     console.log(
       "📩 Resposta COMPLETA do MP:",
       JSON.stringify(paymentData, null, 2),
     );
     console.log("📊 Status:", paymentData.status);
-    console.log("❌ Erro MP:", paymentData.message, paymentData.cause);
+    console.log("📊 Status Detail:", paymentData.status_detail);
     console.log(
       "📩 Resposta do pagamento:",
       paymentData.status,
@@ -711,7 +708,7 @@ router.post("/process-brick", async (req: Request, res: Response) => {
       return res.json({
         success: false,
         status: paymentData.status,
-        error: paymentData.message || "Pagamento não aprovado",
+        error: paymentData.status_detail || "Pagamento não aprovado",
       });
     }
   } catch (error: any) {
