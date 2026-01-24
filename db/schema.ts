@@ -804,6 +804,60 @@ export const simuladoAnswers = pgTable("simulado_answers", {
   answeredAt: timestamp("answered_at").notNull().defaultNow(),
 });
 
+// ============================================
+// TRANSACTIONS - Histórico de Pagamentos MP
+// ============================================
+
+export const transactionStatusEnum = pgEnum("transaction_status", [
+  "APPROVED",
+  "PENDING",
+  "REJECTED",
+  "CANCELLED",
+  "REFUNDED",
+  "IN_PROCESS",
+  "IN_MEDIATION",
+]);
+
+export const transactions = pgTable("transactions", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+
+  // Mercado Pago IDs
+  mpPaymentId: varchar("mp_payment_id", { length: 50 }).notNull().unique(),
+  mpPreferenceId: varchar("mp_preference_id", { length: 100 }),
+
+  // Usuário
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  telegramId: varchar("telegram_id", { length: 50 }),
+  payerEmail: varchar("payer_email", { length: 255 }),
+
+  // Detalhes do pagamento
+  packageId: varchar("package_id", { length: 50 }).notNull(),
+  amount: real("amount").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("BRL"),
+  status: transactionStatusEnum("status").notNull(),
+  statusDetail: varchar("status_detail", { length: 100 }),
+
+  // Método de pagamento
+  paymentMethodId: varchar("payment_method_id", { length: 50 }),
+  paymentTypeId: varchar("payment_type_id", { length: 50 }), // credit_card, debit_card, pix
+  installments: integer("installments").default(1),
+
+  // Antifraude
+  deviceId: varchar("device_id", { length: 100 }),
+  ipAddress: varchar("ip_address", { length: 45 }),
+
+  // Dados brutos do MP
+  rawData: jsonb("raw_data"),
+
+  // Timestamps
+  mpDateCreated: timestamp("mp_date_created"),
+  mpDateApproved: timestamp("mp_date_approved"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // Types para TypeScript
 export type EditalSubject = {
   name: string;

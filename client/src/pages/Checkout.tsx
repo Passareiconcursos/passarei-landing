@@ -96,10 +96,14 @@ export default function Checkout() {
           onSubmit: async ({ selectedPaymentMethod, formData }: any) => {
             setLoading(true);
             try {
+              // Obter device_id do SDK para prevenção de fraude
+              const deviceId = mp.getDeviceId?.() || null;
+
               console.log("🔍 Dados enviados:", {
                 ...formData,
                 telegramId: userId,
                 packageId: pkg,
+                deviceId,
               });
               const response = await fetch("/api/payment/process-brick", {
                 method: "POST",
@@ -109,6 +113,7 @@ export default function Checkout() {
                   telegramId: userId,
                   packageId: pkg,
                   userEmail: formData?.email,
+                  deviceId,
                 }),
               });
               const result = await response.json();

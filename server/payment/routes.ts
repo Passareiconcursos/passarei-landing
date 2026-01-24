@@ -183,13 +183,54 @@ router.post("/webhooks/mercadopago", async (req: Request, res: Response) => {
       console.log(`📊 [Webhook] Status: ${paymentData.status}`);
       console.log(`💰 [Webhook] Valor: R$ ${paymentData.transaction_amount}`);
 
+      // Extrair dados do external_reference
+      const externalRef = paymentData.external_reference || "";
+      const [refTelegramId, refPackageId, refUserEmail] = externalRef.split("|");
+
+      // 💾 Salvar transação para conciliação (webhook)
+      try {
+        await db.execute(sql`
+          INSERT INTO transactions (
+            mp_payment_id, telegram_id, payer_email, package_id,
+            amount, status, status_detail, payment_method_id,
+            payment_type_id, installments, raw_data,
+            mp_date_created, mp_date_approved, created_at, updated_at
+          ) VALUES (
+            ${String(paymentData.id)},
+            ${refTelegramId || null},
+            ${paymentData.payer?.email || null},
+            ${refPackageId || 'unknown'},
+            ${paymentData.transaction_amount || 0},
+            ${paymentData.status?.toUpperCase() || 'PENDING'},
+            ${paymentData.status_detail || null},
+            ${paymentData.payment_method_id || null},
+            ${paymentData.payment_type_id || null},
+            ${paymentData.installments || 1},
+            ${JSON.stringify(paymentData)},
+            ${paymentData.date_created ? new Date(paymentData.date_created) : null},
+            ${paymentData.date_approved ? new Date(paymentData.date_approved) : null},
+            NOW(),
+            NOW()
+          )
+          ON CONFLICT (mp_payment_id) DO UPDATE SET
+            status = EXCLUDED.status,
+            status_detail = EXCLUDED.status_detail,
+            mp_date_approved = EXCLUDED.mp_date_approved,
+            raw_data = EXCLUDED.raw_data,
+            updated_at = NOW()
+        `);
+        console.log("💾 [Webhook] Transação salva para conciliação");
+      } catch (dbError) {
+        console.error("⚠️ [Webhook] Erro ao salvar transação (não crítico):", dbError);
+      }
+
       // Processar apenas se aprovado
       if (paymentData.status === "approved") {
         console.log("✅ [Webhook] Pagamento aprovado! Ativando usuário...");
 
-        // Extrair email do external_reference (enviado pelo frontend)
-        const externalRef = paymentData.external_reference || "";
-        const [telegramId, packageId, userEmail] = externalRef.split("|");
+        const telegramId = refTelegramId;
+        const packageId = refPackageId;
+        const userEmail = refUserEmail;
 
         const email = userEmail || paymentData.payer?.email;
         const amount = paymentData.transaction_amount || 0;
@@ -475,7 +516,12 @@ router.post("/process-brick", async (req: Request, res: Response) => {
       telegramId,
       packageId,
       payer,
+      deviceId,
     } = req.body;
+
+    // Capturar IP do usuário para prevenção de fraude
+    const userIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+    const clientIp = Array.isArray(userIp) ? userIp[0] : userIp.split(",")[0]?.trim();
 
     if (!telegramId) {
       return res.status(400).json({
@@ -499,13 +545,14 @@ router.post("/process-brick", async (req: Request, res: Response) => {
     const packageName = pkg?.label || (packageId === "veterano" ? "Plano Veterano" : "Plano Calouro");
     const packageQuestions = pkg?.questions || (packageId === "veterano" ? 10800 : 300);
 
-    const payloadMP = {
+    const payloadMP: Record<string, any> = {
       token,
       transaction_amount: amount,
       installments: installments || 1,
       payment_method_id,
       description: `${packageName} - Passarei Concursos`,
       statement_descriptor: "PASSAREI",
+      binary_mode: true, // Aprovação instantânea sem revisão manual
       external_reference: `${telegramId}|${packageId}|${payer?.email || ""}|${Date.now()}`,
       payer: {
         email: payer?.email || "suporte@passarei.com.br",
@@ -544,8 +591,17 @@ router.post("/process-brick", async (req: Request, res: Response) => {
           last_name: payer?.last_name || payer?.lastName || "",
           registration_date: new Date().toISOString(),
         },
+        ip_address: clientIp || undefined,
       },
     };
+
+    // Adicionar device fingerprint se disponível (melhora aprovação)
+    if (deviceId) {
+      payloadMP.metadata = {
+        ...payloadMP.metadata,
+        device_id: deviceId,
+      };
+    }
 
     console.log(
       "📦 Payload enviado ao MP:",
@@ -574,6 +630,45 @@ router.post("/process-brick", async (req: Request, res: Response) => {
       paymentData.status,
       paymentData.id,
     );
+
+    // 💾 Salvar transação para conciliação financeira
+    if (paymentData.id) {
+      try {
+        await db.execute(sql`
+          INSERT INTO transactions (
+            mp_payment_id, telegram_id, payer_email, package_id,
+            amount, status, status_detail, payment_method_id,
+            payment_type_id, installments, device_id, ip_address,
+            raw_data, mp_date_created, created_at, updated_at
+          ) VALUES (
+            ${String(paymentData.id)},
+            ${telegramId},
+            ${payer?.email || null},
+            ${packageId},
+            ${amount},
+            ${paymentData.status?.toUpperCase() || 'PENDING'},
+            ${paymentData.status_detail || null},
+            ${payment_method_id || null},
+            ${paymentData.payment_type_id || null},
+            ${installments || 1},
+            ${deviceId || null},
+            ${clientIp || null},
+            ${JSON.stringify(paymentData)},
+            ${paymentData.date_created ? new Date(paymentData.date_created) : null},
+            NOW(),
+            NOW()
+          )
+          ON CONFLICT (mp_payment_id) DO UPDATE SET
+            status = EXCLUDED.status,
+            status_detail = EXCLUDED.status_detail,
+            raw_data = EXCLUDED.raw_data,
+            updated_at = NOW()
+        `);
+        console.log("💾 Transação salva para conciliação");
+      } catch (dbError) {
+        console.error("⚠️ Erro ao salvar transação (não crítico):", dbError);
+      }
+    }
 
     if (paymentData.status === "approved") {
       // Atualizar usuário no banco
