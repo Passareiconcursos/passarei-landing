@@ -704,6 +704,106 @@ export const sm2Reviews = pgTable("sm2_reviews", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// ============================================
+// SIMULADOS - PROVAS MENSAIS (VETERANO)
+// ============================================
+
+export const simuladoStatusEnum = pgEnum("simulado_status", [
+  "AVAILABLE", // Disponível para iniciar
+  "IN_PROGRESS", // Em andamento
+  "COMPLETED", // Finalizado
+  "EXPIRED", // Expirado (não completou no prazo)
+]);
+
+// Simulados disponíveis (criados mensalmente)
+export const simulados = pgTable("simulados", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  examType: examTypeEnum("exam_type").notNull(),
+
+  // Configuração
+  totalQuestions: integer("total_questions").notNull().default(50),
+  durationMinutes: integer("duration_minutes").notNull().default(120), // 2 horas
+  passingScore: integer("passing_score").notNull().default(60), // 60%
+
+  // Período de disponibilidade
+  month: varchar("month", { length: 7 }).notNull(), // YYYY-MM
+  availableFrom: timestamp("available_from").notNull(),
+  availableUntil: timestamp("available_until").notNull(),
+
+  // Status
+  isActive: boolean("is_active").notNull().default(true),
+
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Questões de cada simulado
+export const simuladoQuestions = pgTable("simulado_questions", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  simuladoId: uuid("simulado_id")
+    .notNull()
+    .references(() => simulados.id, { onDelete: "cascade" }),
+  contentId: varchar("content_id", { length: 255 }).notNull(),
+  questionOrder: integer("question_order").notNull(),
+
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Tentativas dos usuários
+export const userSimulados = pgTable("user_simulados", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  simuladoId: uuid("simulado_id")
+    .notNull()
+    .references(() => simulados.id, { onDelete: "cascade" }),
+
+  // Progresso
+  status: simuladoStatusEnum("status").notNull().default("IN_PROGRESS"),
+  currentQuestion: integer("current_question").notNull().default(0),
+  correctAnswers: integer("correct_answers").notNull().default(0),
+  wrongAnswers: integer("wrong_answers").notNull().default(0),
+
+  // Resultados
+  score: integer("score"), // Percentual final
+  passed: boolean("passed"), // Se passou (>= passingScore)
+  timeSpentMinutes: integer("time_spent_minutes"),
+
+  // Timestamps
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  finishedAt: timestamp("finished_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Respostas do simulado
+export const simuladoAnswers = pgTable("simulado_answers", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userSimuladoId: uuid("user_simulado_id")
+    .notNull()
+    .references(() => userSimulados.id, { onDelete: "cascade" }),
+  questionId: uuid("question_id")
+    .notNull()
+    .references(() => simuladoQuestions.id, { onDelete: "cascade" }),
+
+  selectedAnswer: integer("selected_answer").notNull(),
+  correct: boolean("correct").notNull(),
+  answeredAt: timestamp("answered_at").notNull().defaultNow(),
+});
+
 // Types para TypeScript
 export type EditalSubject = {
   name: string;
