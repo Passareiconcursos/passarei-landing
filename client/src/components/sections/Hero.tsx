@@ -63,7 +63,7 @@ export function Hero() {
                         ✅ +2.847 candidatos estudando agora
                       </p>
                       <p className="text-sm text-primary font-semibold">
-                        🏆 154 aprovações confirmadas em 2025
+                        🏆 +377 aprovações confirmadas em 2025
                       </p>
                     </div>
                   </div>
@@ -93,106 +93,106 @@ export function Hero() {
           {/* Coluna da direita - Mockup (MiniChat abre em modal) */}
           <div className="flex justify-center">
             <div
-                className="relative max-w-[300px] mx-auto cursor-pointer group"
-                onClick={() => setShowMiniChat(true)}
-              >
-                {/* Mockup do celular */}
-                <div className="relative bg-black rounded-[3rem] p-3 shadow-2xl group-hover:shadow-3xl transition-all duration-300 group-hover:scale-[1.02]">
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
+              className="relative max-w-[300px] mx-auto cursor-pointer group"
+              onClick={() => setShowMiniChat(true)}
+            >
+              {/* Mockup do celular */}
+              <div className="relative bg-black rounded-[3rem] p-3 shadow-2xl group-hover:shadow-3xl transition-all duration-300 group-hover:scale-[1.02]">
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
 
-                  <div
-                    className="bg-[#ECE5DD] rounded-[2.5rem] overflow-hidden relative"
-                    style={{ height: "520px" }}
-                  >
-                    <div className="bg-[#18cb96] text-white px-4 py-3 flex items-center gap-3 sticky top-0 z-20">
-                      {/* LOGO: Substitua aqui pela sua imagem */}
-                      <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                        {/* Opção 1: Usar imagem */}
-                        {/* <img src="/logo-icon.png" alt="Passarei" className="w-8 h-8" /> */}
-                        {/* Opção 2: Usar letra */}
-                        <span className="text-[#18cb96] font-bold text-lg">
-                          P
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-base truncate">
-                          PASSAREI
-                        </p>
-                        <p className="text-xs opacity-90">online agora</p>
-                      </div>
+                <div
+                  className="bg-[#ECE5DD] rounded-[2.5rem] overflow-hidden relative"
+                  style={{ height: "520px" }}
+                >
+                  <div className="bg-[#18cb96] text-white px-4 py-3 flex items-center gap-3 sticky top-0 z-20">
+                    {/* LOGO: Substitua aqui pela sua imagem */}
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {/* Opção 1: Usar imagem */}
+                      {/* <img src="/logo-icon.png" alt="Passarei" className="w-8 h-8" /> */}
+                      {/* Opção 2: Usar letra */}
+                      <span className="text-[#18cb96] font-bold text-lg">
+                        P
+                      </span>
                     </div>
-
-                    <div className="p-4 space-y-3">
-                      {/* Mensagem de boas-vindas */}
-                      <div className="flex justify-start">
-                        <div className="max-w-[85%] bg-white rounded-lg rounded-tl-none p-3 shadow-sm">
-                          <p className="text-sm">
-                            👋 Olá! Eu sou o Assistente Passarei!
-                          </p>
-                          <p className="text-[10px] text-gray-500 text-right mt-1">
-                            09:00
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Mensagem de questões grátis */}
-                      <div className="flex justify-start">
-                        <div className="max-w-[85%] bg-white rounded-lg rounded-tl-none p-3 shadow-sm border-2 border-[#18cb96]">
-                          <p className="text-sm">
-                            🎁 Você ganhou <strong>21 questões GRÁTIS</strong>{" "}
-                            para testar!
-                          </p>
-                          <p className="text-[10px] text-gray-500 text-right mt-1">
-                            09:00
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Mensagem pedindo email */}
-                      <div className="flex justify-start">
-                        <div className="max-w-[85%] bg-white rounded-lg rounded-tl-none p-3 shadow-sm">
-                          <p className="text-sm">
-                            📧 Para começar, me diz seu melhor e-mail:
-                          </p>
-                          <p className="text-[10px] text-gray-500 text-right mt-1">
-                            09:01
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Indicador de clique */}
-                      <div className="flex justify-center pt-8">
-                        <div className="bg-[#18cb96] text-white px-6 py-3 rounded-full shadow-lg animate-pulse">
-                          <p className="text-sm font-semibold">
-                            👆 Clique para começar!
-                          </p>
-                        </div>
-                      </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-base truncate">
+                        PASSAREI
+                      </p>
+                      <p className="text-xs opacity-90">online agora</p>
                     </div>
                   </div>
 
-                  <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-white/30 rounded-full"></div>
+                  <div className="p-4 space-y-3">
+                    {/* Mensagem de boas-vindas */}
+                    <div className="flex justify-start">
+                      <div className="max-w-[85%] bg-white rounded-lg rounded-tl-none p-3 shadow-sm">
+                        <p className="text-sm">
+                          👋 Olá! Eu sou o Assistente Passarei!
+                        </p>
+                        <p className="text-[10px] text-gray-500 text-right mt-1">
+                          09:00
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Mensagem de questões grátis */}
+                    <div className="flex justify-start">
+                      <div className="max-w-[85%] bg-white rounded-lg rounded-tl-none p-3 shadow-sm border-2 border-[#18cb96]">
+                        <p className="text-sm">
+                          🎁 Você ganhou <strong>21 questões GRÁTIS</strong>{" "}
+                          para testar!
+                        </p>
+                        <p className="text-[10px] text-gray-500 text-right mt-1">
+                          09:00
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Mensagem pedindo email */}
+                    <div className="flex justify-start">
+                      <div className="max-w-[85%] bg-white rounded-lg rounded-tl-none p-3 shadow-sm">
+                        <p className="text-sm">
+                          📧 Para começar, me diz seu melhor e-mail:
+                        </p>
+                        <p className="text-[10px] text-gray-500 text-right mt-1">
+                          09:01
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Indicador de clique */}
+                    <div className="flex justify-center pt-8">
+                      <div className="bg-[#18cb96] text-white px-6 py-3 rounded-full shadow-lg animate-pulse">
+                        <p className="text-sm font-semibold">
+                          👆 Clique para começar!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Badges flutuantes */}
-                <div className="absolute -right-4 top-20 bg-white rounded-full px-4 py-2 shadow-lg border-2 border-[#18cb96] animate-bounce-slow">
-                  <p className="text-xs font-bold text-[#18cb96]">
-                    ✓ Teste grátis
-                  </p>
-                </div>
-
-                <div className="absolute -left-4 top-1/3 bg-white rounded-full px-4 py-2 shadow-lg border-2 border-blue-500">
-                  <p className="text-xs font-bold text-blue-600">
-                    🎯 21 questões
-                  </p>
-                </div>
-
-                <div className="absolute -right-4 bottom-32 bg-white rounded-full px-4 py-2 shadow-lg border-2 border-purple-500">
-                  <p className="text-xs font-bold text-purple-600">
-                    📝 Com correção
-                  </p>
-                </div>
+                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-white/30 rounded-full"></div>
               </div>
+
+              {/* Badges flutuantes */}
+              <div className="absolute -right-4 top-20 bg-white rounded-full px-4 py-2 shadow-lg border-2 border-[#18cb96] animate-bounce-slow">
+                <p className="text-xs font-bold text-[#18cb96]">
+                  ✓ Teste grátis
+                </p>
+              </div>
+
+              <div className="absolute -left-4 top-1/3 bg-white rounded-full px-4 py-2 shadow-lg border-2 border-blue-500">
+                <p className="text-xs font-bold text-blue-600">
+                  🎯 21 questões
+                </p>
+              </div>
+
+              <div className="absolute -right-4 bottom-32 bg-white rounded-full px-4 py-2 shadow-lg border-2 border-purple-500">
+                <p className="text-xs font-bold text-purple-600">
+                  📝 Com correção
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -207,8 +207,19 @@ export function Hero() {
               className="absolute -top-3 -right-3 z-10 bg-white text-gray-700 hover:text-red-500 hover:bg-red-50 rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-gray-200 hover:border-red-300 transition-all duration-200"
               aria-label="Fechar chat"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
             <MiniChat />
