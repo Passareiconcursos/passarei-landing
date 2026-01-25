@@ -205,7 +205,7 @@ export default function Checkout() {
         <div className="flex flex-col items-center gap-3 mb-8">
           <img src="/logo.png" alt="Passarei" className="h-16 w-auto" />
           <h1 className="text-xl font-semibold text-gray-700">
-            Checkout Seguro
+            Carrinho de Compras
           </h1>
         </div>
 
