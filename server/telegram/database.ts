@@ -1094,3 +1094,209 @@ export async function getSM2Stats(telegramId: string): Promise<{
     return { totalCards: 0, dueToday: 0, averageEF: 2.5, longestStreak: 0 };
   }
 }
+
+// ============================================
+// CONCURSOS E CARGOS - BUSCAR DO BANCO
+// ============================================
+
+// Fallback para concursos (usado se banco falhar)
+const CONCURSOS_FALLBACK = [
+  { sigla: "PF", nome: "Polícia Federal", esfera: "FEDERAL" },
+  { sigla: "PRF", nome: "Polícia Rodoviária Federal", esfera: "FEDERAL" },
+  { sigla: "PM", nome: "Polícia Militar", esfera: "ESTADUAL" },
+  { sigla: "PC", nome: "Polícia Civil", esfera: "ESTADUAL" },
+  { sigla: "CBM", nome: "Corpo de Bombeiros Militar", esfera: "ESTADUAL" },
+  { sigla: "GM", nome: "Guarda Municipal", esfera: "MUNICIPAL" },
+  { sigla: "PP_ESTADUAL", nome: "Polícia Penal Estadual", esfera: "ESTADUAL" },
+  { sigla: "PP_FEDERAL", nome: "Polícia Penal Federal", esfera: "FEDERAL" },
+  { sigla: "PL_ESTADUAL", nome: "Polícia Legislativa Estadual", esfera: "ESTADUAL" },
+  { sigla: "PL_FEDERAL", nome: "Polícia Legislativa Federal", esfera: "FEDERAL" },
+];
+
+// Fallback para cargos (usado se banco falhar)
+const CARGOS_FALLBACK: Record<string, string[]> = {
+  PF: ["Agente", "Escrivão", "Delegado", "Perito Criminal"],
+  PRF: ["Policial Rodoviário Federal"],
+  PM: ["Soldado", "Aspirante a Oficial"],
+  PC: ["Delegado", "Escrivão", "Investigador", "Agente de Polícia", "Perito Criminal"],
+  CBM: ["Soldado", "Aspirante a Oficial"],
+  GM: ["Guarda Municipal"],
+  PP_ESTADUAL: ["Agente Penitenciário"],
+  PP_FEDERAL: ["Agente Federal Penitenciário"],
+  PL_ESTADUAL: ["Agente de Polícia Legislativa"],
+  PL_FEDERAL: ["Policial Legislativo Federal"],
+};
+
+/**
+ * Busca todos os concursos do banco de dados
+ * Se falhar, retorna fallback hardcoded
+ */
+export async function getConcursosFromDB(): Promise<
+  { sigla: string; nome: string; esfera: string }[]
+> {
+  try {
+    const result = await db.execute(sql`
+      SELECT sigla, nome, esfera
+      FROM concursos
+      WHERE is_active = true
+      ORDER BY ordem, esfera, nome
+    `);
+
+    if (result.length > 0) {
+      console.log(`✅ [DB] ${result.length} concursos carregados do banco`);
+      return result as any[];
+    }
+
+    console.log("⚠️ [DB] Nenhum concurso no banco, usando fallback");
+    return CONCURSOS_FALLBACK;
+  } catch (error) {
+    console.error("❌ [DB] Erro ao buscar concursos:", error);
+    return CONCURSOS_FALLBACK;
+  }
+}
+
+/**
+ * Busca cargos de um concurso específico
+ * Se falhar, retorna fallback hardcoded
+ */
+export async function getCargosFromDB(
+  concursoSigla: string
+): Promise<{ id: string; nome: string; codigo: string }[]> {
+  try {
+    const result = await db.execute(sql`
+      SELECT cg.id, cg.nome, cg.codigo
+      FROM cargos cg
+      JOIN concursos c ON c.id = cg.concurso_id
+      WHERE c.sigla = ${concursoSigla}
+        AND cg.is_active = true
+        AND c.is_active = true
+      ORDER BY cg.ordem, cg.nome
+    `);
+
+    if (result.length > 0) {
+      console.log(`✅ [DB] ${result.length} cargos para ${concursoSigla}`);
+      return result as any[];
+    }
+
+    // Fallback: usar lista hardcoded
+    const fallback = CARGOS_FALLBACK[concursoSigla] || [];
+    console.log(`⚠️ [DB] Usando fallback para cargos de ${concursoSigla}`);
+    return fallback.map((nome, idx) => ({
+      id: `fallback_${idx}`,
+      nome,
+      codigo: nome.toUpperCase().replace(/\s+/g, "_"),
+    }));
+  } catch (error) {
+    console.error(`❌ [DB] Erro ao buscar cargos de ${concursoSigla}:`, error);
+    const fallback = CARGOS_FALLBACK[concursoSigla] || [];
+    return fallback.map((nome, idx) => ({
+      id: `fallback_${idx}`,
+      nome,
+      codigo: nome.toUpperCase().replace(/\s+/g, "_"),
+    }));
+  }
+}
+
+/**
+ * Busca matérias de um cargo específico
+ */
+export async function getMateriasFromDB(
+  cargoId: string
+): Promise<{ id: string; nome: string; codigo: string }[]> {
+  try {
+    const result = await db.execute(sql`
+      SELECT cm.id, cm.nome, cm.codigo
+      FROM cargo_materias cm
+      WHERE cm.cargo_id = ${cargoId}
+        AND cm.is_active = true
+      ORDER BY cm.ordem, cm.nome
+    `);
+
+    return result as any[];
+  } catch (error) {
+    console.error(`❌ [DB] Erro ao buscar matérias do cargo ${cargoId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Gera teclado inline do Telegram para seleção de concurso
+ */
+export async function generateConcursosKeyboard(): Promise<{
+  inline_keyboard: { text: string; callback_data: string }[][];
+}> {
+  const concursos = await getConcursosFromDB();
+
+  // Ícones por sigla
+  const icons: Record<string, string> = {
+    PF: "🎯", PRF: "🚓", PM: "🚔", PC: "🕵️", CBM: "🚒",
+    GM: "🛡️", PP_ESTADUAL: "🔐", PP_FEDERAL: "⚖️",
+    PL_ESTADUAL: "🏛️", PL_FEDERAL: "🏛️", ABIN: "🔍",
+    EXERCITO: "⚔️", MARINHA: "⚓", FAB: "✈️", ANAC: "🛫",
+    CPNU: "📋", PFF: "🚂", PJ_CNJ: "⚖️", MD: "🎖️",
+    PC_CIENT: "🔬", GP: "🚢", PPF: "🔒", PLF: "🏛️", PPE: "🔐",
+  };
+
+  // Agrupa em linhas de 2
+  const rows: { text: string; callback_data: string }[][] = [];
+  let currentRow: { text: string; callback_data: string }[] = [];
+
+  for (const c of concursos) {
+    const icon = icons[c.sigla] || "📌";
+    currentRow.push({
+      text: `${icon} ${c.sigla}`,
+      callback_data: `onb_${c.sigla}`,
+    });
+
+    if (currentRow.length === 2) {
+      rows.push(currentRow);
+      currentRow = [];
+    }
+  }
+
+  // Adiciona última linha se tiver itens ímpares
+  if (currentRow.length > 0) {
+    rows.push(currentRow);
+  }
+
+  return { inline_keyboard: rows };
+}
+
+/**
+ * Gera teclado inline do Telegram para seleção de cargo
+ */
+export async function generateCargosKeyboard(
+  concursoSigla: string
+): Promise<{
+  inline_keyboard: { text: string; callback_data: string }[][];
+}> {
+  const cargos = await getCargosFromDB(concursoSigla);
+
+  // Ícones por tipo de cargo
+  const icons: Record<string, string> = {
+    DELEGADO: "👔", AGENTE: "🎯", ESCRIVAO: "📝", PERITO: "🔬",
+    SOLDADO: "⭐", OFICIAL: "🎖️", POLICIAL: "🚔", GUARDA: "🛡️",
+    INSPETOR: "📋", INVESTIGADOR: "🕵️", PAPILOSCOPISTA: "🔍",
+  };
+
+  const getIcon = (codigo: string): string => {
+    for (const [key, icon] of Object.entries(icons)) {
+      if (codigo.toUpperCase().includes(key)) return icon;
+    }
+    return "👤";
+  };
+
+  const rows: { text: string; callback_data: string }[][] = [];
+
+  for (const cargo of cargos) {
+    const icon = getIcon(cargo.codigo);
+    rows.push([
+      {
+        text: `${icon} ${cargo.nome}`,
+        callback_data: `cargo_${cargo.codigo}`,
+      },
+    ]);
+  }
+
+  return { inline_keyboard: rows };
+}

@@ -2,7 +2,12 @@ import { startLearningSession } from "./learning-session";
 import TelegramBot from "node-telegram-bot-api";
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
-import { updateUserOnboarding } from "./database";
+import {
+  updateUserOnboarding,
+  generateConcursosKeyboard,
+  generateCargosKeyboard,
+  getCargosFromDB,
+} from "./database";
 
 // MAPEAMENTO ESTÁTICO COMO FALLBACK GARANTIDO
 const SUBJECT_FALLBACK: any = {
@@ -139,30 +144,8 @@ export async function startOnboarding(
 
   await new Promise((r) => setTimeout(r, 2000));
 
-  const keyboard = {
-    inline_keyboard: [
-      [
-        { text: "🎯 PF", callback_data: "onb_PF" },
-        { text: "🚓 PRF", callback_data: "onb_PRF" },
-      ],
-      [
-        { text: "🚔 PM", callback_data: "onb_PM" },
-        { text: "🕵️ PC", callback_data: "onb_PC" },
-      ],
-      [
-        { text: "🚒 CBM", callback_data: "onb_CBM" },
-        { text: "⚖️ PP Estadual", callback_data: "onb_PP_ESTADUAL" },
-      ],
-      [
-        { text: "🏛️ PL Estadual", callback_data: "onb_PL_ESTADUAL" },
-        { text: "🛡️ GM", callback_data: "onb_GM" },
-      ],
-      [
-        { text: "⚖️ PP Federal", callback_data: "onb_PP_FEDERAL" },
-        { text: "🏛️ PL Federal", callback_data: "onb_PL_FEDERAL" },
-      ],
-    ],
-  };
+  // Busca concursos dinamicamente do banco de dados
+  const keyboard = await generateConcursosKeyboard();
 
   await bot.sendMessage(
     chatId,
@@ -328,12 +311,16 @@ export async function handleOnboardingMessage(bot: TelegramBot, msg: any) {
 }
 
 async function askCargo(bot: TelegramBot, chatId: number, examType: string) {
-  const cargos = CARGOS[examType] || ["Outro"];
-  const keyboard = {
-    inline_keyboard: cargos.map((c: string) => [
+  // Busca cargos dinamicamente do banco de dados
+  const keyboard = await generateCargosKeyboard(examType);
+
+  // Se não houver cargos no banco, usa fallback hardcoded
+  if (keyboard.inline_keyboard.length === 0) {
+    const fallbackCargos = CARGOS[examType] || ["Outro"];
+    keyboard.inline_keyboard = fallbackCargos.map((c: string) => [
       { text: c, callback_data: `cargo_${c}` },
-    ]),
-  };
+    ]);
+  }
 
   await bot.sendMessage(
     chatId,
