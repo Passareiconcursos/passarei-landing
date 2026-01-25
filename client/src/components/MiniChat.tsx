@@ -1,5 +1,13 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Send, Loader2, CheckCircle2, Trophy, Sparkles } from "lucide-react";
+import {
+  useConcursos,
+  useCargos,
+  formatConcursoForChat,
+  formatCargoForChat,
+  type Concurso,
+  type Cargo,
+} from "../hooks/use-concursos";
 
 // ============================================
 // TAREFA 2.1: CONSTANTES DE STORAGE
@@ -73,8 +81,8 @@ interface UserContext {
   cargo: string | null;
 }
 
-// Dados dos concursos - COMPLETO
-const CONCURSOS = [
+// Dados dos concursos - FALLBACK (usado se API falhar)
+const CONCURSOS_FALLBACK = [
   { id: "PF", label: "🎯 PF - Polícia Federal", group: "Federal" },
   { id: "PRF", label: "🚓 PRF - Polícia Rodoviária Federal", group: "Federal" },
   {
@@ -133,7 +141,8 @@ const ESTADOS = [
   "TO",
 ];
 
-const CARGOS: Record<string, { id: string; label: string }[]> = {
+// Cargos - FALLBACK (usado se API falhar)
+const CARGOS_FALLBACK: Record<string, { id: string; label: string }[]> = {
   PF: [
     { id: "delegado", label: "👔 Delegado" },
     { id: "agente", label: "🎯 Agente" },
@@ -414,6 +423,31 @@ export function MiniChat() {
   const [totalQuestions, setTotalQuestions] = useState(5); // Padrão 5 para demo, API pode retornar 21
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // ============================================
+  // INTEGRAÇÃO COM API DE CONCURSOS
+  // ============================================
+  const { concursos: apiConcursos, loading: loadingConcursos } = useConcursos();
+  const { cargos: apiCargos, loading: loadingCargos } = useCargos(chatState.concurso || null);
+
+  // Concursos: usa API se disponível, senão fallback
+  const CONCURSOS = useMemo(() => {
+    if (apiConcursos.length > 0) {
+      return apiConcursos.map(formatConcursoForChat);
+    }
+    return CONCURSOS_FALLBACK;
+  }, [apiConcursos]);
+
+  // Cargos: usa API se disponível, senão fallback
+  const CARGOS = useMemo(() => {
+    const cargosMap: Record<string, { id: string; label: string }[]> = { ...CARGOS_FALLBACK };
+
+    if (apiCargos.length > 0 && chatState.concurso) {
+      cargosMap[chatState.concurso] = apiCargos.map(formatCargoForChat);
+    }
+
+    return cargosMap;
+  }, [apiCargos, chatState.concurso]);
 
   // useRef para sessionId - garante valor atualizado em callbacks assíncronos
   const sessionIdRef = useRef<string>("");
