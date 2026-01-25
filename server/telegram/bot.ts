@@ -7,6 +7,7 @@ import {
   checkUserLimit,
   incrementUserCount,
   isUserActive,
+  generateConcursosKeyboard,
 } from "./database";
 import {
   startOnboarding,
@@ -95,18 +96,9 @@ export async function startTelegramBot() {
           return;
         }
 
-        // Mostrar lista de concursos
-        const concursos = [
-          { id: "PM-ES", nome: "Polícia Militar do Espírito Santo" },
-          { id: "PC-ES", nome: "Polícia Civil do Espírito Santo" },
-          { id: "PRF", nome: "Polícia Rodoviária Federal" },
-          { id: "PF", nome: "Polícia Federal" },
-          { id: "PCDF", nome: "Polícia Civil do Distrito Federal" },
-          { id: "OUTRO", nome: "Outro concurso policial" },
-        ];
-        const keyboard = concursos.map((concurso) => [
-          { text: concurso.nome, callback_data: `concurso_${concurso.id}` },
-        ]);
+        // Mostrar lista de concursos (dinâmico do banco)
+        // Usar prefix "concurso_" para callback_data (tratado no bloco data.startsWith("concurso_"))
+        const keyboard = await generateConcursosKeyboard("concurso_");
         await bot!.sendMessage(
           chatId,
           "🎯 *Escolha seu concurso:*\n\n" +
@@ -114,7 +106,7 @@ export async function startTelegramBot() {
             "Você pode trocar a qualquer momento usando /concurso novamente.",
           {
             parse_mode: "Markdown",
-            reply_markup: { inline_keyboard: keyboard },
+            reply_markup: keyboard,
           },
         );
         return;

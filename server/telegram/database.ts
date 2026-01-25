@@ -1221,8 +1221,11 @@ export async function getMateriasFromDB(
 
 /**
  * Gera teclado inline do Telegram para seleção de concurso
+ * @param prefix - Prefixo para callback_data (padrão: "onb_" para onboarding, usar "concurso_" para /concurso)
  */
-export async function generateConcursosKeyboard(): Promise<{
+export async function generateConcursosKeyboard(
+  prefix: string = "onb_"
+): Promise<{
   inline_keyboard: { text: string; callback_data: string }[][];
 }> {
   const concursos = await getConcursosFromDB();
@@ -1245,7 +1248,7 @@ export async function generateConcursosKeyboard(): Promise<{
     const icon = icons[c.sigla] || "📌";
     currentRow.push({
       text: `${icon} ${c.sigla}`,
-      callback_data: `onb_${c.sigla}`,
+      callback_data: `${prefix}${c.sigla}`,
     });
 
     if (currentRow.length === 2) {
