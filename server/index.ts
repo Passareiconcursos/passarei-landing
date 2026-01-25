@@ -11,6 +11,7 @@ import { registerSupabaseRoutes } from "./routes-supabase";
 import { registerMiniChatRoutes } from "./minichat-routes";
 import { registerEssayRoutes } from "./essay-routes";
 import { registerSimuladoRoutes } from "./simulado-routes";
+import { registerConcursosRoutes } from "./concursos-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startTelegramBot } from "./telegram/bot";
 
@@ -56,6 +57,7 @@ app.use((req, res, next) => {
   registerMiniChatRoutes(app);
   registerEssayRoutes(app);
   registerSimuladoRoutes(app);
+  registerConcursosRoutes(app);
   app.use("/api/payment", paymentRoutes);
   app.use("/api/email", emailTestRouter);
 

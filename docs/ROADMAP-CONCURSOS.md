@@ -1,15 +1,38 @@
 # 🗺️ ROADMAP - Integração de Concursos e Conteúdos
 
+## 🔴 REGRAS FUNDAMENTAIS
+
+```
+✅ EXPANDIR     - Adicionar novos concursos, cargos, matérias
+✅ COMPLEMENTAR - Vincular conteúdo existente às novas estruturas
+❌ NÃO EXCLUIR  - Manter todo conteúdo/questões existentes
+❌ NÃO DUPLICAR - Verificar existência antes de criar
+```
+
+---
+
 ## 📊 Situação Atual
 
 ### ❌ Dados Hardcoded (NÃO conectados ao banco)
-- `MiniChat.tsx` → 10 concursos, ~20 cargos
-- `Concursos.tsx` → 10 concursos na landing page
 
-### ✅ Dados no Banco (NÃO usados pelo frontend)
+| Arquivo | Local | Dados |
+|---------|-------|-------|
+| `MiniChat.tsx` | Frontend | 10 concursos, ~20 cargos |
+| `Concursos.tsx` | Landing Page | 10 concursos |
+| `bot.ts` | Telegram Bot | Lista de concursos (linhas 99-106) |
+| `onboarding.ts` | Telegram Bot | CARGOS + SUBJECT_FALLBACK |
+
+### ✅ Dados no Banco (NÃO usados pelos frontends)
 - 20 concursos cadastrados
 - 62 cargos cadastrados
 - Tabelas: `concursos`, `cargos`, `cargo_materias`, `conteudo_cargos`
+
+### ✅ Conteúdo Existente (PRESERVAR!)
+- Tabela `Content` → Conteúdos educacionais ativos
+- Tabela `Question` → Questões vinculadas
+- Tabela `Subject` → Matérias cadastradas
+- Tabela `user_answers` → Histórico de respostas
+- Tabela `sm2_reviews` → Revisões espaçadas (VETERANO)
 
 ---
 
@@ -32,7 +55,7 @@ server/
 
 ---
 
-## 🎯 FASE 2: Integração Frontend (Onboarding)
+## 🎯 FASE 2: Integração Frontend (Onboarding Web)
 **Objetivo:** Substituir dados hardcoded por chamadas à API
 
 ### Tarefas:
@@ -51,6 +74,35 @@ client/src/
 │   ├── MiniChat.tsx (MODIFICAR)
 │   └── sections/
 │       └── Concursos.tsx (MODIFICAR)
+```
+
+---
+
+## 🎯 FASE 2.5: Integração Telegram Bot
+**Objetivo:** Bot usar dados do banco ao invés de hardcoded
+
+### Arquivos com dados hardcoded:
+```
+server/telegram/
+├── bot.ts          → const concursos = [...] (linhas 99-106)
+├── onboarding.ts   → CARGOS = {...} (linhas 8-40)
+│                   → SUBJECT_FALLBACK = {...} (linhas 42-82)
+```
+
+### Tarefas:
+- [ ] 2.5.1 Criar função `getConcursosFromDB()` em database.ts
+- [ ] 2.5.2 Criar função `getCargosFromDB(concursoSigla)` em database.ts
+- [ ] 2.5.3 Criar função `getMateriasFromDB(cargoId)` em database.ts
+- [ ] 2.5.4 Atualizar `bot.ts` para usar funções do banco
+- [ ] 2.5.5 Atualizar `onboarding.ts` para usar funções do banco
+- [ ] 2.5.6 Manter fallback para concursos sem dados no banco
+
+### Estratégia de Migração (Segura):
+```
+1. Criar funções que buscam do banco
+2. Se banco vazio/erro → usar hardcoded como fallback
+3. Testar em produção com logs
+4. Quando estável → remover fallback
 ```
 
 ---
@@ -77,8 +129,44 @@ client/src/
 
 ---
 
-## 🎯 FASE 4: Geração de Conteúdo
-**Objetivo:** Criar conteúdos vinculados aos cargos
+## 🎯 FASE 3.5: Vincular Conteúdo Existente
+**Objetivo:** Associar conteúdos já criados aos novos cargos
+
+### Conteúdo Existente (NÃO EXCLUIR):
+```sql
+-- Verificar conteúdo existente
+SELECT COUNT(*) FROM "Content" WHERE "isActive" = true;
+SELECT COUNT(*) FROM "Question";
+SELECT DISTINCT "subjectId" FROM "Content";
+```
+
+### Tarefas:
+- [ ] 3.5.1 Listar todo conteúdo existente por subject
+- [ ] 3.5.2 Mapear subjects existentes → cargo_materias
+- [ ] 3.5.3 Criar vínculos em `conteudo_cargos` para conteúdo existente
+- [ ] 3.5.4 Validar que nenhum conteúdo foi perdido
+
+### Script de Vinculação:
+```sql
+-- Vincular conteúdo de Direito Penal ao cargo Agente PF
+INSERT INTO conteudo_cargos (content_id, cargo_id, cargo_materia_id)
+SELECT
+  c.id,
+  cg.id,
+  cm.id
+FROM "Content" c
+CROSS JOIN cargos cg
+JOIN cargo_materias cm ON cm.cargo_id = cg.id
+WHERE c."subjectId" IN (SELECT id FROM "Subject" WHERE name = 'DIR_PENAL')
+  AND cg.codigo = 'AGENTE_PF'
+  AND cm.codigo = 'DIREITO_PENAL'
+ON CONFLICT DO NOTHING;
+```
+
+---
+
+## 🎯 FASE 4: Geração de Conteúdo NOVO
+**Objetivo:** Criar conteúdos NOVOS vinculados aos cargos
 
 ### Fluxo de Criação:
 
