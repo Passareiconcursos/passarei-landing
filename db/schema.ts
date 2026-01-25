@@ -25,16 +25,37 @@ export const roleEnum = pgEnum("role", [
   "USER",
 ]);
 export const examTypeEnum = pgEnum("exam_type", [
+  // Federais - Segurança
   "PF", // Polícia Federal
   "PRF", // Polícia Rodoviária Federal
   "PP_FEDERAL", // Polícia Penal Federal
   "PL_FEDERAL", // Polícia Legislativa Federal
+  "PF_FERROVIARIA", // Polícia Ferroviária Federal
+  "PJ_CNJ", // Polícia Judicial CNJ
+  "ABIN", // Agência Brasileira de Inteligência
+
+  // Federais - Militares
+  "EXERCITO", // Exército (ESPCEX, IME, ESA)
+  "MARINHA", // Marinha (Colégio Naval, Escola Naval, Fuzileiros)
+  "FAB", // Força Aérea (ITA, EPCAR, EAGS)
+  "MIN_DEFESA", // Ministério da Defesa
+
+  // Federais - Outros
+  "ANAC", // Agência Nacional de Aviação Civil
+  "CPNU", // Concurso Público Nacional Unificado
+
+  // Estaduais
   "PM", // Polícia Militar
   "PC", // Polícia Civil
   "PP_ESTADUAL", // Polícia Penal Estadual
   "PL_ESTADUAL", // Polícia Legislativa Estadual
   "CBM", // Corpo de Bombeiros Militar
+  "PC_CIENTIFICA", // Polícia Científica Estadual
+
+  // Municipais
   "GM", // Guarda Municipal
+  "GP", // Guarda Portuária
+
   "OUTRO",
 ]);
 export const sphereEnum = pgEnum("sphere", ["FEDERAL", "ESTADUAL"]);
@@ -78,15 +99,62 @@ export const contentStatusEnum = pgEnum("content_status", [
 
 // Novos enums para sistema de conteúdo
 export const positionEnum = pgEnum("position", [
-  "SOLDADO",
-  "CABO",
-  "SARGENTO",
-  "OFICIAL",
+  // Polícias Civis
   "DELEGADO",
   "INVESTIGADOR",
   "ESCRIVAO",
   "AGENTE",
   "PERITO",
+  "PAPILOSCOPISTA",
+
+  // Polícias Militares / Bombeiros
+  "SOLDADO",
+  "CABO",
+  "SARGENTO",
+  "OFICIAL",
+  "CFO", // Curso de Formação de Oficiais
+
+  // Polícia Federal
+  "AGENTE_PF",
+  "ESCRIVAO_PF",
+  "DELEGADO_PF",
+  "PAPILOSCOPISTA_PF",
+
+  // PRF
+  "POLICIAL_RODOVIARIO",
+
+  // Penal
+  "AGENTE_PENITENCIARIO",
+  "TECNICO_PENITENCIARIO",
+  "POLICIAL_PENAL",
+
+  // Legislativa
+  "POLICIAL_LEGISLATIVO",
+
+  // Judicial
+  "POLICIAL_JUDICIAL",
+
+  // Militares
+  "ESPCEX", // Escola Preparatória de Cadetes do Exército
+  "IME", // Instituto Militar de Engenharia
+  "ESA", // Escola de Sargentos das Armas
+  "FUZILEIRO_NAVAL",
+  "ESCOLA_NAVAL",
+  "COLEGIO_NAVAL",
+  "ITA", // Instituto Tecnológico de Aeronáutica
+  "EPCAR", // Escola Preparatória de Cadetes do Ar
+  "EAGS", // Escola de Especialistas de Aeronáutica
+
+  // Guardas
+  "GUARDA_MUNICIPAL",
+  "GUARDA_PORTUARIO",
+
+  // ABIN
+  "OFICIAL_INTELIGENCIA",
+
+  // Genérico
+  "TECNICO",
+  "ANALISTA",
 ]);
 
 export const materialTypeEnum = pgEnum("material_type", [
@@ -857,6 +925,131 @@ export const transactions = pgTable("transactions", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+// ============================================
+// CONCURSOS - Estrutura de Concursos e Cargos
+// ============================================
+
+export const concursoSphereEnum = pgEnum("concurso_sphere", [
+  "FEDERAL",
+  "ESTADUAL",
+  "MUNICIPAL",
+]);
+
+// Tabela de Concursos/Instituições
+export const concursos = pgTable("concursos", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+
+  // Informações básicas
+  nome: varchar("nome", { length: 100 }).notNull(), // Ex: "Polícia Federal"
+  sigla: varchar("sigla", { length: 20 }).notNull().unique(), // Ex: "PF"
+  descricao: text("descricao"),
+
+  // Classificação
+  esfera: concursoSphereEnum("esfera").notNull(), // FEDERAL, ESTADUAL, MUNICIPAL
+  examType: examTypeEnum("exam_type").notNull(),
+
+  // Links úteis
+  editalUrl: text("edital_url"),
+  siteOficial: text("site_oficial"),
+
+  // Configuração
+  isActive: boolean("is_active").notNull().default(true),
+  ordem: integer("ordem").default(0), // Para ordenação no frontend
+
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Tabela de Cargos por Concurso
+export const cargos = pgTable("cargos", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+
+  concursoId: uuid("concurso_id")
+    .notNull()
+    .references(() => concursos.id, { onDelete: "cascade" }),
+
+  // Informações do cargo
+  nome: varchar("nome", { length: 100 }).notNull(), // Ex: "Agente"
+  codigo: varchar("codigo", { length: 50 }).notNull(), // Ex: "AGENTE_PF"
+  descricao: text("descricao"),
+
+  // Requisitos
+  escolaridade: varchar("escolaridade", { length: 50 }), // "MEDIO", "SUPERIOR"
+  requisitos: text("requisitos"),
+
+  // Configuração
+  isActive: boolean("is_active").notNull().default(true),
+  ordem: integer("ordem").default(0),
+
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Tabela de Matérias por Cargo
+export const cargoMaterias = pgTable("cargo_materias", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+
+  cargoId: uuid("cargo_id")
+    .notNull()
+    .references(() => cargos.id, { onDelete: "cascade" }),
+
+  // Informações da matéria
+  nome: varchar("nome", { length: 100 }).notNull(), // Ex: "Direito Penal"
+  codigo: varchar("codigo", { length: 50 }).notNull(), // Ex: "DIREITO_PENAL"
+  descricao: text("descricao"),
+
+  // Peso no concurso
+  peso: real("peso").default(1), // Peso da matéria
+  quantidadeQuestoes: integer("quantidade_questoes").default(10),
+
+  // Tópicos cobrados (JSON array)
+  topicos: jsonb("topicos").$type<string[]>().default([]),
+
+  // Configuração
+  isActive: boolean("is_active").notNull().default(true),
+  ordem: integer("ordem").default(0),
+
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Tabela para associar conteúdos a cargos específicos
+export const conteudoCargos = pgTable("conteudo_cargos", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+
+  contentId: varchar("content_id", { length: 255 })
+    .notNull()
+    .references(() => content.id, { onDelete: "cascade" }),
+
+  cargoId: uuid("cargo_id")
+    .notNull()
+    .references(() => cargos.id, { onDelete: "cascade" }),
+
+  cargoMateriaId: uuid("cargo_materia_id")
+    .references(() => cargoMaterias.id, { onDelete: "set null" }),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Types para as novas tabelas
+export type Concurso = typeof concursos.$inferSelect;
+export type InsertConcurso = typeof concursos.$inferInsert;
+export type Cargo = typeof cargos.$inferSelect;
+export type InsertCargo = typeof cargos.$inferInsert;
+export type CargoMateria = typeof cargoMaterias.$inferSelect;
+export type InsertCargoMateria = typeof cargoMaterias.$inferInsert;
 
 // Types para TypeScript
 export type EditalSubject = {
