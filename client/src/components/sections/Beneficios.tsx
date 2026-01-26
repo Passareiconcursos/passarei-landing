@@ -4,9 +4,9 @@ export function Beneficios() {
   const benefits = [
     {
       icon: Brain,
-      title: "Aprenda Fazendo Questões",
+      title: "Aprenda Com Questões",
       description:
-        "Responder questões acelera o aprendizado mais do que aulas passivas. A prática ativa simula a prova real e melhora a retenção desde o início. Fonte: roediger.psych.wustl.edu",
+        "Responder questões acelera o aprendizado mais do que aulas passivas. A prática ativa simula a prova real e melhora a retenção. Fonte: roediger.psych.wustl.edu",
     },
     {
       icon: Target,
@@ -16,13 +16,13 @@ export function Beneficios() {
     },
     {
       icon: BarChart,
-      title: "Memorização de Longo Prazo",
+      title: "Memoria de Longo Prazo",
       description:
         "Testes frequentes ativam o efeito de recuperação, técnica comprovada para fixar conteúdos por muito mais tempo. Fonte: psychologicalscience.org",
     },
     {
       icon: BookOpen,
-      title: "Estudo Guiado por Desempenho",
+      title: "Desempenho Guiado",
       description:
         "O sistema adapta os próximos exercícios conforme seus erros e acertos, focando onde você realmente precisa evoluir. Fonte: oecd.org/education",
     },
