@@ -3,30 +3,31 @@ import { Zap, Brain, Target, BarChart } from "lucide-react";
 export function Beneficios() {
   const benefits = [
     {
-      icon: Zap,
-      title: "100% pelo Telegram",
-      description:
-        "Estude onde você já está. Receba matérias, questões e correções direto no Telegram. Sem instalar apps, sem complicação. Simples como conversar com um amigo.",
-    },
-    {
       icon: Brain,
-      title: "IA Personalizada",
+      title: "Aprenda Fazendo Questões",
       description:
-        "Nossa inteligência artificial analisa seu edital e cria um plano único para VOCÊ. Prioriza matérias com maior peso, adapta a dificuldade e evolui com seu progresso.",
+        "Responder questões acelera o aprendizado mais do que aulas passivas. A prática ativa simula a prova real e melhora a retenção desde o início. Fonte: roediger.psych.wustl.edu",
     },
     {
       icon: Target,
-      title: "Repetição Espaçada",
+      title: "Correção que Ensina",
       description:
-        "Sistema de Repetição Espaçada comprovado pela neurociência revisita conteúdos no momento exato para maximizar sua memória de longo prazo. Você nunca mais esquece o que estudou.",
+        "Cada resposta recebe explicação imediata do erro ou acerto. Feedback rápido reduz falhas repetidas e consolida o entendimento. Fonte: visible-learning.org",
     },
     {
       icon: BarChart,
-      title: "Acompanhamento em Tempo Real",
+      title: "Memorização de Longo Prazo",
       description:
-        "Dashboard mostra seu progresso, pontos fortes e fracos. Estatísticas detalhadas de desempenho para você saber exatamente onde focar.",
+        "Testes frequentes ativam o efeito de recuperação, técnica comprovada para fixar conteúdos por muito mais tempo. Fonte: psychologicalscience.org",
+    },
+    {
+      icon: BookOpen,
+      title: "Estudo Guiado por Desempenho",
+      description:
+        "O sistema adapta os próximos exercícios conforme seus erros e acertos, focando onde você realmente precisa evoluir. Fonte: oecd.org/education",
     },
   ];
+}
 
   return (
     <section className="py-16 md:py-24 bg-white">
