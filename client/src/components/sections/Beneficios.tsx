@@ -6,25 +6,41 @@ export function Beneficios() {
       icon: Brain,
       title: "Aprenda Com Questões",
       description:
-        "Responder questões acelera o aprendizado mais do que aulas passivas. A prática ativa simula a prova real e melhora a retenção. Fonte: roediger.psych.wustl.edu",
+        "Responder questões acelera o aprendizado mais do que aulas passivas. A prática ativa simula a prova real e melhora a retenção.",
+      source: {
+        label: "Fonte",
+        url: "https://ctl.wustl.edu/resources/using-retrieval-practice-to-increase-student-learning/",
+      },
     },
     {
       icon: Target,
       title: "Correção que Ensina",
       description:
-        "Cada resposta recebe explicação imediata do erro ou acerto. Feedback rápido reduz falhas repetidas e consolida o entendimento. Fonte: visible-learning.org",
+        "Cada resposta recebe explicação imediata do erro ou acerto. Feedback rápido reduz falhas repetidas e consolida o entendimento.",
+      source: {
+        label: "Fonte",
+        url: "https://nationalcollege.com/news/evidence-based-teaching",
+      },
     },
     {
       icon: BarChart,
-      title: "Memoria de Longo Prazo",
+      title: "Memória de Longo Prazo",
       description:
-        "Testes frequentes ativam o efeito de recuperação, técnica comprovada para fixar conteúdos por muito mais tempo. Fonte: psychologicalscience.org",
+        "Testes frequentes ativam o efeito de recuperação, técnica comprovada para fixar conteúdos por muito mais tempo.",
+      source: {
+        label: "Fonte",
+        url: "https://www.psychologicalscience.org/publications/observer/obsonline/testing-and-spacing-both-aid-memory.html",
+      },
     },
     {
       icon: BookOpen,
       title: "Desempenho Guiado",
       description:
-        "O sistema adapta os próximos exercícios conforme seus erros e acertos, focando onde você realmente precisa evoluir. Fonte: oecd.org/education",
+        "O sistema adapta os próximos exercícios conforme seus erros e acertos, focando onde você realmente precisa evoluir.",
+      source: {
+        label: "Fonte",
+        url: "https://iiscientific.com/artigos/7f12a5/",
+      },
     },
   ];
 
@@ -46,12 +62,23 @@ export function Beneficios() {
               <div className="w-16 h-16 bg-[#18cb96]/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <benefit.icon className="w-8 h-8 text-[#18cb96]" />
               </div>
+
               <h3 className="text-xl font-bold text-foreground mb-3">
                 {benefit.title}
               </h3>
-              <p className="text-muted-foreground leading-relaxed">
+
+              <p className="text-muted-foreground leading-relaxed mb-2">
                 {benefit.description}
               </p>
+
+              <a
+                href={benefit.source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-[#18cb96] hover:underline"
+              >
+                {benefit.source.label}
+              </a>
             </div>
           ))}
         </div>
