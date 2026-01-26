@@ -107,17 +107,17 @@ interface OnboardingState {
 // Buscar cargoId pelo código do cargo
 async function getCargoIdByCodigo(
   examType: string,
-  cargoCodigo: string
+  cargoCodigo: string,
 ): Promise<string | null> {
   try {
-    const result = await db.execute(sql`
+    const result = (await db.execute(sql`
       SELECT c.id FROM cargos c
       JOIN concursos co ON c.concurso_id = co.id
       WHERE co.sigla = ${examType}
         AND c.codigo = ${cargoCodigo}
         AND c.is_active = true
       LIMIT 1
-    `) as any[];
+    `)) as any[];
 
     return result[0]?.id || null;
   } catch (error) {
@@ -234,13 +234,16 @@ export async function handleOnboardingCallback(bot: TelegramBot, query: any) {
       await new Promise((r) => setTimeout(r, 1500));
       await askCargo(bot, chatId, examType);
     }
-  } else if (data.startsWith("cargo_") && state.step === 3) {
-    const cargoCodigo = data.replace("cargo_", "");
+  } else if (state.step === 3) {
+    const cargoCodigo = data.startsWith("cargo_")
+      ? data.replace("cargo_", "")
+      : data;
+
     state.data.cargo = cargoCodigo;
 
-    // Buscar cargoId pelo código para usar nas matérias
     const cargoId = await getCargoIdByCodigo(state.data.examType!, cargoCodigo);
     state.data.cargoId = cargoId || undefined;
+
     console.log(`📋 [ONBOARDING] Cargo: ${cargoCodigo}, ID: ${cargoId}`);
 
     state.step = 4;
@@ -391,7 +394,10 @@ async function askFacilidades(
     const materias = await getMateriasFromDB(cargoId);
     if (materias.length > 0) {
       subjectNames = materias.map((m) => m.nome);
-      console.log(`📚 [ONBOARDING] Matérias do cargo (${materias.length}):`, subjectNames);
+      console.log(
+        `📚 [ONBOARDING] Matérias do cargo (${materias.length}):`,
+        subjectNames,
+      );
     } else {
       // Fallback se não encontrar matérias no banco
       subjectNames = SUBJECT_FALLBACK[examType] || SUBJECT_FALLBACK["PF"];
