@@ -39,11 +39,13 @@ export function Hero() {
               <Button
                 size="lg"
                 variant="outline"
-                onClick={scrollToHowItWorks}
-                className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-6 text-lg font-semibold"
+                onClick={() =>
+                  window.open("https://t.me/PassareiBot", "_blank")
+                }
+                className="border-2 border-[#18cb96] text-[#18cb96] hover:bg-green-50 px-8 py-6 text-lg font-semibold"
               >
                 <Play className="mr-2 w-5 h-5" />
-                Ver como funciona
+                Iniciar no Telegram
               </Button>
             </div>
 
