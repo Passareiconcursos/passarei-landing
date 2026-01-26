@@ -7,6 +7,7 @@ import {
   generateConcursosKeyboard,
   generateCargosKeyboard,
   getCargosFromDB,
+  getMateriasFromDB,
 } from "./database";
 
 // MAPEAMENTO ESTÁTICO COMO FALLBACK GARANTIDO
@@ -94,12 +95,35 @@ interface OnboardingState {
     state?: string;
     municipio?: string;
     cargo?: string;
+    cargoId?: string; // ID do cargo no banco para buscar matérias
     nivel?: string;
     facilidades?: string[];
     dificuldades?: string[];
     timeUntilExam?: string;
     schedule?: string;
   };
+}
+
+// Buscar cargoId pelo código do cargo
+async function getCargoIdByCodigo(
+  examType: string,
+  cargoCodigo: string
+): Promise<string | null> {
+  try {
+    const result = await db.execute(sql`
+      SELECT c.id FROM cargos c
+      JOIN concursos co ON c.concurso_id = co.id
+      WHERE co.sigla = ${examType}
+        AND c.codigo = ${cargoCodigo}
+        AND c.is_active = true
+      LIMIT 1
+    `) as any[];
+
+    return result[0]?.id || null;
+  } catch (error) {
+    console.error(`❌ Erro ao buscar cargoId: ${error}`);
+    return null;
+  }
 }
 
 const onboardingStates = new Map<string, OnboardingState>();
@@ -211,7 +235,14 @@ export async function handleOnboardingCallback(bot: TelegramBot, query: any) {
       await askCargo(bot, chatId, examType);
     }
   } else if (data.startsWith("cargo_") && state.step === 3) {
-    state.data.cargo = data.replace("cargo_", "");
+    const cargoCodigo = data.replace("cargo_", "");
+    state.data.cargo = cargoCodigo;
+
+    // Buscar cargoId pelo código para usar nas matérias
+    const cargoId = await getCargoIdByCodigo(state.data.examType!, cargoCodigo);
+    state.data.cargoId = cargoId || undefined;
+    console.log(`📋 [ONBOARDING] Cargo: ${cargoCodigo}, ID: ${cargoId}`);
+
     state.step = 4;
     await bot.answerCallbackQuery(query.id);
     await askNivel(bot, chatId);
@@ -220,7 +251,7 @@ export async function handleOnboardingCallback(bot: TelegramBot, query: any) {
     state.step = 5;
     state.data.facilidades = [];
     await bot.answerCallbackQuery(query.id);
-    await askFacilidades(bot, chatId, state.data.examType!);
+    await askFacilidades(bot, chatId, state.data.examType!, state.data.cargoId);
   } else if (data.startsWith("facil_") && state.step === 5) {
     const facil = data.replace("facil_", "");
 
@@ -233,6 +264,7 @@ export async function handleOnboardingCallback(bot: TelegramBot, query: any) {
         chatId,
         state.data.examType!,
         state.data.facilidades!,
+        state.data.cargoId,
       );
       return;
     }
@@ -245,6 +277,7 @@ export async function handleOnboardingCallback(bot: TelegramBot, query: any) {
         chatId,
         state.data.examType!,
         state.data.facilidades!,
+        state.data.cargoId,
       );
       return;
     }
@@ -349,8 +382,25 @@ async function askFacilidades(
   bot: TelegramBot,
   chatId: number,
   examType: string,
+  cargoId?: string,
 ) {
-  const subjectNames = SUBJECT_FALLBACK[examType] || SUBJECT_FALLBACK["PF"];
+  // CORREÇÃO 1: Buscar matérias do banco pelo cargoId
+  let subjectNames: string[];
+
+  if (cargoId) {
+    const materias = await getMateriasFromDB(cargoId);
+    if (materias.length > 0) {
+      subjectNames = materias.map((m) => m.nome);
+      console.log(`📚 [ONBOARDING] Matérias do cargo (${materias.length}):`, subjectNames);
+    } else {
+      // Fallback se não encontrar matérias no banco
+      subjectNames = SUBJECT_FALLBACK[examType] || SUBJECT_FALLBACK["PF"];
+      console.log(`⚠️ [ONBOARDING] Usando fallback para matérias`);
+    }
+  } else {
+    subjectNames = SUBJECT_FALLBACK[examType] || SUBJECT_FALLBACK["PF"];
+    console.log(`⚠️ [ONBOARDING] Sem cargoId, usando fallback`);
+  }
 
   const keyboard = {
     inline_keyboard: [
@@ -374,8 +424,23 @@ async function askDificuldades(
   chatId: number,
   examType: string,
   facilidades: string[],
+  cargoId?: string,
 ) {
-  const allSubjects = SUBJECT_FALLBACK[examType] || SUBJECT_FALLBACK["PF"];
+  // CORREÇÃO 1: Buscar matérias do banco pelo cargoId
+  let allSubjects: string[];
+
+  if (cargoId) {
+    const materias = await getMateriasFromDB(cargoId);
+    if (materias.length > 0) {
+      allSubjects = materias.map((m) => m.nome);
+    } else {
+      allSubjects = SUBJECT_FALLBACK[examType] || SUBJECT_FALLBACK["PF"];
+    }
+  } else {
+    allSubjects = SUBJECT_FALLBACK[examType] || SUBJECT_FALLBACK["PF"];
+  }
+
+  // Filtrar matérias já marcadas como facilidade
   const filtered = allSubjects.filter((s: string) => !facilidades.includes(s));
 
   const keyboard = {

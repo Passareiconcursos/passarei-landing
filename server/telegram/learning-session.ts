@@ -26,11 +26,17 @@ interface LearningSession {
   correctAnswers: number;
   wrongAnswers: number;
   usedContentIds: string[];
+  usedAlternatives: string[]; // Alternativas já usadas na sessão (nunca repetir)
   difficulties: string[];
   facilities: string[];
   examType: string;
   startTime: Date;
   lastAccessType?: QuestionAccessResult["reason"];
+  // Controle de matéria atual
+  currentSubject: string | null;
+  currentSubjectName: string | null;
+  currentSubjectQuestions: number;
+  currentSubjectCorrect: number;
 }
 
 const activeSessions = new Map<string, LearningSession>();
@@ -70,10 +76,16 @@ export async function startLearningSession(
     correctAnswers: 0,
     wrongAnswers: 0,
     usedContentIds: [],
+    usedAlternatives: [], // Alternativas já usadas (nunca repetir)
     difficulties: dificuldades,
     facilities: facilidades,
     examType: examType,
     startTime: new Date(),
+    // Controle de matéria atual
+    currentSubject: null,
+    currentSubjectName: null,
+    currentSubjectQuestions: 0,
+    currentSubjectCorrect: 0,
   };
 
   activeSessions.set(telegramId, session);
@@ -116,8 +128,58 @@ async function getSmartContent(session: LearningSession) {
     }
 
     // ============================================
-    // BUSCA NORMAL: CONTEÚDO NÃO USADO
+    // CORREÇÃO 2: PRIORIZAR MATÉRIAS DE DIFICULDADE
+    // 70% dificuldade, 30% facilidade (plano de estudo)
     // ============================================
+    const shouldPrioritizeDifficulty = Math.random() < 0.7;
+    const usedIdsClause = session.usedContentIds.length > 0
+      ? sql`AND c."id" NOT IN (${sql.join(session.usedContentIds.map((id) => sql`${id}`), sql`, `)})`
+      : sql``;
+
+    // 2a. Tentar buscar de matérias de DIFICULDADE (70% das vezes)
+    if (shouldPrioritizeDifficulty && session.difficulties.length > 0) {
+      console.log(`🎯 [PLANO] Buscando matéria de DIFICULDADE...`);
+
+      result = await db.execute(sql`
+        SELECT c.* FROM "Content" c
+        JOIN "Subject" s ON c."subjectId" = s.id
+        WHERE s."displayName" IN (${sql.join(session.difficulties.map((d) => sql`${d}`), sql`, `)})
+          AND c."isActive" = true
+          ${usedIdsClause}
+        ORDER BY RANDOM()
+        LIMIT 1
+      `);
+
+      if (result.length > 0) {
+        console.log(`✅ [DIFICULDADE] Encontrado: ${result[0].title}`);
+        return result[0];
+      }
+      console.log(`⚠️ [DIFICULDADE] Nenhum conteúdo disponível, tentando facilidade...`);
+    }
+
+    // 2b. Tentar buscar de matérias de FACILIDADE (30% das vezes ou fallback)
+    if (session.facilities.length > 0) {
+      console.log(`📚 [PLANO] Buscando matéria de FACILIDADE...`);
+
+      result = await db.execute(sql`
+        SELECT c.* FROM "Content" c
+        JOIN "Subject" s ON c."subjectId" = s.id
+        WHERE s."displayName" IN (${sql.join(session.facilities.map((f) => sql`${f}`), sql`, `)})
+          AND c."isActive" = true
+          ${usedIdsClause}
+        ORDER BY RANDOM()
+        LIMIT 1
+      `);
+
+      if (result.length > 0) {
+        console.log(`✅ [FACILIDADE] Encontrado: ${result[0].title}`);
+        return result[0];
+      }
+      console.log(`⚠️ [FACILIDADE] Nenhum conteúdo disponível, buscando geral...`);
+    }
+
+    // 2c. Fallback: qualquer conteúdo não usado
+    console.log(`📚 [FALLBACK] Buscando qualquer conteúdo disponível...`);
     if (session.usedContentIds.length > 0) {
       result = await db.execute(sql`
         SELECT * FROM "Content"
@@ -139,7 +201,7 @@ async function getSmartContent(session: LearningSession) {
     }
 
     if (result.length > 0) {
-      console.log(`✅ Conteúdo encontrado: ${result[0].title}`);
+      console.log(`✅ [GERAL] Conteúdo encontrado: ${result[0].title}`);
       return result[0];
     }
 
@@ -211,15 +273,70 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
   await consumeQuestion(session.userId, access.reason);
 
   session.currentContent = content;
-  session.usedContentIds.push(content.id);
+  session.usedContentIds.push(content.id as string);
   session.contentsSent++;
 
-  const title = content.title || "Conteúdo";
-  const definition =
+  // ============================================
+  // CORREÇÃO 4: INFORMAR MUDANÇA DE MATÉRIA
+  // ============================================
+  const contentSubjectId = (content.subjectId as string) || null;
+  let subjectName = "Conteúdo";
+
+  // Buscar nome do subject
+  try {
+    if (contentSubjectId) {
+      const subjectResult = await db.execute(sql`
+        SELECT "displayName" FROM "Subject" WHERE id = ${contentSubjectId}
+      `) as any[];
+      subjectName = subjectResult[0]?.displayName || "Conteúdo";
+    }
+  } catch (e) {
+    console.error("Erro ao buscar subject:", e);
+  }
+
+  // Verificar se mudou de matéria
+  if (session.currentSubject !== contentSubjectId) {
+    // Se tinha matéria anterior, enviar resumo de aproveitamento
+    if (session.currentSubject && session.currentSubjectQuestions > 0) {
+      const percent = Math.round(
+        (session.currentSubjectCorrect / session.currentSubjectQuestions) * 100
+      );
+      const emoji = percent >= 70 ? "🎉" : percent >= 50 ? "👍" : "💪";
+
+      await bot.sendMessage(
+        session.chatId,
+        `${emoji} *Aproveitamento em ${session.currentSubjectName}:*\n\n` +
+          `✅ Acertos: ${session.currentSubjectCorrect}/${session.currentSubjectQuestions} (${percent}%)\n\n` +
+          `───────────────`,
+        { parse_mode: "Markdown" }
+      );
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+
+    // Atualizar matéria atual
+    session.currentSubject = contentSubjectId;
+    session.currentSubjectName = subjectName;
+    session.currentSubjectQuestions = 0;
+    session.currentSubjectCorrect = 0;
+
+    // Anunciar nova matéria
+    await bot.sendMessage(
+      session.chatId,
+      `📚 *Agora vamos estudar:*\n\n` +
+        `🎯 *${subjectName.toUpperCase()}*\n\n` +
+        `───────────────`,
+      { parse_mode: "Markdown" }
+    );
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+
+  const title = (content.title as string) || "Conteúdo";
+  const definition = (
     content.textContent ||
     content.definition ||
     content.description ||
-    "Definição não disponível";
+    "Definição não disponível"
+  ) as string;
   // Salvar definição original antes da IA modificar
   const originalDefinition = definition;
 
@@ -253,7 +370,7 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
     definition: originalDefinition,
     description: originalDefinition,
   };
-  const question = generateMultipleChoice(contentForQuestion);
+  const question = await generateMultipleChoice(contentForQuestion, session);
   session.currentQuestion = question;
 
   // Formatar opções completas fora dos botões
@@ -292,30 +409,120 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
   session.currentStep = "waiting_answer";
 }
 
-function generateMultipleChoice(content: any) {
+// ============================================
+// GERADOR DE ALTERNATIVAS ÚNICAS POR QUESTÃO
+// ============================================
+
+async function generateMultipleChoice(content: any, session: LearningSession) {
   const title = content.title || "Conceito";
-  // Usar textContent que agora é a definição original
   const def = content.textContent || "";
+  const subjectId = content.subjectId;
 
-  // Pegar primeira frase completa
+  // Pegar primeira frase completa como resposta correta
   let correctAnswer = def.split(/[.!?]/)[0].trim();
-
-  // Se muito longo, limitar
   if (correctAnswer.length > 200) {
     correctAnswer = correctAnswer.substring(0, 197) + "...";
   } else if (correctAnswer.length > 0) {
-    correctAnswer += "."; // Adicionar ponto final
+    correctAnswer += ".";
   }
 
-  const wrongAnswers = [
-    `${title} refere-se exclusivamente a crimes dolosos`,
-    `${title} só se aplica com violência ou grave ameaça`,
-    `${title} é conceito do direito civil apenas`,
-  ];
+  // ============================================
+  // BUSCAR ALTERNATIVAS ERRADAS DO BANCO
+  // ============================================
+  let wrongAnswers: string[] = [];
 
-  const options = [correctAnswer, ...wrongAnswers].sort(
-    () => Math.random() - 0.5,
-  );
+  try {
+    // 1. Primeiro: buscar outros conteúdos do MESMO subject
+    const sameSubjectContents = await db.execute(sql`
+      SELECT "textContent", "title" FROM "Content"
+      WHERE "subjectId" = ${subjectId}
+        AND "id" != ${content.id}
+        AND "isActive" = true
+      ORDER BY RANDOM()
+      LIMIT 10
+    `) as any[];
+
+    // Filtrar alternativas que ainda não foram usadas na sessão
+    for (const c of sameSubjectContents) {
+      if (wrongAnswers.length >= 3) break;
+
+      let answer = c.textContent?.split(/[.!?]/)[0]?.trim() || "";
+      if (answer.length > 200) answer = answer.substring(0, 197) + "...";
+      if (answer.length > 0) answer += ".";
+
+      // Verificar se não é igual à correta e não foi usada antes
+      if (
+        answer.length > 10 &&
+        answer !== correctAnswer &&
+        !session.usedAlternatives.includes(answer) &&
+        !wrongAnswers.includes(answer)
+      ) {
+        wrongAnswers.push(answer);
+      }
+    }
+
+    // 2. Se não encontrou 3, buscar de OUTROS subjects da mesma categoria
+    if (wrongAnswers.length < 3 && subjectId) {
+      const subjectResult = await db.execute(sql`
+        SELECT category FROM "Subject" WHERE id = ${subjectId}
+      `) as any[];
+
+      const category = subjectResult[0]?.category;
+
+      if (category) {
+        const sameCategoryContents = await db.execute(sql`
+          SELECT c."textContent", c."title" FROM "Content" c
+          JOIN "Subject" s ON c."subjectId" = s.id
+          WHERE s.category = ${category}
+            AND c."subjectId" != ${subjectId}
+            AND c."isActive" = true
+          ORDER BY RANDOM()
+          LIMIT 10
+        `) as any[];
+
+        for (const c of sameCategoryContents) {
+          if (wrongAnswers.length >= 3) break;
+
+          let answer = c.textContent?.split(/[.!?]/)[0]?.trim() || "";
+          if (answer.length > 200) answer = answer.substring(0, 197) + "...";
+          if (answer.length > 0) answer += ".";
+
+          if (
+            answer.length > 10 &&
+            answer !== correctAnswer &&
+            !session.usedAlternatives.includes(answer) &&
+            !wrongAnswers.includes(answer)
+          ) {
+            wrongAnswers.push(answer);
+          }
+        }
+      }
+    }
+
+  } catch (err) {
+    console.error("⚠️ Erro ao buscar alternativas do banco:", err);
+  }
+
+  // 3. Fallback: gerar alternativas contextuais únicas se ainda não tem 3
+  if (wrongAnswers.length < 3) {
+    const fallbackAlternatives = await generateContextualFallback(
+      title,
+      subjectId,
+      session.usedAlternatives,
+      wrongAnswers,
+      correctAnswer
+    );
+    wrongAnswers.push(...fallbackAlternatives);
+  }
+
+  // Garantir apenas 3 alternativas erradas
+  wrongAnswers = wrongAnswers.slice(0, 3);
+
+  // Registrar alternativas usadas na sessão (para não repetir)
+  session.usedAlternatives.push(...wrongAnswers);
+
+  // Misturar opções
+  const options = [correctAnswer, ...wrongAnswers].sort(() => Math.random() - 0.5);
 
   return {
     question: `Sobre ${title}, assinale a CORRETA:`,
@@ -323,6 +530,141 @@ function generateMultipleChoice(content: any) {
     correctAnswer,
     correctIndex: options.indexOf(correctAnswer),
   };
+}
+
+// Gera alternativas de fallback contextuais e únicas
+async function generateContextualFallback(
+  title: string,
+  subjectId: string,
+  usedAlternatives: string[],
+  existingWrong: string[],
+  correctAnswer: string
+): Promise<string[]> {
+  const fallback: string[] = [];
+
+  // Buscar categoria do subject
+  let category = "OUTRO";
+  try {
+    if (subjectId) {
+      const result = await db.execute(sql`
+        SELECT category FROM "Subject" WHERE id = ${subjectId}
+      `) as any[];
+      category = result[0]?.category || "OUTRO";
+    }
+  } catch (e) {
+    console.error("Erro ao buscar categoria:", e);
+  }
+
+  // Pool de alternativas por categoria (várias opções para não repetir)
+  const FALLBACK_POOL: Record<string, string[]> = {
+    DIREITO: [
+      `${title} aplica-se apenas na esfera administrativa.`,
+      `${title} não tem previsão na legislação vigente.`,
+      `${title} é instituto exclusivo do direito privado.`,
+      `${title} depende de regulamentação específica.`,
+      `${title} foi revogado pela jurisprudência recente.`,
+      `${title} não admite interpretação extensiva.`,
+      `${title} requer autorização judicial prévia.`,
+      `${title} está restrito à competência estadual.`,
+    ],
+    LINGUAGENS: [
+      `${title} caracteriza apenas a linguagem informal.`,
+      `${title} não é reconhecido pela gramática normativa.`,
+      `${title} aplica-se somente a textos literários.`,
+      `${title} é um fenômeno regional sem registro formal.`,
+      `${title} contradiz as regras de concordância.`,
+      `${title} ocorre apenas em registros orais.`,
+      `${title} foi abolido pela reforma ortográfica.`,
+      `${title} não possui função sintática definida.`,
+    ],
+    MATEMATICA: [
+      `${title} só é válido para números naturais.`,
+      `${title} não se aplica em conjuntos infinitos.`,
+      `${title} é restrito à geometria espacial.`,
+      `${title} requer variáveis complexas.`,
+      `${title} contradiz os axiomas de Peano.`,
+      `${title} não admite representação gráfica.`,
+      `${title} é exclusivo de funções lineares.`,
+      `${title} depende de condições de contorno.`,
+    ],
+    CIENCIAS_NATUREZA: [
+      `${title} ocorre apenas em sistemas isolados.`,
+      `${title} não é observado em condições padrão.`,
+      `${title} viola as leis da conservação de energia.`,
+      `${title} requer temperaturas absolutas.`,
+      `${title} contradiz o modelo atômico atual.`,
+      `${title} é exclusivo de reações endotérmicas.`,
+      `${title} não ocorre na natureza espontaneamente.`,
+      `${title} depende de catalisadores específicos.`,
+    ],
+    CIENCIAS_HUMANAS: [
+      `${title} foi conceito superado no século XXI.`,
+      `${title} aplica-se apenas a contextos europeus.`,
+      `${title} ignora fatores socioeconômicos.`,
+      `${title} contradiz as teorias contemporâneas.`,
+      `${title} não considera aspectos culturais.`,
+      `${title} é restrito a sociedades industriais.`,
+      `${title} foi refutado por estudos recentes.`,
+      `${title} desconsidera o contexto histórico.`,
+    ],
+    INFORMATICA: [
+      `${title} é exclusivo de sistemas legados.`,
+      `${title} não funciona em arquiteturas 64-bit.`,
+      `${title} requer hardware proprietário.`,
+      `${title} foi descontinuado nas versões atuais.`,
+      `${title} não é compatível com redes modernas.`,
+      `${title} depende de protocolos obsoletos.`,
+      `${title} é restrito a ambientes mainframe.`,
+      `${title} contradiz os padrões de segurança.`,
+    ],
+    ESPECIFICAS: [
+      `${title} é aplicável apenas em contextos específicos.`,
+      `${title} não segue os padrões regulamentares.`,
+      `${title} requer certificação especial.`,
+      `${title} foi substituído por normas recentes.`,
+      `${title} contradiz as diretrizes vigentes.`,
+      `${title} depende de autorização prévia.`,
+      `${title} não é reconhecido internacionalmente.`,
+      `${title} está restrito a casos excepcionais.`,
+    ],
+    CONHECIMENTOS_GERAIS: [
+      `${title} é informação desatualizada.`,
+      `${title} não possui comprovação científica.`,
+      `${title} contradiz dados oficiais recentes.`,
+      `${title} foi desmentido por especialistas.`,
+      `${title} aplica-se apenas a casos isolados.`,
+      `${title} não é consenso entre pesquisadores.`,
+      `${title} carece de fundamentação teórica.`,
+      `${title} foi revisado em publicações recentes.`,
+    ],
+    OUTRO: [
+      `${title} é uma definição ultrapassada.`,
+      `${title} não se aplica ao contexto atual.`,
+      `${title} requer condições especiais.`,
+      `${title} contradiz o entendimento vigente.`,
+      `${title} foi revisado por especialistas.`,
+      `${title} não possui aplicação prática.`,
+      `${title} depende de fatores externos.`,
+      `${title} é restrito a situações específicas.`,
+    ],
+  };
+
+  const pool = FALLBACK_POOL[category] || FALLBACK_POOL.OUTRO;
+
+  // Selecionar alternativas que não foram usadas
+  for (const alt of pool) {
+    if (fallback.length >= (3 - existingWrong.length)) break;
+
+    if (
+      !usedAlternatives.includes(alt) &&
+      !existingWrong.includes(alt) &&
+      alt !== correctAnswer
+    ) {
+      fallback.push(alt);
+    }
+  }
+
+  return fallback;
 }
 
 export async function handleLearningCallback(
@@ -422,8 +764,12 @@ export async function handleLearningCallback(
     // Delay para dar tempo do usuário processar
     await new Promise((r) => setTimeout(r, 1500)); // 1,5 segundos
 
+    // Incrementar contador de questões da matéria atual
+    session.currentSubjectQuestions++;
+
     if (isCorrect) {
       session.correctAnswers++;
+      session.currentSubjectCorrect++; // Contador por matéria
       const fb =
         FEEDBACK_CORRECT[Math.floor(Math.random() * FEEDBACK_CORRECT.length)];
       await bot.sendMessage(session.chatId, `✅ *${fb.title}*\n\n${fb.msg}`, {
