@@ -27,7 +27,7 @@ export function Beneficios() {
         "O sistema adapta os próximos exercícios conforme seus erros e acertos, focando onde você realmente precisa evoluir. Fonte: oecd.org/education",
     },
   ];
-}
+
   return (
     <section className="py-16 md:py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 md:px-6">
