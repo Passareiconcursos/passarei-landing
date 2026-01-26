@@ -63,7 +63,7 @@ export function Hero() {
                         ✅ +2.847 candidatos estudando agora
                       </p>
                       <p className="text-sm text-primary font-semibold">
-                        🏆 +377 aprovações confirmadas em 2025
+                        🏆 377 aprovações confirmadas em 2025
                       </p>
                     </div>
                   </div>
@@ -83,7 +83,7 @@ export function Hero() {
                     ✅ +2.847 candidatos estudando agora
                   </p>
                   <p className="text-sm text-primary font-semibold">
-                    🏆 154 aprovações confirmadas em 2025
+                    🏆 377 aprovações confirmadas em 2025
                   </p>
                 </div>
               </div>
