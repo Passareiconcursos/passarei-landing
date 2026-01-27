@@ -4,12 +4,27 @@ import { useConcursos, type Concurso } from "../../hooks/use-concursos";
 // Fallback para caso a API falhe
 const CONCURSOS_FALLBACK = [
   { icon: "🎯", name: "Polícia Federal", sigla: "PF", nivel: "Federal" },
-  { icon: "🚓", name: "Polícia Rodoviária Federal", sigla: "PRF", nivel: "Federal" },
+  {
+    icon: "🚓",
+    name: "Polícia Rodoviária Federal",
+    sigla: "PRF",
+    nivel: "Federal",
+  },
   { icon: "🔒", name: "Polícia Penal Federal", sigla: "PPF", nivel: "Federal" },
-  { icon: "🏛️", name: "Polícia Legislativa Federal", sigla: "PLF", nivel: "Federal" },
+  {
+    icon: "🏛️",
+    name: "Polícia Legislativa Federal",
+    sigla: "PLF",
+    nivel: "Federal",
+  },
   { icon: "🚔", name: "Polícia Militar", sigla: "PM", nivel: "Estadual" },
   { icon: "🕵️", name: "Polícia Civil", sigla: "PC", nivel: "Estadual" },
-  { icon: "🔐", name: "Polícia Penal Estadual", sigla: "PPE", nivel: "Estadual" },
+  {
+    icon: "🔐",
+    name: "Polícia Penal Estadual",
+    sigla: "PPE",
+    nivel: "Estadual",
+  },
   { icon: "🚒", name: "Corpo de Bombeiros", sigla: "CBM", nivel: "Estadual" },
   { icon: "🛡️", name: "Guarda Municipal", sigla: "GM", nivel: "Municipal" },
   { icon: "🔍", name: "ABIN", sigla: "ABIN", nivel: "Federal" },
@@ -53,8 +68,12 @@ export function Concursos() {
         icon: ICONS[c.sigla] || "📌",
         name: c.nome,
         sigla: c.sigla,
-        nivel: c.esfera === "FEDERAL" ? "Federal" :
-               c.esfera === "ESTADUAL" ? "Estadual" : "Municipal",
+        nivel:
+          c.esfera === "FEDERAL"
+            ? "Federal"
+            : c.esfera === "ESTADUAL"
+              ? "Estadual"
+              : "Municipal",
       }));
     }
     return CONCURSOS_FALLBACK;
@@ -75,12 +94,12 @@ export function Concursos() {
             Para Qual Concurso Você Estuda?
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Cobrimos todas as principais carreiras policiais, militares e de segurança
-            pública do Brasil
+            Cobrimos todas as principais carreiras policiais, militares e de
+            segurança pública do Brasil
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 max-w-6xl mx-auto">
           {concursos.map((concurso, index) => (
             <div
               key={concurso.sigla || index}
