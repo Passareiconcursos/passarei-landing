@@ -1,9 +1,7 @@
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { lazy } from "react";
-
-const MiniChat = lazy(() => import("@/components/MiniChat"));
+import { MiniChat } from "@/components/MiniChat";
 
 export function Hero() {
   const [showMiniChat, setShowMiniChat] = useState(false);
@@ -209,7 +207,7 @@ export function Hero() {
       {showMiniChat && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="relative w-full max-w-md">
-            {/* Botão de fechar - posicionado fora do MiniChat */}
+            {/* Botão de fechar */}
             <button
               onClick={() => setShowMiniChat(false)}
               className="absolute -top-3 -right-3 z-10 bg-white text-gray-700 hover:text-red-500 hover:bg-red-50 rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-gray-200 hover:border-red-300 transition-all duration-200"
@@ -230,9 +228,9 @@ export function Hero() {
                 />
               </svg>
             </button>
-            <Suspense fallback={null}>
-              <MiniChat />
-            </Suspense>
+
+            {/* MiniChat renderizado diretamente */}
+            <MiniChat />
           </div>
         </div>
       )}
