@@ -34,7 +34,10 @@ export function Header() {
 
   return (
     <>
-      <header className="fixed top-0 w-full bg-white shadow-sm z-50">
+      <header
+        className="fixed top-0 w-full bg-white shadow-sm z-50"
+        role="banner"
+      >
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <a
@@ -45,7 +48,8 @@ export function Header() {
                 src="/logo.png"
                 alt="Passarei - Concursos Policiais"
                 className="h-8 md:h-10 w-auto"
-                loading="lazy"
+                loading="eager"
+                decoding="async"
                 onError={(e) => {
                   console.error("Logo não carregou");
                   e.currentTarget.style.display = "none";
@@ -59,6 +63,7 @@ export function Header() {
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
                   className="text-gray-700 hover:text-[#18cb96] transition-colors font-medium"
+                  aria-label={`Ir para seção ${item.label}`}
                 >
                   {item.label}
                 </button>
@@ -99,7 +104,8 @@ export function Header() {
                 <button
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
-                  className="text-left px-4 py-3 text-gray-700 hover:bg-gray-100 hover:text-[#18cb96] rounded-lg transition-colors font-medium"
+                  className="text-gray-700 hover:text-[#18cb96] transition-colors font-medium"
+                  aria-label={`Ir para seção ${item.label}`}
                 >
                   {item.label}
                 </button>

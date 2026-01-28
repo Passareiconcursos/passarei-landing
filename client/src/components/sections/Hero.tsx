@@ -1,7 +1,9 @@
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { MiniChat } from "@/components/MiniChat";
+import { lazy } from "react";
+
+const MiniChat = lazy(() => import("@/components/MiniChat"));
 
 export function Hero() {
   const [showMiniChat, setShowMiniChat] = useState(false);
@@ -18,7 +20,11 @@ export function Hero() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Coluna da esquerda - Texto */}
           <div className="text-center lg:text-left">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
+            <h1
+              className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6"
+              data-testid="hero-title"
+              style={{ contain: "content" }}
+            >
               Seu preparador pessoal para concursos policiais.
             </h1>
 
@@ -93,7 +99,7 @@ export function Hero() {
           </div>
 
           {/* Coluna da direita - Mockup (MiniChat abre em modal) */}
-          <div className="flex justify-center">
+          <div className="flex justify-center" aria-hidden="true">
             <div
               className="relative max-w-[300px] mx-auto cursor-pointer group"
               onClick={() => setShowMiniChat(true)}
@@ -224,7 +230,9 @@ export function Hero() {
                 />
               </svg>
             </button>
-            <MiniChat />
+            <Suspense fallback={null}>
+              <MiniChat />
+            </Suspense>
           </div>
         </div>
       )}
