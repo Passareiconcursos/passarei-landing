@@ -921,6 +921,7 @@ export function getQualityFromAnswer(
 
 /**
  * Registra ou atualiza revisão SM2 para um conteúdo
+ * Usa tabela SpacedReview (Prisma)
  */
 export async function recordSM2Review(
   telegramId: string,
@@ -945,10 +946,10 @@ export async function recordSM2Review(
 
     const quality = getQualityFromAnswer(correct, responseTimeMs);
 
-    // Verificar se já existe registro SM2 para este conteúdo
+    // Verificar se já existe registro na tabela SpacedReview
     const existingResult = await db.execute(sql`
-      SELECT * FROM "sm2_reviews"
-      WHERE "user_id" = ${user.id} AND "content_id" = ${contentId}
+      SELECT * FROM "SpacedReview"
+      WHERE "userId" = ${user.id} AND "contentId" = ${contentId}
     `);
 
     if (existingResult.length > 0) {
@@ -956,25 +957,24 @@ export async function recordSM2Review(
       const existing = existingResult[0] as any;
       const sm2 = calculateSM2(
         quality,
-        existing.ease_factor || 2.5,
+        existing.easinessFactor || 2.5,
         existing.interval || 1,
-        existing.repetitions || 0,
+        existing.reviewNumber || 0,
       );
 
       await db.execute(sql`
-        UPDATE "sm2_reviews"
+        UPDATE "SpacedReview"
         SET
-          "ease_factor" = ${sm2.easeFactor},
+          "easinessFactor" = ${sm2.easeFactor},
           "interval" = ${sm2.interval},
-          "repetitions" = ${sm2.repetitions},
-          "next_review_date" = ${sm2.nextReviewDate},
-          "last_quality" = ${quality},
-          "times_correct" = "times_correct" + ${correct ? 1 : 0},
-          "times_incorrect" = "times_incorrect" + ${correct ? 0 : 1},
-          "total_reviews" = "total_reviews" + 1,
-          "last_reviewed_at" = NOW(),
-          "updated_at" = NOW()
-        WHERE "user_id" = ${user.id} AND "content_id" = ${contentId}
+          "reviewNumber" = ${sm2.repetitions},
+          "scheduledFor" = ${sm2.nextReviewDate},
+          "quality" = ${quality},
+          "wasSuccessful" = ${correct},
+          "status" = 'CONCLUIDA',
+          "completedAt" = NOW(),
+          "updatedAt" = NOW()
+        WHERE "userId" = ${user.id} AND "contentId" = ${contentId}
       `);
 
       console.log(
@@ -983,18 +983,19 @@ export async function recordSM2Review(
     } else {
       // Criar novo registro
       const sm2 = calculateSM2(quality);
+      const id = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`.slice(0, 25);
 
       await db.execute(sql`
-        INSERT INTO "sm2_reviews" (
-          "user_id", "content_id",
-          "ease_factor", "interval", "repetitions", "next_review_date",
-          "last_quality", "times_correct", "times_incorrect", "total_reviews",
-          "first_seen_at", "last_reviewed_at"
+        INSERT INTO "SpacedReview" (
+          "id", "userId", "contentId",
+          "easinessFactor", "interval", "reviewNumber", "scheduledFor",
+          "quality", "wasSuccessful", "status",
+          "completedAt", "createdAt", "updatedAt"
         ) VALUES (
-          ${user.id}, ${contentId},
+          ${id}, ${user.id}, ${contentId},
           ${sm2.easeFactor}, ${sm2.interval}, ${sm2.repetitions}, ${sm2.nextReviewDate},
-          ${quality}, ${correct ? 1 : 0}, ${correct ? 0 : 1}, 1,
-          NOW(), NOW()
+          ${quality}, ${correct}, 'CONCLUIDA',
+          NOW(), NOW(), NOW()
         )
       `);
 
@@ -1012,7 +1013,8 @@ export async function recordSM2Review(
 
 /**
  * Busca conteúdos pendentes de revisão para usuário VETERANO
- * Retorna os que precisam ser revisados (nextReviewDate <= hoje)
+ * Retorna os que precisam ser revisados (scheduledFor <= hoje)
+ * Usa tabela SpacedReview (Prisma)
  */
 export async function getSM2DueReviews(
   telegramId: string,
@@ -1033,18 +1035,17 @@ export async function getSM2DueReviews(
 
     // Buscar conteúdos pendentes de revisão
     const dueResult = await db.execute(sql`
-      SELECT r."content_id"
-      FROM "sm2_reviews" r
-      JOIN "Content" c ON r."content_id" = c."id"
-      WHERE r."user_id" = ${user.id}
-        AND r."next_review_date" <= NOW()
-        AND c."examType" = ${examType}
+      SELECT r."contentId"
+      FROM "SpacedReview" r
+      JOIN "Content" c ON r."contentId" = c."id"
+      WHERE r."userId" = ${user.id}
+        AND r."scheduledFor" <= NOW()
         AND c."isActive" = true
-      ORDER BY r."next_review_date" ASC
+      ORDER BY r."scheduledFor" ASC
       LIMIT ${limit}
     `);
 
-    return dueResult.map((r: any) => r.content_id);
+    return dueResult.map((r: any) => r.contentId);
   } catch (error) {
     console.error("❌ [SM2] Erro ao buscar revisões pendentes:", error);
     return [];
@@ -1053,6 +1054,7 @@ export async function getSM2DueReviews(
 
 /**
  * Obtém estatísticas SM2 do usuário
+ * Usa tabela SpacedReview (Prisma)
  */
 export async function getSM2Stats(telegramId: string): Promise<{
   totalCards: number;
@@ -1074,11 +1076,11 @@ export async function getSM2Stats(telegramId: string): Promise<{
     const statsResult = await db.execute(sql`
       SELECT
         COUNT(*) as total_cards,
-        COUNT(CASE WHEN "next_review_date" <= NOW() THEN 1 END) as due_today,
-        COALESCE(AVG("ease_factor"), 2.5) as avg_ef,
-        COALESCE(MAX("repetitions"), 0) as longest_streak
-      FROM "sm2_reviews"
-      WHERE "user_id" = ${user.id}
+        COUNT(CASE WHEN "scheduledFor" <= NOW() THEN 1 END) as due_today,
+        COALESCE(AVG("easinessFactor"), 2.5) as avg_ef,
+        COALESCE(MAX("reviewNumber"), 0) as longest_streak
+      FROM "SpacedReview"
+      WHERE "userId" = ${user.id}
     `);
 
     const stats = statsResult[0] as any;
