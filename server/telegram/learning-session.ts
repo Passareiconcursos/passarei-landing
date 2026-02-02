@@ -8,6 +8,8 @@ import {
   QuestionAccessResult,
   recordSM2Review,
   getSM2DueReviews,
+  getQuestionForSubject,
+  recordQuestionAttempt,
 } from "./database";
 
 interface LearningSession {
@@ -27,6 +29,8 @@ interface LearningSession {
   wrongAnswers: number;
   usedContentIds: string[];
   usedAlternatives: string[]; // Alternativas já usadas na sessão (nunca repetir)
+  usedQuestionIds: string[]; // IDs de questões reais já usadas
+  currentQuestionId: string | null; // ID da questão real atual (se houver)
   difficulties: string[];
   facilities: string[];
   examType: string;
@@ -77,6 +81,8 @@ export async function startLearningSession(
     wrongAnswers: 0,
     usedContentIds: [],
     usedAlternatives: [], // Alternativas já usadas (nunca repetir)
+    usedQuestionIds: [], // Questões reais já usadas
+    currentQuestionId: null, // Questão real atual
     difficulties: dificuldades,
     facilities: facilidades,
     examType: examType,
@@ -363,48 +369,113 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
 
   await new Promise((r) => setTimeout(r, 3000));
 
-  // Criar objeto com definição original
-  const contentForQuestion = {
-    ...content,
-    textContent: originalDefinition,
-    definition: originalDefinition,
-    description: originalDefinition,
-  };
-  const question = await generateMultipleChoice(contentForQuestion, session);
-  session.currentQuestion = question;
+  // ============================================
+  // FASE 5: TENTAR QUESTÃO REAL DO BANCO
+  // ============================================
+  const realQuestion = contentSubjectId
+    ? await getQuestionForSubject(contentSubjectId, session.usedQuestionIds)
+    : null;
 
-  // Formatar opções completas fora dos botões
-  const optionsText = question.options
-    .map((opt: string, idx: number) => {
-      const letter = String.fromCharCode(65 + idx); // A, B, C, D, E
-      return `${letter}) ${opt}`;
-    })
-    .join("\n\n");
+  if (realQuestion) {
+    // QUESTÃO REAL DO BANCO
+    session.currentQuestionId = realQuestion.id as string;
+    session.usedQuestionIds.push(realQuestion.id as string);
 
-  // Botões só com letras
-  const keyboard = {
-    inline_keyboard: question.options.map((opt: string, idx: number) => [
+    const alternatives = realQuestion.alternatives as { letter: string; text: string }[];
+    const isCertoErrado = realQuestion.questionType === "CERTO_ERRADO";
+
+    // Montar opções
+    const options = alternatives.map((alt: { letter: string; text: string }) => alt.text);
+    const correctLetter = realQuestion.correctAnswer as string;
+    const correctIdx = alternatives.findIndex(
+      (alt: { letter: string; text: string }) => alt.letter === correctLetter
+    );
+
+    session.currentQuestion = {
+      question: realQuestion.statement,
+      options,
+      correctAnswer: alternatives[correctIdx]?.text || options[0],
+      correctIndex: correctIdx >= 0 ? correctIdx : 0,
+      explanation: realQuestion.explanation,
+      isRealQuestion: true,
+      questionType: realQuestion.questionType,
+    };
+
+    // Formatar opções
+    const optionsText = alternatives
+      .map((alt: { letter: string; text: string }) => `${alt.letter}) ${alt.text}`)
+      .join("\n\n");
+
+    // Botões com letras
+    const keyboard = {
+      inline_keyboard: alternatives.map(
+        (alt: { letter: string; text: string }, idx: number) => [
+          {
+            text: isCertoErrado ? alt.text : `Questão ${alt.letter}`,
+            callback_data: `answer_${idx}`,
+          },
+        ]
+      ),
+    };
+
+    const diffEmoji = realQuestion.difficulty === "FACIL" ? "🟢" : realQuestion.difficulty === "MEDIO" ? "🟡" : "🔴";
+
+    await bot.sendMessage(
+      session.chatId,
+      `✍️ *QUESTÃO ${diffEmoji}*\n\n` +
+        `❓ ${realQuestion.statement}\n\n` +
+        `───────────────\n` +
+        `${optionsText}\n` +
+        `───────────────\n\n` +
+        `👇 *Escolha sua resposta:*`,
       {
-        text: `Questão ${String.fromCharCode(65 + idx)}`,
-        callback_data: `answer_${idx}`,
+        parse_mode: "Markdown",
+        reply_markup: keyboard,
       },
-    ]),
-  };
+    );
+  } else {
+    // FALLBACK: Gerar questão a partir do conteúdo
+    session.currentQuestionId = null;
 
-  // Enviar questão com opções formatadas FORA dos botões
-  await bot.sendMessage(
-    session.chatId,
-    `✍️ *EXERCÍCIO*\n\n` +
-      `❓ ${question.question}\n\n` +
-      `───────────────\n` +
-      `${optionsText}\n` +
-      `───────────────\n\n` +
-      `👇 *Escolha sua resposta:*`,
-    {
-      parse_mode: "Markdown",
-      reply_markup: keyboard,
-    },
-  );
+    const contentForQuestion = {
+      ...content,
+      textContent: originalDefinition,
+      definition: originalDefinition,
+      description: originalDefinition,
+    };
+    const question = await generateMultipleChoice(contentForQuestion, session);
+    session.currentQuestion = { ...question, isRealQuestion: false };
+
+    const optionsText = question.options
+      .map((opt: string, idx: number) => {
+        const letter = String.fromCharCode(65 + idx);
+        return `${letter}) ${opt}`;
+      })
+      .join("\n\n");
+
+    const keyboard = {
+      inline_keyboard: question.options.map((opt: string, idx: number) => [
+        {
+          text: `Questão ${String.fromCharCode(65 + idx)}`,
+          callback_data: `answer_${idx}`,
+        },
+      ]),
+    };
+
+    await bot.sendMessage(
+      session.chatId,
+      `✍️ *EXERCÍCIO*\n\n` +
+        `❓ ${question.question}\n\n` +
+        `───────────────\n` +
+        `${optionsText}\n` +
+        `───────────────\n\n` +
+        `👇 *Escolha sua resposta:*`,
+      {
+        parse_mode: "Markdown",
+        reply_markup: keyboard,
+      },
+    );
+  }
 
   session.currentStep = "waiting_answer";
 }
@@ -775,17 +846,24 @@ export async function handleLearningCallback(
       await bot.sendMessage(session.chatId, `✅ *${fb.title}*\n\n${fb.msg}`, {
         parse_mode: "Markdown",
       });
-      // Gerar explicação com IA
-      const explanation = await generateExplanation(
-        session.currentContent.title,
-        session.currentContent.textContent || "",
-        session.currentQuestion.options[answerIdx],
-        session.currentQuestion.correctAnswer,
-        true,
-      );
-      await bot.sendMessage(session.chatId, `💡 ${explanation.explanation}`, {
-        parse_mode: "Markdown",
-      });
+
+      // Usar explicação da questão real OU gerar com IA
+      if (session.currentQuestion.isRealQuestion && session.currentQuestion.explanation) {
+        await bot.sendMessage(session.chatId, `💡 ${session.currentQuestion.explanation}`, {
+          parse_mode: "Markdown",
+        });
+      } else {
+        const explanation = await generateExplanation(
+          session.currentContent.title,
+          session.currentContent.textContent || "",
+          session.currentQuestion.options[answerIdx],
+          session.currentQuestion.correctAnswer,
+          true,
+        );
+        await bot.sendMessage(session.chatId, `💡 ${explanation.explanation}`, {
+          parse_mode: "Markdown",
+        });
+      }
     } else {
       session.wrongAnswers++;
       const fb =
@@ -795,17 +873,24 @@ export async function handleLearningCallback(
         `❌ *${fb.title}*\n\n${fb.msg}\n\n✅ Correta: ${session.currentQuestion.correctAnswer}`,
         { parse_mode: "Markdown" },
       );
-      // Gerar explicação com IA
-      const explanation = await generateExplanation(
-        session.currentContent.title,
-        session.currentContent.textContent || "",
-        session.currentQuestion.options[answerIdx],
-        session.currentQuestion.correctAnswer,
-        false,
-      );
-      await bot.sendMessage(session.chatId, `📚 ${explanation.explanation}`, {
-        parse_mode: "Markdown",
-      });
+
+      // Usar explicação da questão real OU gerar com IA
+      if (session.currentQuestion.isRealQuestion && session.currentQuestion.explanation) {
+        await bot.sendMessage(session.chatId, `📚 ${session.currentQuestion.explanation}`, {
+          parse_mode: "Markdown",
+        });
+      } else {
+        const explanation = await generateExplanation(
+          session.currentContent.title,
+          session.currentContent.textContent || "",
+          session.currentQuestion.options[answerIdx],
+          session.currentQuestion.correctAnswer,
+          false,
+        );
+        await bot.sendMessage(session.chatId, `📚 ${explanation.explanation}`, {
+          parse_mode: "Markdown",
+        });
+      }
     }
 
     // 💾 SALVAR RESPOSTA NO BANCO
@@ -818,7 +903,7 @@ export async function handleLearningCallback(
       if (userData && userData.length > 0) {
         const userId = userData[0].id;
 
-        // Salvar resposta
+        // Salvar resposta na user_answers
         await db.execute(sql`
           INSERT INTO "user_answers" ("userId", "contentId", "selectedAnswer", "correct", "answeredAt")
 VALUES (${userId}, ${session.currentContent.id}, ${answerIdx}, ${isCorrect}, NOW())
@@ -830,7 +915,21 @@ VALUES (${userId}, ${session.currentContent.id}, ${answerIdx}, ${isCorrect}, NOW
       }
     } catch (error) {
       console.error("❌ [Learning] Erro ao salvar resposta:", error);
-      // Não bloqueia o fluxo se falhar
+    }
+
+    // 📝 REGISTRAR QUESTION ATTEMPT (questão real)
+    if (session.currentQuestionId) {
+      try {
+        const userAnswer = session.currentQuestion.options[answerIdx] || String(answerIdx);
+        await recordQuestionAttempt(
+          telegramId,
+          session.currentQuestionId,
+          userAnswer,
+          isCorrect,
+        );
+      } catch (qaError) {
+        console.error("❌ [QuestionAttempt] Erro:", qaError);
+      }
     }
 
     // 📚 SM2: REGISTRAR REVISÃO ESPAÇADA (VETERANO)
@@ -842,7 +941,6 @@ VALUES (${userId}, ${session.currentContent.id}, ${answerIdx}, ${isCorrect}, NOW
       );
     } catch (sm2Error) {
       console.error("❌ [SM2] Erro ao registrar revisão:", sm2Error);
-      // Não bloqueia o fluxo
     }
 
     await new Promise((r) => setTimeout(r, 2000));

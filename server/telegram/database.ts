@@ -1098,6 +1098,97 @@ export async function getSM2Stats(telegramId: string): Promise<{
 }
 
 // ============================================
+// QUESTÕES - BUSCAR E REGISTRAR
+// ============================================
+
+/**
+ * Busca uma questão real do banco para o subject dado
+ * Evita questões já usadas na sessão
+ */
+export async function getQuestionForSubject(
+  subjectId: string,
+  usedQuestionIds: string[] = [],
+  difficulty?: string,
+): Promise<any | null> {
+  try {
+    const usedClause = usedQuestionIds.length > 0
+      ? sql`AND q."id" NOT IN (${sql.join(usedQuestionIds.map((id) => sql`${id}`), sql`, `)})`
+      : sql``;
+
+    const difficultyClause = difficulty
+      ? sql`AND q."difficulty" = ${difficulty}`
+      : sql``;
+
+    const result = await db.execute(sql`
+      SELECT q.* FROM "Question" q
+      WHERE q."subjectId" = ${subjectId}
+        AND q."isActive" = true
+        ${usedClause}
+        ${difficultyClause}
+      ORDER BY q."timesUsed" ASC, RANDOM()
+      LIMIT 1
+    `) as any[];
+
+    if (result.length > 0) {
+      // Incrementar timesUsed
+      await db.execute(sql`
+        UPDATE "Question" SET "timesUsed" = "timesUsed" + 1
+        WHERE "id" = ${result[0].id}
+      `);
+      return result[0];
+    }
+
+    // Fallback: sem filtro de dificuldade
+    if (difficulty) {
+      return getQuestionForSubject(subjectId, usedQuestionIds);
+    }
+
+    return null;
+  } catch (error) {
+    console.error("❌ Erro ao buscar questão:", error);
+    return null;
+  }
+}
+
+/**
+ * Registra tentativa de resposta a uma questão
+ */
+export async function recordQuestionAttempt(
+  telegramId: string,
+  questionId: string,
+  userAnswer: string,
+  isCorrect: boolean,
+  attemptType: string = "QUIZ_FIXACAO",
+): Promise<boolean> {
+  try {
+    const userResult = await db.execute(sql`
+      SELECT "id" FROM "User" WHERE "telegramId" = ${telegramId}
+    `);
+
+    if (userResult.length === 0) return false;
+    const userId = (userResult[0] as any).id;
+
+    const id = `qa${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`.slice(0, 25);
+
+    await db.execute(sql`
+      INSERT INTO "QuestionAttempt" (
+        "id", "userId", "questionId", "userAnswer",
+        "isCorrect", "attemptType", "reviewAttempt", "createdAt"
+      ) VALUES (
+        ${id}, ${userId}, ${questionId}, ${userAnswer},
+        ${isCorrect}, ${attemptType}, false, NOW()
+      )
+    `);
+
+    console.log(`💾 [QuestionAttempt] ${telegramId}: ${isCorrect ? "✅" : "❌"} (${questionId})`);
+    return true;
+  } catch (error) {
+    console.error("❌ Erro ao registrar tentativa:", error);
+    return false;
+  }
+}
+
+// ============================================
 // CONCURSOS E CARGOS - BUSCAR DO BANCO
 // ============================================
 
