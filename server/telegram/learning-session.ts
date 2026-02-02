@@ -12,6 +12,7 @@ import {
   recordQuestionAttempt,
   getStudyProgress,
   saveStudyProgress,
+  getMnemonicForContent,
 } from "./database";
 
 interface LearningSession {
@@ -384,9 +385,19 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
   const example = enhanced.example;
   const tip = enhanced.tip;
 
+  // Buscar mnemônico relevante para este conteúdo
+  const mnemonic = contentSubjectId
+    ? await getMnemonicForContent(contentSubjectId, title, definition)
+    : null;
+
+  // Montar bloco do mnemônico (só aparece se encontrar match)
+  const mnemonicBlock = mnemonic
+    ? `\n\n🧠 *MACETE: ${mnemonic.mnemonic}*\n${mnemonic.meaning}\n📎 _${mnemonic.article}_`
+    : "";
+
   await bot.sendMessage(
     session.chatId,
-    `📚 *CONTEÚDO ${session.contentsSent}*\n\n🎯 *${title}*\n\n📖 ${definition}\n\n✅ *Pontos-chave:*\n${keyPoints}\n\n💡 *Exemplo:* ${example}\n\n🎯 *Dica:* ${tip}`,
+    `📚 *CONTEÚDO ${session.contentsSent}*\n\n🎯 *${title}*\n\n📖 ${definition}\n\n✅ *Pontos-chave:*\n${keyPoints}${mnemonicBlock}\n\n💡 *Exemplo:* ${example}\n\n🎯 *Dica:* ${tip}`,
     { parse_mode: "Markdown" },
   );
 

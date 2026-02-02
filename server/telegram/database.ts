@@ -1668,3 +1668,67 @@ function safeParseJson(value: any, fallback: any): any {
     return fallback;
   }
 }
+
+// ============================================
+// MNEMÔNICOS - FUNÇÕES
+// ============================================
+
+export interface MnemonicResult {
+  mnemonic: string;
+  title: string;
+  meaning: string;
+  article: string;
+  category: string;
+}
+
+/**
+ * Busca mnemônico relevante para um conteúdo específico
+ * Faz match por subjectId + keywords no título/definição do conteúdo
+ *
+ * @param subjectId - ID do subject do conteúdo
+ * @param contentTitle - Título do conteúdo
+ * @param contentText - Texto/definição do conteúdo (opcional)
+ * @returns Mnemônico encontrado ou null
+ */
+export async function getMnemonicForContent(
+  subjectId: string,
+  contentTitle: string,
+  contentText: string = "",
+): Promise<MnemonicResult | null> {
+  try {
+    // Buscar todos os mnemônicos ativos do subject
+    const mnemonics = await db.execute(sql`
+      SELECT "mnemonic", "title", "meaning", "article", "keywords", "category"
+      FROM "Mnemonic"
+      WHERE "subjectId" = ${subjectId}
+        AND "isActive" = true
+    `) as any[];
+
+    if (mnemonics.length === 0) return null;
+
+    // Texto combinado para busca (lowercase)
+    const searchText = `${contentTitle} ${contentText}`.toLowerCase();
+
+    // Procurar match por keywords
+    for (const m of mnemonics) {
+      const keywords: string[] = safeParseJson(m.keywords, []);
+
+      for (const keyword of keywords) {
+        if (searchText.includes(keyword.toLowerCase())) {
+          return {
+            mnemonic: m.mnemonic,
+            title: m.title,
+            meaning: m.meaning,
+            article: m.article,
+            category: m.category,
+          };
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("❌ [Mnemonic] Erro ao buscar mnemônico:", error);
+    return null;
+  }
+}

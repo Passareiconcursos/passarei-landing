@@ -8,16 +8,14 @@ import {
   consumeQuestion,
   getQuestionForSubject,
   saveStudyProgress,
+  getMnemonicForContent,
 } from "./database";
-import { generateEnhancedContent, generateExplanation } from "./ai-service";
+import { generateEnhancedContent } from "./ai-service";
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
 
 // Intervalo do scheduler: verificar a cada 30 minutos
 const CHECK_INTERVAL_MS = 30 * 60 * 1000;
-
-// Controle para evitar envios duplicados em memória (além da dedup no banco)
-const lastCheckHour = new Map<string, number>();
 
 /**
  * Obtém hora atual em Brasília (America/Sao_Paulo)
@@ -175,12 +173,21 @@ async function sendProactiveContent(
     // Gerar conteúdo enriquecido com IA
     const enhanced = await generateEnhancedContent(title, definition, user.examType || "PF");
 
+    // Buscar mnemônico relevante
+    const mnemonic = content.subjectId
+      ? await getMnemonicForContent(content.subjectId, title, definition)
+      : null;
+
+    const mnemonicBlock = mnemonic
+      ? `\n\n🧠 *MACETE: ${mnemonic.mnemonic}*\n${mnemonic.meaning}\n📎 _${mnemonic.article}_`
+      : "";
+
     await bot.sendMessage(
       chatId,
       `📚 *${subjectName.toUpperCase()}*\n\n` +
         `🎯 *${title}*\n\n` +
         `📖 ${definition}\n\n` +
-        `✅ *Pontos-chave:*\n${enhanced.keyPoints}\n\n` +
+        `✅ *Pontos-chave:*\n${enhanced.keyPoints}${mnemonicBlock}\n\n` +
         `💡 *Exemplo:* ${enhanced.example}\n\n` +
         `🎯 *Dica:* ${enhanced.tip}`,
       { parse_mode: "Markdown" },
