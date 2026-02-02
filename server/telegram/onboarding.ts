@@ -508,12 +508,15 @@ async function finishOnboarding(
   data: any,
 ) {
   try {
-    // Atualizar usuário no banco
+    // Atualizar usuário no banco (incluindo schedule, facilidades, dificuldades)
     await updateUserOnboarding(telegramId, {
       examType: data.examType,
       state: data.state,
       cargo: data.cargo,
       nivelConhecimento: data.nivel,
+      studySchedule: data.schedule,
+      facilidades: data.facilidades || [],
+      dificuldades: data.dificuldades || [],
     });
 
     onboardingStates.delete(telegramId);

@@ -8,6 +8,7 @@ import {
   incrementUserCount,
   isUserActive,
   generateConcursosKeyboard,
+  resetStudyProgress,
 } from "./database";
 import {
   startOnboarding,
@@ -16,6 +17,7 @@ import {
   onboardingStates,
 } from "./onboarding";
 import { handleLearningCallback } from "./learning-session";
+import { startReminderScheduler, handleReminderAnswer } from "./reminder";
 
 const token = process.env.TELEGRAM_BOT_TOKEN || "";
 let bot: TelegramBot | null = null;
@@ -31,6 +33,10 @@ export async function startTelegramBot() {
     const data = query.data;
 
     if (!chatId || !data) return;
+
+    // 0. Processar respostas de lembretes
+    const isReminder = await handleReminderAnswer(bot!, query);
+    if (isReminder) return;
 
     // 1. Processar learning primeiro
     const isLearning = await handleLearningCallback(bot!, query);
@@ -260,6 +266,10 @@ export async function startTelegramBot() {
           WHERE "telegramId" = ${telegramId}
         `);
 
+        // Resetar progresso de estudo ao mudar de concurso
+        // (facilidades, dificuldades e conteúdos vistos são específicos do concurso)
+        await resetStudyProgress(telegramId);
+
         await bot!.answerCallbackQuery(query.id, {
           text: "✅ Concurso atualizado!",
         });
@@ -268,6 +278,7 @@ export async function startTelegramBot() {
           chatId,
           `✅ *Concurso atualizado!*\n\n` +
             `Agora você está estudando para: *${concursoId}*\n\n` +
+            `🔄 Seu progresso de estudo foi reiniciado para o novo concurso.\n\n` +
             `Use /estudar para começar a praticar questões! 📚`,
           { parse_mode: "Markdown" },
         );
@@ -449,6 +460,9 @@ export async function startTelegramBot() {
       await startOnboarding(bot!, chatId, telegramId, name);
     }
   });
+
+  // Iniciar scheduler de lembretes de estudo
+  startReminderScheduler(bot);
 
   console.log("✅ Pronto!\n");
   // Comando /estudar

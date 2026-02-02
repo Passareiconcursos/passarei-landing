@@ -10,6 +10,8 @@ import {
   getSM2DueReviews,
   getQuestionForSubject,
   recordQuestionAttempt,
+  getStudyProgress,
+  saveStudyProgress,
 } from "./database";
 
 interface LearningSession {
@@ -64,11 +66,26 @@ export async function startLearningSession(
   bot: TelegramBot,
   chatId: number,
   telegramId: string,
-  examType: string,
-  dificuldades: string[],
-  facilidades: string[] = [],
+  examType?: string,
+  dificuldades?: string[],
+  facilidades?: string[],
 ) {
   console.log("🎓 Iniciando sessão");
+
+  // Se chamado sem parâmetros (via /estudar), carregar do banco
+  let resolvedExamType = examType || "";
+  let resolvedDificuldades = dificuldades || [];
+  let resolvedFacilidades = facilidades || [];
+  let persistedContentIds: string[] = [];
+
+  if (!examType || !dificuldades) {
+    const progress = await getStudyProgress(telegramId);
+    resolvedExamType = examType || progress.examType || "PF";
+    resolvedDificuldades = dificuldades || progress.dificuldades;
+    resolvedFacilidades = facilidades || progress.facilidades;
+    persistedContentIds = progress.lastStudyContentIds || [];
+    console.log(`📂 [Session] Progresso carregado: ${persistedContentIds.length} conteúdos já vistos`);
+  }
 
   const session: LearningSession = {
     userId: telegramId,
@@ -79,13 +96,13 @@ export async function startLearningSession(
     contentsSent: 0,
     correctAnswers: 0,
     wrongAnswers: 0,
-    usedContentIds: [],
+    usedContentIds: [...persistedContentIds],
     usedAlternatives: [], // Alternativas já usadas (nunca repetir)
     usedQuestionIds: [], // Questões reais já usadas
     currentQuestionId: null, // Questão real atual
-    difficulties: dificuldades,
-    facilities: facilidades,
-    examType: examType,
+    difficulties: resolvedDificuldades,
+    facilities: resolvedFacilidades,
+    examType: resolvedExamType,
     startTime: new Date(),
     // Controle de matéria atual
     currentSubject: null,
@@ -281,6 +298,12 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
   session.currentContent = content;
   session.usedContentIds.push(content.id as string);
   session.contentsSent++;
+
+  // Salvar progresso no banco (persiste entre reinícios)
+  const trimmedIds = session.usedContentIds.slice(-200);
+  saveStudyProgress(session.userId, trimmedIds).catch((e) =>
+    console.error("❌ [Progress] Erro ao salvar:", e)
+  );
 
   // ============================================
   // CORREÇÃO 4: INFORMAR MUDANÇA DE MATÉRIA
@@ -974,6 +997,11 @@ VALUES (${userId}, ${session.currentContent.id}, ${answerIdx}, ${isCorrect}, NOW
       `📊 *RELATÓRIO*\n\n📚 ${session.contentsSent} questões\n✅ ${session.correctAnswers} acertos\n❌ ${session.wrongAnswers} erros\n📈 ${pct}%\n\nVolte amanhã! 🚀`,
       { parse_mode: "Markdown" },
     );
+
+    // Salvar progresso antes de encerrar
+    const trimmedIds = session.usedContentIds.slice(-200);
+    await saveStudyProgress(telegramId, trimmedIds);
+
     activeSessions.delete(telegramId);
     return true;
   }

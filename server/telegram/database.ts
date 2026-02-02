@@ -580,20 +580,29 @@ export async function updateUserOnboarding(
     state?: string;
     cargo?: string;
     nivelConhecimento?: string;
+    studySchedule?: string;
+    facilidades?: string[];
+    dificuldades?: string[];
   },
 ): Promise<boolean> {
   try {
+    const facilidadesJson = JSON.stringify(data.facilidades || []);
+    const dificuldadesJson = JSON.stringify(data.dificuldades || []);
+
     await db.execute(sql`
-      UPDATE "User" 
+      UPDATE "User"
       SET "examType" = ${data.examType || null},
           "state" = ${data.state || null},
           "cargo" = ${data.cargo || null},
           "nivelConhecimento" = ${data.nivelConhecimento || null},
+          "studySchedule" = ${data.studySchedule || null},
+          "facilidades" = ${facilidadesJson},
+          "dificuldades" = ${dificuldadesJson},
           "onboardingCompleted" = true,
           "updatedAt" = NOW()
       WHERE "telegramId" = ${telegramId}
     `);
-    console.log(`✅ Onboarding atualizado para ${telegramId}`);
+    console.log(`✅ Onboarding atualizado para ${telegramId} (schedule: ${data.studySchedule})`);
     return true;
   } catch (error) {
     console.error("❌ Erro ao atualizar onboarding:", error);
@@ -1395,4 +1404,267 @@ export async function generateCargosKeyboard(
   }
 
   return { inline_keyboard: rows };
+}
+
+// ============================================
+// LEMBRETES DE ESTUDO - FUNÇÕES
+// ============================================
+
+/**
+ * Mapeamento de horários de envio por schedule
+ * manha → 06:00, tarde → 12:00, noite → 18:00
+ * manha_tarde → 06:00 e 12:00, tarde_noite → 12:00 e 18:00
+ */
+export const SCHEDULE_HOURS: Record<string, number[]> = {
+  manha: [6],
+  tarde: [12],
+  noite: [18],
+  manha_tarde: [6, 12],
+  tarde_noite: [12, 18],
+};
+
+/**
+ * Busca usuários que devem receber lembrete neste horário
+ * Filtra por: schedule compatível, reminderEnabled, onboardingCompleted, isActive
+ * Verifica se ainda não atingiu limite diário
+ */
+export async function getUsersForReminder(currentHour: number): Promise<any[]> {
+  try {
+    // Buscar todos os schedules que incluem este horário
+    const matchingSchedules: string[] = [];
+    for (const [schedule, hours] of Object.entries(SCHEDULE_HOURS)) {
+      if (hours.includes(currentHour)) {
+        matchingSchedules.push(schedule);
+      }
+    }
+
+    if (matchingSchedules.length === 0) return [];
+
+    const result = await db.execute(sql`
+      SELECT
+        "telegramId",
+        "examType",
+        "plan",
+        "dailyContentCount",
+        "lastContentDate",
+        "firstInteractionDate",
+        "firstDayFreeUsed",
+        "credits",
+        "studySchedule",
+        "facilidades",
+        "dificuldades",
+        "lastStudyContentIds"
+      FROM "User"
+      WHERE "studySchedule" IN (${sql.join(matchingSchedules.map((s) => sql`${s}`), sql`, `)})
+        AND "reminderEnabled" = true
+        AND "onboardingCompleted" = true
+        AND "isActive" = true
+        AND "telegramId" IS NOT NULL
+    `) as any[];
+
+    // Filtrar quem ainda tem limite disponível hoje
+    const today = new Date().toISOString().split("T")[0];
+    const eligible: any[] = [];
+
+    for (const user of result) {
+      const lastDate = user.lastContentDate
+        ? new Date(user.lastContentDate).toISOString().split("T")[0]
+        : null;
+      const dailyCount = lastDate === today ? (user.dailyContentCount || 0) : 0;
+
+      let canSend = false;
+
+      if (user.plan === "VETERANO") {
+        canSend = dailyCount < VETERANO_DAILY_LIMIT;
+      } else if (user.plan === "CALOURO") {
+        canSend = dailyCount < CALOURO_DAILY_LIMIT;
+      } else {
+        // FREE: só no primeiro dia
+        const firstDay = user.firstInteractionDate
+          ? new Date(user.firstInteractionDate).toISOString().split("T")[0]
+          : today;
+        const isFirstDay = firstDay === today;
+        const freeUsed = user.firstDayFreeUsed || 0;
+        if (isFirstDay && freeUsed < FREE_QUESTIONS_FIRST_DAY) {
+          canSend = true;
+        } else {
+          // Tem créditos?
+          const credits = parseFloat(user.credits) || 0;
+          canSend = credits >= PRICE_PER_QUESTION;
+        }
+      }
+
+      if (canSend) {
+        // Parse JSON fields
+        user.facilidades = safeParseJson(user.facilidades, []);
+        user.dificuldades = safeParseJson(user.dificuldades, []);
+        user.lastStudyContentIds = safeParseJson(user.lastStudyContentIds, []);
+        eligible.push(user);
+      }
+    }
+
+    console.log(`📬 [Reminder] ${eligible.length}/${result.length} usuários elegíveis para hora ${currentHour}h`);
+    return eligible;
+  } catch (error) {
+    console.error("❌ [Reminder] Erro ao buscar usuários:", error);
+    return [];
+  }
+}
+
+/**
+ * Verifica se já enviou lembrete para este usuário hoje neste turno
+ * Usa tabela Notification para deduplicação
+ */
+export async function hasReminderToday(
+  telegramId: string,
+  currentHour: number,
+): Promise<boolean> {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const turno = currentHour <= 11 ? "manha" : currentHour <= 17 ? "tarde" : "noite";
+
+    // Buscar userId pelo telegramId
+    const userResult = await db.execute(sql`
+      SELECT "id" FROM "User" WHERE "telegramId" = ${telegramId}
+    `) as any[];
+
+    if (userResult.length === 0) return true; // Se não achar, não enviar
+
+    const userId = userResult[0].id;
+
+    const result = await db.execute(sql`
+      SELECT COUNT(*) as count
+      FROM "Notification"
+      WHERE "userId" = ${userId}
+        AND "type" = 'LEMBRETE_ESTUDO'
+        AND DATE("scheduledFor") = ${today}
+        AND "metadata"::text LIKE ${`%"turno":"${turno}"%`}
+    `) as any[];
+
+    return parseInt(result[0]?.count || "0") > 0;
+  } catch (error) {
+    console.error("❌ [Reminder] Erro ao verificar lembrete:", error);
+    return true; // Em caso de erro, não enviar duplicata
+  }
+}
+
+/**
+ * Registra que um lembrete foi enviado
+ */
+export async function recordReminderSent(
+  telegramId: string,
+  currentHour: number,
+): Promise<void> {
+  try {
+    const turno = currentHour <= 11 ? "manha" : currentHour <= 17 ? "tarde" : "noite";
+
+    // Buscar userId
+    const userResult = await db.execute(sql`
+      SELECT "id" FROM "User" WHERE "telegramId" = ${telegramId}
+    `) as any[];
+
+    if (userResult.length === 0) return;
+
+    const userId = userResult[0].id;
+    const id = `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`.slice(0, 25);
+
+    await db.execute(sql`
+      INSERT INTO "Notification" (
+        "id", "userId", "type", "title", "message",
+        "scheduledFor", "sentAt", "status", "metadata",
+        "createdAt", "updatedAt"
+      ) VALUES (
+        ${id}, ${userId}, 'LEMBRETE_ESTUDO',
+        'Lembrete de Estudo',
+        ${'Lembrete automático enviado no turno ' + turno},
+        NOW(), NOW(), 'ENVIADA',
+        ${JSON.stringify({ turno, hour: currentHour })}::jsonb,
+        NOW(), NOW()
+      )
+    `);
+  } catch (error) {
+    console.error("❌ [Reminder] Erro ao registrar lembrete:", error);
+  }
+}
+
+/**
+ * Salva progresso do estudo (conteúdos já vistos)
+ */
+export async function saveStudyProgress(
+  telegramId: string,
+  contentIds: string[],
+): Promise<void> {
+  try {
+    const idsJson = JSON.stringify(contentIds);
+    await db.execute(sql`
+      UPDATE "User"
+      SET "lastStudyContentIds" = ${idsJson},
+          "updatedAt" = NOW()
+      WHERE "telegramId" = ${telegramId}
+    `);
+  } catch (error) {
+    console.error("❌ [Progress] Erro ao salvar progresso:", error);
+  }
+}
+
+/**
+ * Carrega progresso do estudo do banco
+ */
+export async function getStudyProgress(
+  telegramId: string,
+): Promise<{ facilidades: string[]; dificuldades: string[]; lastStudyContentIds: string[]; examType: string | null }> {
+  try {
+    const result = await db.execute(sql`
+      SELECT "examType", "facilidades", "dificuldades", "lastStudyContentIds"
+      FROM "User"
+      WHERE "telegramId" = ${telegramId}
+    `) as any[];
+
+    if (result.length === 0) {
+      return { facilidades: [], dificuldades: [], lastStudyContentIds: [], examType: null };
+    }
+
+    const user = result[0];
+    return {
+      examType: user.examType,
+      facilidades: safeParseJson(user.facilidades, []),
+      dificuldades: safeParseJson(user.dificuldades, []),
+      lastStudyContentIds: safeParseJson(user.lastStudyContentIds, []),
+    };
+  } catch (error) {
+    console.error("❌ [Progress] Erro ao carregar progresso:", error);
+    return { facilidades: [], dificuldades: [], lastStudyContentIds: [], examType: null };
+  }
+}
+
+/**
+ * Reseta progresso de estudo (usado ao mudar de concurso)
+ */
+export async function resetStudyProgress(telegramId: string): Promise<void> {
+  try {
+    await db.execute(sql`
+      UPDATE "User"
+      SET "lastStudyContentIds" = '[]',
+          "facilidades" = '[]',
+          "dificuldades" = '[]',
+          "updatedAt" = NOW()
+      WHERE "telegramId" = ${telegramId}
+    `);
+    console.log(`🔄 [Progress] Progresso resetado para ${telegramId}`);
+  } catch (error) {
+    console.error("❌ [Progress] Erro ao resetar progresso:", error);
+  }
+}
+
+/**
+ * Helper para parse seguro de JSON
+ */
+function safeParseJson(value: any, fallback: any): any {
+  if (!value) return fallback;
+  if (typeof value === "object") return value; // Já é objeto
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
 }
