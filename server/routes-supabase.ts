@@ -1,12 +1,15 @@
 import type { Express } from "express";
 import { verifyPassword } from "./auth-minimal";
-import { 
-  createAdminSession, 
+import {
+  createAdminSession,
   logAuditAction,
-  findAdminByEmail 
+  findAdminByEmail
 } from "../lib/db/auth";
 import { getAllLeads, createLead } from "../lib/db/leads";
 import { requireAuth } from "./middleware-supabase";
+import { sendLeadWelcomeEmail } from "./email/send-lead-drip";
+import { db } from "../db";
+import { sql } from "drizzle-orm";
 
 export function registerSupabaseRoutes(app: Express) {
   
@@ -31,6 +34,26 @@ export function registerSupabaseRoutes(app: Express) {
       }
       
       const lead = await createLead({ name, email, phone, examType, state, acceptedWhatsApp });
+
+      // Enviar email de boas-vindas imediato (drip email 1/4)
+      // Não bloquear a resposta HTTP - enviar em background
+      sendLeadWelcomeEmail({ leadEmail: email, leadName: name, examType })
+        .then(async (result) => {
+          if (result.success) {
+            // Marcar email 1 como enviado
+            try {
+              await db.execute(sql`
+                UPDATE "Lead"
+                SET "dripEmail1SentAt" = NOW(), "updatedAt" = NOW()
+                WHERE id = ${lead.id}
+              `);
+            } catch (e) {
+              console.error("❌ [Drip] Erro ao marcar email 1:", e);
+            }
+          }
+        })
+        .catch((err) => console.error("❌ [Drip] Erro no email de boas-vindas:", err));
+
       return res.json({ success: true, leadId: lead.id });
     } catch (error: any) {
       console.error("Error creating lead:", error);

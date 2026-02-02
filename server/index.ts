@@ -14,6 +14,7 @@ import { registerSimuladoRoutes } from "./simulado-routes";
 import { registerConcursosRoutes } from "./concursos-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startTelegramBot } from "./telegram/bot";
+import { startEmailScheduler } from "./email/email-scheduler";
 
 const app = express();
 app.use(express.json());
@@ -104,6 +105,11 @@ Sitemap: https://www.passarei.com.br/sitemap.xml`);
   // Telegram Bot - só roda no Railway
   if (process.env.RAILWAY_ENVIRONMENT) {
     startTelegramBot().catch(console.error);
+  }
+
+  // Email Scheduler - drip campaign para leads (só em produção)
+  if (process.env.RAILWAY_ENVIRONMENT) {
+    startEmailScheduler();
   }
 
   const port = parseInt(process.env.PORT || "5000", 10);
