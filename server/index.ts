@@ -5,6 +5,7 @@ import { registerRoutes } from "./routes";
 import { registerAIRoutes } from "./ai-routes";
 import activationRoutes from "./activation/test-routes";
 import paymentRoutes from "./payment/routes";
+import refundRoutes from "./payment/refund-routes";
 import { registerEditalRoutes } from "./edital-routes";
 // import { registerPrismaRoutes } from "./routes-prisma"; // DESABILITADO - usando Supabase
 import { registerSupabaseRoutes } from "./routes-supabase";
@@ -60,6 +61,7 @@ app.use((req, res, next) => {
   registerSimuladoRoutes(app);
   registerConcursosRoutes(app);
   app.use("/api/payment", paymentRoutes);
+  app.use("/api/admin/financial", refundRoutes);
   app.use("/api/email", emailTestRouter);
 
   // --- BLOCO DE SEO (A NOVIDADE) ---

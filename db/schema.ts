@@ -927,6 +927,43 @@ export const transactions = pgTable("transactions", {
 });
 
 // ============================================
+// REFUNDS - Estornos de Pagamentos
+// ============================================
+
+export const refundStatusEnum = pgEnum("refund_status", [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+]);
+
+export const refunds = pgTable("refunds", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  transactionId: uuid("transaction_id"),
+  mpPaymentId: varchar("mp_payment_id", { length: 50 }),
+  mpRefundId: varchar("mp_refund_id", { length: 50 }),
+  userId: text("user_id"),
+  telegramId: varchar("telegram_id", { length: 50 }),
+
+  amount: real("amount").notNull(),
+  reason: text("reason").notNull(),
+  status: varchar("status", { length: 20 }).default("PENDING"),
+
+  processedBy: text("processed_by"),
+  processedAt: timestamp("processed_at"),
+
+  mpResponse: jsonb("mp_response"),
+  notes: text("notes"),
+
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type Refund = typeof refunds.$inferSelect;
+export type InsertRefund = typeof refunds.$inferInsert;
+
+// ============================================
 // CONCURSOS - Estrutura de Concursos e Cargos
 // ============================================
 
