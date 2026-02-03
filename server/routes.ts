@@ -33,63 +33,6 @@ import {
 } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // POST /api/leads - Create a new lead
-  //   app.post("/api/leads", async (req, res) => {
-  //     try {
-  //       // Validate request body
-  //       const result = insertLeadSchema.safeParse(req.body);
-  //
-  //       if (!result.success) {
-  //         const validationError = fromZodError(result.error);
-  //         return res.status(400).json({
-  //           success: false,
-  //           error: validationError.message,
-  //         });
-  //       }
-  //
-  //       // Create lead in database
-  //       const [lead] = await db
-  //         .insert(leads)
-  //         .values({
-  //           name: result.data.name,
-  //           email: result.data.email,
-  //           phone: result.data.phone,
-  //           examType: result.data.examType,
-  //           state: result.data.state,
-  //           acceptedWhatsApp: result.data.acceptedWhatsApp,
-  //         })
-  //         .returning();
-  //
-  //       return res.json({
-  //         success: true,
-  //         leadId: lead.id,
-  //       });
-  //     } catch (error) {
-  //       console.error("Error creating lead:", error);
-  //       return res.status(500).json({
-  //         success: false,
-  //         error: "Erro ao processar cadastro. Tente novamente.",
-  //       });
-  //     }
-  //   });
-
-  // GET /api/leads - Get all leads (for admin use later)
-  //   app.get("/api/leads", async (req, res) => {
-  //     try {
-  //       const allLeads = await db.select().from(leads);
-  //       return res.json({
-  //         success: true,
-  //         leads: allLeads,
-  //       });
-  //     } catch (error) {
-  //       console.error("Error fetching leads:", error);
-  //       return res.status(500).json({
-  //         success: false,
-  //         error: "Erro ao buscar leads.",
-  //       });
-  //     }
-  //   });
-
   // Helper function to parse cookies
   function parseCookies(
     cookieHeader: string | undefined,
@@ -138,134 +81,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return false;
     }
   }
-
-  // POST /api/admin/login - Admin login
-  //   app.post("/api/admin/login", async (req, res) => {
-  //     try {
-  //       const { email, password, recaptchaToken } = req.body;
-  //
-  //       if (!email || !password) {
-  //         return res.status(400).json({
-  //           success: false,
-  //           error: "Email e senha são obrigatórios.",
-  //         });
-  //       }
-  //
-  //       // reCAPTCHA verification DISABLED for testing
-  //       // TODO: Re-enable in production after configuring RECAPTCHA_SECRET_KEY
-  //       /*
-  //       if (!recaptchaToken) {
-  //         return res.status(403).json({
-  //           success: false,
-  //           error: "Verificação de segurança obrigatória.",
-  //         });
-  //       }
-  //
-  //       const isHuman = await verifyRecaptcha(recaptchaToken);
-  //       if (!isHuman) {
-  //         return res.status(403).json({
-  //           success: false,
-  //           error: "Falha na verificação de segurança. Tente novamente.",
-  //         });
-  //       }
-  //       */
-  //
-  //       // Find admin by email
-  //       const [admin] = await db
-  //         .select()
-  //         .from(admins)
-  //         .where(eq(admins.email, email))
-  //         .limit(1);
-  //
-  //       if (!admin) {
-  //         return res.status(401).json({
-  //           success: false,
-  //           error: "Email ou senha inválidos.",
-  //         });
-  //       }
-  //
-  //       // Check if account is locked
-  //       if (admin.lockedUntil && admin.lockedUntil > new Date()) {
-  //         return res.status(403).json({
-  //           success: false,
-  //           error: "Conta temporariamente bloqueada. Tente novamente mais tarde.",
-  //         });
-  //       }
-  //
-  //       // Check if admin is active
-  //       if (!admin.isActive) {
-  //         return res.status(403).json({
-  //           success: false,
-  //           error: "Conta desativada. Contate o administrador.",
-  //         });
-  //       }
-  //
-  //       // Verify password
-  //       const isValid = await verifyPassword(password, admin.passwordHash);
-  //
-  //       if (!isValid) {
-  //         // Increment login attempts
-  //         const attempts = admin.loginAttempts + 1;
-  //         const lockedUntil =
-  //           attempts >= 5
-  //             ? new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
-  //             : null;
-  //
-  //         await db
-  //           .update(admins)
-  //           .set({
-  //             loginAttempts: attempts,
-  //             lockedUntil,
-  //           })
-  //           .where(eq(admins.id, admin.id));
-  //
-  //         return res.status(401).json({
-  //           success: false,
-  //           error: "Email ou senha inválidos.",
-  //         });
-  //       }
-  //
-  //       // Reset login attempts and update last login
-  //       await db
-  //         .update(admins)
-  //         .set({
-  //           loginAttempts: 0,
-  //           lockedUntil: null,
-  //           lastLoginAt: new Date(),
-  //         })
-  //         .where(eq(admins.id, admin.id));
-  //
-  //       // Create session
-  //       const token = await createAdminSession(admin.id, req);
-  //
-  //       // Log audit
-  //       await logAuditAction(admin.id, "LOGIN", "admin", admin.id, null, req);
-  //
-  //       // Set cookie
-  //       res.cookie("adminToken", token, {
-  //         httpOnly: true,
-  //         secure: process.env.NODE_ENV === "production",
-  //         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  //         sameSite: "lax",
-  //       });
-  //
-  //       return res.json({
-  //         success: true,
-  //         admin: {
-  //           id: admin.id,
-  //           email: admin.email,
-  //           name: admin.name,
-  //           role: admin.role,
-  //         },
-  //       });
-  //     } catch (error) {
-  //       console.error("Error during admin login:", error);
-  //       return res.status(500).json({
-  //         success: false,
-  //         error: "Erro ao processar login.",
-  //       });
-  //     }
-  //   });
 
   // POST /api/admin/logout - Admin logout
   app.post("/api/admin/logout", requireAuth, async (req, res) => {
@@ -379,6 +194,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({
         success: false,
         error: "Erro ao buscar estatísticas.",
+      });
+    }
+  });
+
+  // GET /api/admin/dashboard-stats - Estatísticas detalhadas do dashboard
+  app.get("/api/admin/dashboard-stats", requireAuth, async (req, res) => {
+    try {
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      // Leads total e semana
+      const totalLeadsResult = await db.select({ count: count() }).from(leads);
+      const weekLeadsResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM leads
+        WHERE created_at >= ${weekAgo}
+      `);
+
+      // Alunos (users com telegramId)
+      const totalUsersResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM "User" WHERE "telegramId" IS NOT NULL
+      `);
+      const activeUsersResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM "User"
+        WHERE "telegramId" IS NOT NULL
+        AND plan != 'FREE'
+        AND last_active_at >= ${weekAgo}
+      `);
+      const weekUsersResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM "User"
+        WHERE "telegramId" IS NOT NULL
+        AND created_at >= ${weekAgo}
+      `);
+
+      // Planos
+      const freeUsersResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM "User" WHERE plan = 'FREE'
+      `);
+      const calourosResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM "User" WHERE plan = 'CALOURO'
+      `);
+      const veteranosResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM "User" WHERE plan = 'VETERANO'
+      `);
+
+      // MRR (simplificado: CALOURO = R$29.90, VETERANO = R$89.90)
+      const calouros = Number((calourosResult as any[])[0]?.count || 0);
+      const veteranos = Number((veteranosResult as any[])[0]?.count || 0);
+      const mrr = (calouros * 29.90) + (veteranos * 89.90);
+
+      // Conversão do mês (leads → pagos)
+      const monthLeadsResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM leads WHERE created_at >= ${monthStart}
+      `);
+      const monthPaidResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM "User"
+        WHERE plan != 'FREE' AND created_at >= ${monthStart}
+      `);
+
+      const monthLeads = Number((monthLeadsResult as any[])[0]?.count || 0);
+      const monthPaid = Number((monthPaidResult as any[])[0]?.count || 0);
+      const conversionRate = monthLeads > 0 ? ((monthPaid / monthLeads) * 100).toFixed(1) : "0.0";
+
+      // Alertas
+      const stalledLeadsResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM leads
+        WHERE status = 'NOVO'
+        AND created_at <= ${weekAgo}
+      `);
+      const inactiveUsersResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM "User"
+        WHERE plan != 'FREE'
+        AND (last_active_at IS NULL OR last_active_at <= ${weekAgo})
+      `);
+
+      return res.json({
+        success: true,
+        stats: {
+          leads: {
+            total: Number(totalLeadsResult[0]?.count || 0),
+            week: Number((weekLeadsResult as any[])[0]?.count || 0),
+          },
+          users: {
+            total: Number((totalUsersResult as any[])[0]?.count || 0),
+            active: Number((activeUsersResult as any[])[0]?.count || 0),
+            week: Number((weekUsersResult as any[])[0]?.count || 0),
+            free: Number((freeUsersResult as any[])[0]?.count || 0),
+            calouro: calouros,
+            veterano: veteranos,
+          },
+          mrr: mrr,
+          conversion: `${conversionRate}%`,
+          funnel: {
+            monthLeads: monthLeads,
+            monthFree: Number((freeUsersResult as any[])[0]?.count || 0),
+            monthPaid: monthPaid,
+          },
+          alerts: {
+            stalledLeads: Number((stalledLeadsResult as any[])[0]?.count || 0),
+            inactiveUsers: Number((inactiveUsersResult as any[])[0]?.count || 0),
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erro ao buscar estatísticas do dashboard.",
       });
     }
   });
@@ -498,6 +421,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({
         success: false,
         error: "Erro ao atualizar lead.",
+      });
+    }
+  });
+
+  // GET /api/admin/users - List users (alunos) with engagement metrics
+  app.get("/api/admin/users", requireAuth, async (req, res) => {
+    try {
+      const {
+        page = "1",
+        limit = "20",
+        plan,
+        status,
+        search,
+      } = req.query;
+
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const offset = (pageNum - 1) * limitNum;
+
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      // Build WHERE conditions
+      let whereConditions = `WHERE "telegramId" IS NOT NULL`;
+
+      if (plan && plan !== "ALL") {
+        whereConditions += ` AND plan = '${plan}'`;
+      }
+
+      if (status === "inactive") {
+        whereConditions += ` AND (last_active_at IS NULL OR last_active_at < '${weekAgo.toISOString()}')`;
+      } else if (status === "active") {
+        whereConditions += ` AND last_active_at >= '${weekAgo.toISOString()}'`;
+      }
+
+      if (search && typeof search === "string" && search.trim()) {
+        const searchTerm = search.trim().toLowerCase();
+        whereConditions += ` AND (LOWER(email) LIKE '%${searchTerm}%' OR LOWER(name) LIKE '%${searchTerm}%' OR "telegramId" LIKE '%${searchTerm}%')`;
+      }
+
+      // Get total count
+      const countResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM "User" ${sql.raw(whereConditions)}
+      `);
+      const total = Number((countResult as any[])[0]?.count || 0);
+
+      // Get users with stats
+      const usersResult = await db.execute(sql`
+        SELECT
+          id,
+          email,
+          name,
+          "telegramId",
+          plan,
+          "planStatus",
+          "planEndDate",
+          last_active_at,
+          created_at,
+          "totalQuestionsAnswered"
+        FROM "User"
+        ${sql.raw(whereConditions)}
+        ORDER BY last_active_at DESC NULLS LAST
+        LIMIT ${limitNum} OFFSET ${offset}
+      `);
+
+      // Format users
+      const formattedUsers = (usersResult as any[]).map((u) => {
+        const lastActive = u.last_active_at ? new Date(u.last_active_at) : null;
+        const isActive = lastActive && lastActive >= weekAgo;
+
+        return {
+          id: u.id,
+          email: u.email,
+          name: u.name,
+          telegramId: u.telegramId,
+          plan: u.plan,
+          planStatus: u.planStatus,
+          planEndDate: u.planEndDate,
+          lastActiveAt: u.last_active_at,
+          createdAt: u.created_at,
+          totalQuestions: u.totalQuestionsAnswered || 0,
+          isActive,
+        };
+      });
+
+      return res.json({
+        success: true,
+        users: formattedUsers,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erro ao buscar usuários.",
       });
     }
   });

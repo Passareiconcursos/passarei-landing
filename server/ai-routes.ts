@@ -1,11 +1,12 @@
 import type { Express } from "express";
 import { db } from "../db";
 import { content, admins } from "../db/schema";
+import { requireAuth } from "./middleware-supabase";
 
 export function registerAIRoutes(app: Express) {
   console.log("🤖 Registrando rotas de IA...");
 
-  app.post("/api/admin/ai/generate-content", async (req, res) => {
+  app.post("/api/admin/ai/generate-content", requireAuth, async (req, res) => {
     try {
       const { subject, examType, topic } = req.body;
       if (!subject || !examType || !topic) {
@@ -33,7 +34,7 @@ export function registerAIRoutes(app: Express) {
     }
   });
 
-  app.post("/api/admin/ai/generate-questions", async (req, res) => {
+  app.post("/api/admin/ai/generate-questions", requireAuth, async (req, res) => {
     try {
       const { contentTitle, contentBody, subject } = req.body;
       if (!contentTitle || !contentBody || !subject) {
@@ -61,7 +62,7 @@ export function registerAIRoutes(app: Express) {
     }
   });
 
-  app.post("/api/admin/content/save", async (req, res) => {
+  app.post("/api/admin/content/save", requireAuth, async (req, res) => {
     try {
       const {
         title,

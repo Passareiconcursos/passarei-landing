@@ -2,12 +2,13 @@ import type { Express } from "express";
 import { db } from "../db";
 import { editals, contentGenerationLog } from "../db/schema";
 import { eq, and } from "drizzle-orm";
+import { requireAuth } from "./middleware-supabase";
 
 export function registerEditalRoutes(app: Express) {
   console.log("📚 Registrando rotas de editais...");
 
   // GET /api/admin/editals - Listar todos editais ativos
-  app.get("/api/admin/editals", async (req, res) => {
+  app.get("/api/admin/editals", requireAuth, async (req, res) => {
     try {
       const allEditals = await db
         .select()
@@ -28,7 +29,7 @@ export function registerEditalRoutes(app: Express) {
   });
 
   // GET /api/admin/content/generated-topics - Listar tópicos já gerados
-  app.get("/api/admin/content/generated-topics", async (req, res) => {
+  app.get("/api/admin/content/generated-topics", requireAuth, async (req, res) => {
     try {
       const logs = await db
         .select()
@@ -53,7 +54,7 @@ export function registerEditalRoutes(app: Express) {
   });
 
   // POST /api/admin/content/log-generation - Registrar geração
-  app.post("/api/admin/content/log-generation", async (req, res) => {
+  app.post("/api/admin/content/log-generation", requireAuth, async (req, res) => {
     try {
       const { examType, subject, topic, contentId } = req.body;
 

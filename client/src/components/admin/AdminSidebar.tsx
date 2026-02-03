@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, UserCheck, DollarSign, FileText, Bell, Settings } from "lucide-react";
+import { LayoutDashboard, UserCheck, DollarSign, Settings, GraduationCap } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 
 const menuItems = [
   {
-    title: "Dashboard",
+    title: "Painel",
     url: "/educ/dashboard",
     icon: LayoutDashboard,
   },
@@ -27,24 +27,14 @@ const menuItems = [
     icon: UserCheck,
   },
   {
-    title: "Usuários",
+    title: "Alunos",
     url: "/educ/users",
-    icon: Users,
+    icon: GraduationCap,
   },
   {
-    title: "Receita",
+    title: "Financeiro",
     url: "/educ/revenue",
     icon: DollarSign,
-  },
-  {
-    title: "Conteúdo",
-    url: "/educ/content",
-    icon: FileText,
-  },
-  {
-    title: "Notificações",
-    url: "/educ/notifications",
-    icon: Bell,
   },
   {
     title: "Configurações",

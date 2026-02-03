@@ -18,8 +18,6 @@ import EducLeads from "@/pages/educ-leads";
 import Success from "./pages/Success";
 import EducUsers from "@/pages/educ-users";
 import EducRevenue from "@/pages/educ-revenue";
-import EducContent from "@/pages/educ-content";
-import EducNotifications from "@/pages/educ-notifications";
 import EducSettings from "@/pages/educ-settings";
 import NotFound from "@/pages/not-found";
 
@@ -39,8 +37,6 @@ function Router() {
       <Route path="/educ/leads" component={EducLeads} />
       <Route path="/educ/users" component={EducUsers} />
       <Route path="/educ/revenue" component={EducRevenue} />
-      <Route path="/educ/content" component={EducContent} />
-      <Route path="/educ/notifications" component={EducNotifications} />
       <Route path="/educ/settings" component={EducSettings} />
       <Route path="/checkout" component={Checkout} />
       <Route component={NotFound} />
