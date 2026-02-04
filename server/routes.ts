@@ -28,9 +28,10 @@ import {
   createAdminSession,
   verifyAdminSession,
   logAuditAction,
-  requireAuth,
   requireRole,
 } from "./auth";
+import { verifyAdminSession as verifySupabaseSession } from "../lib/db/auth";
+import { requireAuth } from "./middleware-supabase";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to parse cookies
@@ -530,6 +531,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const cookies = parseCookies(req.headers.cookie);
     const token = cookies?.adminToken;
 
+    console.log('🔍 [CHECK] Token recebido:', token ? 'SIM' : 'NÃO');
+
     if (!token) {
       return res.json({
         authenticated: false,
@@ -537,7 +540,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const admin = await verifyAdminSession(token);
+      // Use Supabase HTTP client to verify session (same as login)
+      const admin = await verifySupabaseSession(token);
+
+      console.log('🔍 [CHECK] Admin encontrado:', admin ? 'SIM' : 'NÃO');
 
       if (!admin || !admin.isActive) {
         return res.json({
@@ -546,7 +552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if account is locked
-      if (admin.lockedUntil && admin.lockedUntil > new Date()) {
+      if (admin.lockedUntil && new Date(admin.lockedUntil) > new Date()) {
         return res.json({
           authenticated: false,
         });
@@ -562,6 +568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
     } catch (error) {
+      console.error('❌ [CHECK] Erro:', error);
       return res.json({
         authenticated: false,
       });
