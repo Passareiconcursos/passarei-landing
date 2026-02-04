@@ -631,9 +631,9 @@ export async function startTelegramBot() {
     console.log(`🎟️ [Bot] Comando /codigo ${code} de ${telegramId}`);
 
     try {
-      // Chamar API de resgate
-      const APP_URL = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
-      const response = await fetch(`${APP_URL}/api/promo-codes/redeem`, {
+      // Chamar API interna (mesmo processo) via localhost
+      const INTERNAL_URL = `http://localhost:${process.env.PORT || 5000}`;
+      const response = await fetch(`${INTERNAL_URL}/api/promo-codes/redeem`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, telegramId }),
