@@ -21,6 +21,46 @@ type Lead = {
   status: string;
   acceptedWhatsApp: boolean;
   createdAt: string;
+  source?: string;
+  dripEmail1SentAt?: string;
+  dripEmail2SentAt?: string;
+  dripEmail3SentAt?: string;
+  dripEmail4SentAt?: string;
+};
+
+// Helper: Calcular progresso do drip campaign
+const getDripProgress = (lead: Lead) => {
+  if (lead.dripEmail4SentAt) return { step: 4, label: "4/4", color: "bg-green-500" };
+  if (lead.dripEmail3SentAt) return { step: 3, label: "3/4", color: "bg-blue-500" };
+  if (lead.dripEmail2SentAt) return { step: 2, label: "2/4", color: "bg-yellow-500" };
+  if (lead.dripEmail1SentAt) return { step: 1, label: "1/4", color: "bg-gray-400" };
+  return { step: 0, label: "0/4", color: "bg-red-500" };
+};
+
+// Helper: Calcular dias desde cadastro
+const getDaysSince = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Hoje";
+  if (diffDays === 1) return "Ontem";
+  return `há ${diffDays}d`;
+};
+
+// Helper: Formatar source para exibição
+const getSourceBadge = (source?: string) => {
+  if (!source) return { label: "Landing", variant: "outline" as const };
+
+  const sourceMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
+    "landing_page": { label: "Landing", variant: "outline" },
+    "minichat": { label: "MiniChat", variant: "secondary" },
+    "telegram": { label: "Telegram", variant: "default" },
+    "whatsapp": { label: "WhatsApp", variant: "default" },
+  };
+
+  return sourceMap[source.toLowerCase()] || { label: source, variant: "outline" as const };
 };
 
 type LeadsResponse = {
@@ -220,58 +260,74 @@ export default function AdminLeads() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Telefone</TableHead>
                   <TableHead>Concurso</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <TableHead>Origem</TableHead>
+                  <TableHead>Drip</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>WhatsApp</TableHead>
                   <TableHead>Cadastro</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data?.leads.map((lead) => (
-                  <TableRow key={lead.id} data-testid={`row-lead-${lead.id}`}>
-                    <TableCell className="font-medium" data-testid={`text-name-${lead.id}`}>{lead.name}</TableCell>
-                    <TableCell data-testid={`text-email-${lead.id}`}>{lead.email}</TableCell>
-                    <TableCell data-testid={`text-phone-${lead.id}`}>{lead.phone}</TableCell>
-                    <TableCell>{examTypeMap[lead.examType] || lead.examType}</TableCell>
-                    <TableCell>{lead.state}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusMap[lead.status as keyof typeof statusMap]?.variant || "default"}>
-                        {statusMap[lead.status as keyof typeof statusMap]?.label || lead.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {lead.acceptedWhatsApp ? (
-                        <Badge variant="outline">Sim</Badge>
-                      ) : (
-                        <Badge variant="secondary">Não</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>{new Date(lead.createdAt).toLocaleDateString("pt-BR")}</TableCell>
-                    <TableCell>
-                      <Select
-                        value={lead.status}
-                        onValueChange={(value) => handleStatusChange(lead.id, value)}
-                        disabled={updateStatusMutation.isPending}
-                      >
-                        <SelectTrigger className="w-[140px]" data-testid={`select-status-${lead.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="NOVO">Novo</SelectItem>
-                          <SelectItem value="CONTATADO">Contatado</SelectItem>
-                          <SelectItem value="QUALIFICADO">Qualificado</SelectItem>
-                          <SelectItem value="CONVERTIDO">Convertido</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {data?.leads.map((lead) => {
+                  const drip = getDripProgress(lead);
+                  const sourceBadge = getSourceBadge(lead.source);
+                  return (
+                    <TableRow key={lead.id} data-testid={`row-lead-${lead.id}`}>
+                      <TableCell className="font-medium" data-testid={`text-name-${lead.id}`}>
+                        <div>{lead.name}</div>
+                        <div className="text-xs text-muted-foreground">{lead.phone}</div>
+                      </TableCell>
+                      <TableCell data-testid={`text-email-${lead.id}`}>
+                        <div className="max-w-[180px] truncate" title={lead.email}>{lead.email}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div>{examTypeMap[lead.examType] || lead.examType}</div>
+                        <div className="text-xs text-muted-foreground">{lead.state}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={sourceBadge.variant}>{sourceBadge.label}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${drip.color}`} title={`Email ${drip.step} de 4 enviado`} />
+                          <span className="text-sm font-medium">{drip.label}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusMap[lead.status as keyof typeof statusMap]?.variant || "default"}>
+                          {statusMap[lead.status as keyof typeof statusMap]?.label || lead.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{getDaysSince(lead.createdAt)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(lead.createdAt).toLocaleDateString("pt-BR")}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={lead.status}
+                          onValueChange={(value) => handleStatusChange(lead.id, value)}
+                          disabled={updateStatusMutation.isPending}
+                        >
+                          <SelectTrigger className="w-[130px]" data-testid={`select-status-${lead.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="NOVO">Novo</SelectItem>
+                            <SelectItem value="CONTATADO">Contatado</SelectItem>
+                            <SelectItem value="QUALIFICADO">Qualificado</SelectItem>
+                            <SelectItem value="CONVERTIDO">Convertido</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
                 {data?.leads.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                       Nenhum lead encontrado
                     </TableCell>
                   </TableRow>
