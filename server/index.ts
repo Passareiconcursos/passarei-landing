@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import emailTestRouter from "./email/test-route";
 import { registerRoutes } from "./routes";
 import { registerAIRoutes } from "./ai-routes";
@@ -21,6 +22,7 @@ import { startEmailScheduler } from "./email/email-scheduler";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
 app.use("/api/payment", paymentRoutes);
 app.use("/api/activation", activationRoutes);
 
