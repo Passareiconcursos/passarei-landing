@@ -105,13 +105,6 @@ export const supabaseHttpAdmin = {
       // Usar service key para insert
       return supabaseFetch<any>(table, {
         method: 'POST',
-        },
-        true
-      )
-    },
-    insertOld: async (data: any) => {
-      return supabaseFetch<any>(table, {
-        method: 'POST',
         body: JSON.stringify(data),
       }, true)
     },
