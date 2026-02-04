@@ -19,6 +19,12 @@ export async function runAutoMigrations() {
     // 3. Configurar beta tester
     await migrateBetaTester();
 
+    // 4. Garantir tabelas de promo codes
+    await migratePromoCodes();
+
+    // 5. Criar códigos promo iniciais
+    await createDefaultPromoCodes();
+
     console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
   } catch (error) {
     console.error("⚠️ [Auto-Migrate] Erro (não fatal):", error);
@@ -145,4 +151,85 @@ async function migrateBetaTester() {
     WHERE email = ${EMAIL}
   `);
   console.log("  ✅ Beta tester configurado: VETERANO permanente");
+}
+
+async function migratePromoCodes() {
+  // Verificar se tabela promo_codes existe
+  const exists = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables
+      WHERE table_name = 'promo_codes'
+    ) as exists
+  `) as any[];
+
+  if (exists[0]?.exists) {
+    return;
+  }
+
+  console.log("  🔄 Criando tabelas de códigos promocionais...");
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS promo_codes (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      code VARCHAR(20) UNIQUE NOT NULL,
+      description TEXT,
+      type VARCHAR(20) NOT NULL,
+      discount_percent INTEGER,
+      granted_plan VARCHAR(20),
+      granted_days INTEGER,
+      max_uses INTEGER DEFAULT 100,
+      current_uses INTEGER DEFAULT 0,
+      expires_at TIMESTAMP,
+      is_active BOOLEAN DEFAULT true,
+      created_by TEXT,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    )
+  `);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS promo_redemptions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      promo_code_id UUID REFERENCES promo_codes(id) ON DELETE CASCADE,
+      user_id TEXT,
+      telegram_id VARCHAR(50),
+      redeemed_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      benefit_applied JSONB
+    )
+  `);
+
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_promo_codes_code ON promo_codes(code)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_promo_redemptions_telegram ON promo_redemptions(telegram_id)`);
+
+  console.log("  ✅ Tabelas de promo codes criadas");
+}
+
+async function createDefaultPromoCodes() {
+  // Código DONO2026 - para o proprietário usar no bot
+  const donoExists = await db.execute(sql`
+    SELECT id FROM promo_codes WHERE code = 'DONO2026' LIMIT 1
+  `) as any[];
+
+  if (!donoExists || donoExists.length === 0) {
+    console.log("  🔄 Criando código DONO2026...");
+    await db.execute(sql`
+      INSERT INTO promo_codes (code, description, type, granted_plan, granted_days, max_uses, is_active)
+      VALUES ('DONO2026', 'Acesso proprietário - VETERANO permanente', 'GRATUITY', 'VETERANO', 36500, 1, true)
+    `);
+    console.log("  ✅ Código DONO2026 criado (VETERANO ~100 anos)");
+  }
+
+  // Código BETA001 - modelo para beta testers (1 uso, 30 dias)
+  const betaExists = await db.execute(sql`
+    SELECT id FROM promo_codes WHERE code = 'BETA001' LIMIT 1
+  `) as any[];
+
+  if (!betaExists || betaExists.length === 0) {
+    console.log("  🔄 Criando código BETA001...");
+    await db.execute(sql`
+      INSERT INTO promo_codes (code, description, type, granted_plan, granted_days, max_uses, is_active)
+      VALUES ('BETA001', 'Beta tester - VETERANO 30 dias', 'GRATUITY', 'VETERANO', 30, 1, true)
+    `);
+    console.log("  ✅ Código BETA001 criado (VETERANO 30 dias, 1 uso)");
+  }
 }
