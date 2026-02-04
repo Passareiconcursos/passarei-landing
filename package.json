@@ -11,7 +11,8 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx db/seed.ts",
-    "db:migrate-leads": "tsx db/migrate-leads-table.ts"
+    "db:migrate-leads": "tsx db/migrate-leads-table.ts",
+    "db:beta-tester": "tsx db/migrate-beta-tester.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
