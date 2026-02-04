@@ -18,6 +18,7 @@ import { registerPromoRoutes } from "./promo-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startTelegramBot } from "./telegram/bot";
 import { startEmailScheduler } from "./email/email-scheduler";
+import { runAutoMigrations } from "../db/auto-migrate";
 
 const app = express();
 app.use(express.json());
@@ -52,6 +53,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Auto-migração: cria tabelas/colunas faltantes
+  await runAutoMigrations();
+
   // Inicializa o servidor e as rotas base
   const server = await registerRoutes(app);
 
