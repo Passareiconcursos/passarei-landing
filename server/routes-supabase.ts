@@ -43,7 +43,7 @@ export function registerSupabaseRoutes(app: Express) {
             // Marcar email 1 como enviado
             try {
               await db.execute(sql`
-                UPDATE "Lead"
+                UPDATE leads
                 SET "dripEmail1SentAt" = NOW(), "updatedAt" = NOW()
                 WHERE id = ${lead.id}
               `);

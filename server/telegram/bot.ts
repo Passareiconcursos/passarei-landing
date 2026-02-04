@@ -632,7 +632,7 @@ export async function startTelegramBot() {
 
     try {
       // Chamar API de resgate
-      const APP_URL = process.env.APP_URL || "http://localhost:5000";
+      const APP_URL = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
       const response = await fetch(`${APP_URL}/api/promo-codes/redeem`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

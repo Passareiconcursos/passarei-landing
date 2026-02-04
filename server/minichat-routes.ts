@@ -340,14 +340,14 @@ export function registerMiniChatRoutes(app: Express) {
       let odId = nanoid();
       try {
         const { data: existingLeads } = await supabaseHttp
-          .from("Lead")
+          .from("leads")
           .select("id", { email: email });
 
         if (existingLeads && existingLeads.length > 0) {
           odId = existingLeads[0].id;
           console.log("[MiniChat] Lead existente:", odId);
         } else {
-          const { error } = await supabaseHttp.from("Lead").insert({
+          const { error } = await supabaseHttp.from("leads").insert({
             id: odId,
             name: "Mini-Chat User",
             email: email,
@@ -417,7 +417,7 @@ export function registerMiniChatRoutes(app: Express) {
       // Atualizar lead no Supabase
       try {
         await supabaseHttp
-          .from("Lead")
+          .from("leads")
           .update(
             {
               examType: concurso || session.concurso,
@@ -741,7 +741,7 @@ Seja motivador!`,
       // Atualizar lead no Supabase com dados finais
       try {
         await supabaseHttp
-          .from("Lead")
+          .from("leads")
           .update(
             {
               status: "ENGAJADO",

@@ -74,7 +74,7 @@ async function processDripStep(step: {
     // - Recebeu o email 1 (dripEmail1SentAt não é null)
     const leads = await db.execute(sql`
       SELECT id, name, email, "examType"
-      FROM "Lead"
+      FROM leads
       WHERE status = 'NOVO'
         AND "dripEmail1SentAt" IS NOT NULL
         AND ${sql.raw(`"${step.field}"`)} IS NULL
@@ -97,7 +97,7 @@ async function processDripStep(step: {
         if (result.success) {
           // Marcar email como enviado
           await db.execute(sql`
-            UPDATE "Lead"
+            UPDATE leads
             SET ${sql.raw(`"${step.field}"`)} = NOW(),
                 "updatedAt" = NOW()
             WHERE id = ${lead.id}
