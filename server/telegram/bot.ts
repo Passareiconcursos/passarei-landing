@@ -612,5 +612,75 @@ export async function startTelegramBot() {
       );
     }
   });
+
+  // Comando /codigo - Resgatar código promocional
+  bot.onText(/\/codigo (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const telegramId = String(msg.from?.id);
+    const code = match?.[1]?.trim().toUpperCase();
+
+    if (!code) {
+      await bot!.sendMessage(
+        chatId,
+        "❌ *Código não informado.*\n\nUse: `/codigo SEUCODIGO`",
+        { parse_mode: "Markdown" },
+      );
+      return;
+    }
+
+    console.log(`🎟️ [Bot] Comando /codigo ${code} de ${telegramId}`);
+
+    try {
+      // Chamar API de resgate
+      const APP_URL = process.env.APP_URL || "http://localhost:5000";
+      const response = await fetch(`${APP_URL}/api/promo-codes/redeem`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, telegramId }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        let mensagem = `✅ *Código Resgatado!*\n\n`;
+        mensagem += result.message + "\n\n";
+
+        if (result.type === "GRATUITY") {
+          mensagem += `🎉 Seu plano *${result.grantedPlan}* foi ativado por *${result.grantedDays} dias*!\n\n`;
+          mensagem += `Digite /estudar para começar a estudar! 📚`;
+        } else if (result.type === "DISCOUNT") {
+          mensagem += `💰 Use este desconto ao fazer sua assinatura no site!`;
+        }
+
+        await bot!.sendMessage(chatId, mensagem, { parse_mode: "Markdown" });
+      } else {
+        await bot!.sendMessage(
+          chatId,
+          `❌ *Erro ao resgatar código.*\n\n${result.error || "Código inválido ou expirado."}`,
+          { parse_mode: "Markdown" },
+        );
+      }
+    } catch (error) {
+      console.error("❌ [Bot] Erro ao resgatar código:", error);
+      await bot!.sendMessage(
+        chatId,
+        "⚠️ Erro ao processar seu código. Tente novamente em instantes.",
+        { parse_mode: "Markdown" },
+      );
+    }
+  });
+
+  // Comando /codigo sem argumento - mostrar ajuda
+  bot.onText(/^\/codigo$/, async (msg) => {
+    const chatId = msg.chat.id;
+    await bot!.sendMessage(
+      chatId,
+      "🎟️ *Códigos Promocionais*\n\n" +
+        "Para resgatar um código, use:\n" +
+        "`/codigo SEUCODIGO`\n\n" +
+        "Exemplo: `/codigo BETA2026`",
+      { parse_mode: "Markdown" },
+    );
+  });
 }
 export { bot };

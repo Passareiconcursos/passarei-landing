@@ -964,6 +964,61 @@ export type Refund = typeof refunds.$inferSelect;
 export type InsertRefund = typeof refunds.$inferInsert;
 
 // ============================================
+// PROMO CODES - Códigos Promocionais
+// ============================================
+
+export const promoTypeEnum = pgEnum("promo_type", [
+  "DISCOUNT",
+  "GRATUITY",
+]);
+
+export const promoCodes = pgTable("promo_codes", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+
+  code: varchar("code", { length: 20 }).notNull().unique(),
+  description: text("description"),
+
+  type: varchar("type", { length: 20 }).notNull(), // DISCOUNT ou GRATUITY
+
+  // Se DISCOUNT:
+  discountPercent: integer("discount_percent"),
+
+  // Se GRATUITY:
+  grantedPlan: varchar("granted_plan", { length: 20 }), // CALOURO ou VETERANO
+  grantedDays: integer("granted_days"),
+
+  maxUses: integer("max_uses").default(100),
+  currentUses: integer("current_uses").default(0),
+
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").default(true),
+
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const promoRedemptions = pgTable("promo_redemptions", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  promoCodeId: uuid("promo_code_id").references(() => promoCodes.id, { onDelete: "cascade" }),
+  userId: text("user_id"),
+  telegramId: varchar("telegram_id", { length: 50 }),
+
+  redeemedAt: timestamp("redeemed_at").notNull().defaultNow(),
+
+  benefitApplied: jsonb("benefit_applied"),
+});
+
+export type PromoCode = typeof promoCodes.$inferSelect;
+export type InsertPromoCode = typeof promoCodes.$inferInsert;
+export type PromoRedemption = typeof promoRedemptions.$inferSelect;
+export type InsertPromoRedemption = typeof promoRedemptions.$inferInsert;
+
+// ============================================
 // CONCURSOS - Estrutura de Concursos e Cargos
 // ============================================
 

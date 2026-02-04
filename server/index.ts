@@ -13,6 +13,7 @@ import { registerMiniChatRoutes } from "./minichat-routes";
 import { registerEssayRoutes } from "./essay-routes";
 import { registerSimuladoRoutes } from "./simulado-routes";
 import { registerConcursosRoutes } from "./concursos-routes";
+import { registerPromoRoutes } from "./promo-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startTelegramBot } from "./telegram/bot";
 import { startEmailScheduler } from "./email/email-scheduler";
@@ -60,6 +61,7 @@ app.use((req, res, next) => {
   registerEssayRoutes(app);
   registerSimuladoRoutes(app);
   registerConcursosRoutes(app);
+  registerPromoRoutes(app);
   app.use("/api/payment", paymentRoutes);
   app.use("/api/admin/financial", refundRoutes);
   app.use("/api/email", emailTestRouter);
