@@ -304,6 +304,7 @@ export function registerPromoRoutes(app: Express) {
         // Calcular data de expiração do plano
         const planEndDate = new Date();
         planEndDate.setDate(planEndDate.getDate() + promoCode.granted_days);
+        const planEndDateStr = planEndDate.toISOString();
 
         // Atualizar ou criar usuário
         if (userId) {
@@ -313,7 +314,7 @@ export function registerPromoRoutes(app: Express) {
               plan = ${promoCode.granted_plan},
               "planStatus" = 'active',
               "planStartDate" = NOW(),
-              "planEndDate" = ${planEndDate},
+              "planEndDate" = ${planEndDateStr},
               "updatedAt" = NOW()
             WHERE id = ${userId}
           `);
@@ -333,7 +334,7 @@ export function registerPromoRoutes(app: Express) {
               ${promoCode.granted_plan},
               'active',
               NOW(),
-              ${planEndDate},
+              ${planEndDateStr},
               'OUTRO',
               'SP',
               true,
