@@ -977,7 +977,7 @@ export async function recordSM2Review(
           "easinessFactor" = ${sm2.easeFactor},
           "interval" = ${sm2.interval},
           "reviewNumber" = ${sm2.repetitions},
-          "scheduledFor" = ${sm2.nextReviewDate},
+          "scheduledFor" = ${sm2.nextReviewDate.toISOString()},
           "quality" = ${quality},
           "wasSuccessful" = ${correct},
           "status" = 'CONCLUIDA',
@@ -1002,7 +1002,7 @@ export async function recordSM2Review(
           "completedAt", "createdAt", "updatedAt"
         ) VALUES (
           ${id}, ${user.id}, ${contentId},
-          ${sm2.easeFactor}, ${sm2.interval}, ${sm2.repetitions}, ${sm2.nextReviewDate},
+          ${sm2.easeFactor}, ${sm2.interval}, ${sm2.repetitions}, ${sm2.nextReviewDate.toISOString()},
           ${quality}, ${correct}, 'CONCLUIDA',
           NOW(), NOW(), NOW()
         )

@@ -415,15 +415,31 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
     session.currentQuestionId = realQuestion.id as string;
     session.usedQuestionIds.push(realQuestion.id as string);
 
-    const alternatives = realQuestion.alternatives as { letter: string; text: string }[];
+    // Normalizar alternativas (suporta dois formatos do banco)
+    const rawAlternatives = typeof realQuestion.alternatives === "string"
+      ? JSON.parse(realQuestion.alternatives)
+      : realQuestion.alternatives;
+
+    const alternatives: { letter: string; text: string }[] = Array.isArray(rawAlternatives)
+      ? rawAlternatives.map((alt: any, idx: number) => {
+          if (typeof alt === "string") {
+            return { letter: String.fromCharCode(65 + idx), text: alt };
+          }
+          return { letter: alt.letter || String.fromCharCode(65 + idx), text: alt.text || String(alt) };
+        })
+      : [];
+
     const isCertoErrado = realQuestion.questionType === "CERTO_ERRADO";
 
     // Montar opções
-    const options = alternatives.map((alt: { letter: string; text: string }) => alt.text);
+    const options = alternatives.map((alt) => alt.text);
     const correctLetter = realQuestion.correctAnswer as string;
-    const correctIdx = alternatives.findIndex(
-      (alt: { letter: string; text: string }) => alt.letter === correctLetter
-    );
+    // Suportar correctAnswer como letra ("A") ou como índice ("0")
+    let correctIdx = alternatives.findIndex((alt) => alt.letter === correctLetter);
+    if (correctIdx < 0) {
+      const parsed = parseInt(correctLetter);
+      correctIdx = !isNaN(parsed) && parsed < alternatives.length ? parsed : 0;
+    }
 
     session.currentQuestion = {
       question: realQuestion.statement,
@@ -437,13 +453,13 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
 
     // Formatar opções
     const optionsText = alternatives
-      .map((alt: { letter: string; text: string }) => `${alt.letter}) ${alt.text}`)
+      .map((alt) => `${alt.letter}) ${alt.text}`)
       .join("\n\n");
 
     // Botões com letras
     const keyboard = {
       inline_keyboard: alternatives.map(
-        (alt: { letter: string; text: string }, idx: number) => [
+        (alt, idx: number) => [
           {
             text: isCertoErrado ? alt.text : `Questão ${alt.letter}`,
             callback_data: `answer_${idx}`,
