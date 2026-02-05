@@ -27,6 +27,20 @@ export async function startTelegramBot() {
   console.log("🤖 Iniciando...");
   bot = new TelegramBot(token, { polling: true });
 
+  // Tratar erros de polling (evita dump gigante de objetos nos logs)
+  bot.on("polling_error", (error: any) => {
+    const msg = error?.message || error?.code || "unknown";
+    if (msg.includes("409") || msg.includes("terminated")) {
+      console.log("⚠️ [Bot] Polling conflict (outra instância ativa). Aguardando...");
+    } else {
+      console.error("❌ [Bot] Polling error:", msg);
+    }
+  });
+
+  bot.on("error", (error: any) => {
+    console.error("❌ [Bot] Error:", error?.message || error?.code || "unknown");
+  });
+
   bot.on("callback_query", async (query) => {
     const chatId = query.message?.chat.id;
     const telegramId = query.from.id.toString();
