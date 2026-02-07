@@ -276,6 +276,7 @@ async function getSmartContent(session: LearningSession) {
       result = await db.execute(sql`
         SELECT * FROM "Content"
         WHERE "id" = ${dueContentId}
+          AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
         LIMIT 1
       `);
 
@@ -293,6 +294,8 @@ async function getSmartContent(session: LearningSession) {
     const usedIdsClause = session.usedContentIds.length > 0
       ? sql`AND c."id" NOT IN (${sql.join(session.usedContentIds.map((id) => sql`${id}`), sql`, `)})`
       : sql``;
+    // D1: Excluir conteúdos REJEITADOS pelo Professor Revisor
+    const reviewClause = sql`AND (c."reviewStatus" IS NULL OR c."reviewStatus" != 'REJEITADO')`;
 
     // 2a. Tentar buscar de matérias de DIFICULDADE (70% das vezes)
     if (shouldPrioritizeDifficulty && session.difficulties.length > 0) {
@@ -304,6 +307,7 @@ async function getSmartContent(session: LearningSession) {
         WHERE s."displayName" IN (${sql.join(session.difficulties.map((d) => sql`${d}`), sql`, `)})
           AND c."isActive" = true
           ${usedIdsClause}
+          ${reviewClause}
         ORDER BY RANDOM()
         LIMIT 1
       `);
@@ -325,6 +329,7 @@ async function getSmartContent(session: LearningSession) {
         WHERE s."displayName" IN (${sql.join(session.facilities.map((f) => sql`${f}`), sql`, `)})
           AND c."isActive" = true
           ${usedIdsClause}
+          ${reviewClause}
         ORDER BY RANDOM()
         LIMIT 1
       `);
@@ -346,6 +351,7 @@ async function getSmartContent(session: LearningSession) {
             session.usedContentIds.map((id) => sql`${id}`),
             sql`, `,
           )})
+          AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
         ORDER BY RANDOM()
         LIMIT 1
       `);
@@ -353,6 +359,7 @@ async function getSmartContent(session: LearningSession) {
       result = await db.execute(sql`
         SELECT * FROM "Content"
         WHERE "isActive" = true
+          AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
         ORDER BY RANDOM()
         LIMIT 1
       `);
@@ -363,10 +370,12 @@ async function getSmartContent(session: LearningSession) {
       return result[0];
     }
 
-    // Fallback: qualquer conteúdo
+    // Fallback: qualquer conteúdo (exceto rejeitados)
     console.log(`⚠️ Buscando qualquer conteúdo...`);
     const fallback = await db.execute(sql`
-      SELECT * FROM "Content" ORDER BY RANDOM() LIMIT 1
+      SELECT * FROM "Content"
+      WHERE ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
+      ORDER BY RANDOM() LIMIT 1
     `);
 
     if (fallback.length > 0) {

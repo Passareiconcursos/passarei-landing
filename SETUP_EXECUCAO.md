@@ -148,4 +148,15 @@
 | 07/02 | A2 | Fix generate-content.ts (subjectId, alternativas, gabarito) | CONCLUIDO |
 | 07/02 | A3 | Formato alternativas padronizado (seed ok, normalizer ok) | CONCLUIDO |
 | 07/02 | A4 | ENEM removido (2 scripts deletados, refs pedagogicas mantidas) | CONCLUIDO |
-| 07/02 | B | Inicio Fase B | EM ANDAMENTO |
+| 07/02 | B1 | getQuestionForContent (topicId→subjectId fallback) | CONCLUIDO |
+| 07/02 | B2 | Sem questao = pular conteudo (max 3 retries) | CONCLUIDO |
+| 07/02 | B3 | Botao intermediario "Responder questao" | CONCLUIDO |
+| 07/02 | B4 | Botoes Certo/Errado texto completo (CESPE) | CONCLUIDO |
+| 07/02 | A4+ | ENEM removido de seeds, conteudos, prompts | CONCLUIDO |
+| 07/02 | C1 | Relatorio consolidado (3 gatilhos: limite, 30min, /parar) | CONCLUIDO |
+| 07/02 | C2 | Estudo adaptativo (dificuldades <50% → priorizar) | CONCLUIDO |
+| 07/02 | C3 | Mensagem instrucional no onboarding | CONCLUIDO |
+| 07/02 | C4 | Comando /parar e /sair com relatorio | CONCLUIDO |
+| 07/02 | C5 | Removido aproveitamento por troca de materia | CONCLUIDO |
+| 07/02 | D1 | Pipeline Professor Revisor (script, auto-migrate, review filter) | CONCLUIDO |
+| 07/02 | D | Fase D | EM ANDAMENTO |

@@ -25,6 +25,9 @@ export async function runAutoMigrations() {
     // 5. Criar códigos promo iniciais
     await createDefaultPromoCodes();
 
+    // 6. Colunas de revisão (Professor Revisor - Fase D)
+    await migrateReviewColumns();
+
     console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
   } catch (error) {
     console.error("⚠️ [Auto-Migrate] Erro (não fatal):", error);
@@ -231,5 +234,47 @@ async function createDefaultPromoCodes() {
       VALUES ('BETA001', 'Beta tester - VETERANO 30 dias', 'GRATUITY', 'VETERANO', 30, 1, true)
     `);
     console.log("  ✅ Código BETA001 criado (VETERANO 30 dias, 1 uso)");
+  }
+}
+
+async function migrateReviewColumns() {
+  // Adicionar colunas de revisão ao Content
+  const contentCol = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.columns
+      WHERE table_name = 'Content' AND column_name = 'reviewStatus'
+    ) as exists
+  `) as any[];
+
+  if (!contentCol[0]?.exists) {
+    console.log("  🔄 Adicionando colunas de revisão ao Content...");
+    await db.execute(sql`
+      ALTER TABLE "Content"
+      ADD COLUMN IF NOT EXISTS "reviewStatus" VARCHAR(20) DEFAULT 'PENDENTE',
+      ADD COLUMN IF NOT EXISTS "reviewScore" INTEGER,
+      ADD COLUMN IF NOT EXISTS "reviewNotes" TEXT,
+      ADD COLUMN IF NOT EXISTS "reviewedAt" TIMESTAMP
+    `);
+    console.log("  ✅ Colunas de revisão do Content adicionadas");
+  }
+
+  // Adicionar colunas de revisão ao Question
+  const questionCol = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.columns
+      WHERE table_name = 'Question' AND column_name = 'reviewStatus'
+    ) as exists
+  `) as any[];
+
+  if (!questionCol[0]?.exists) {
+    console.log("  🔄 Adicionando colunas de revisão ao Question...");
+    await db.execute(sql`
+      ALTER TABLE "Question"
+      ADD COLUMN IF NOT EXISTS "reviewStatus" VARCHAR(20) DEFAULT 'PENDENTE',
+      ADD COLUMN IF NOT EXISTS "reviewScore" INTEGER,
+      ADD COLUMN IF NOT EXISTS "reviewNotes" TEXT,
+      ADD COLUMN IF NOT EXISTS "reviewedAt" TIMESTAMP
+    `);
+    console.log("  ✅ Colunas de revisão do Question adicionadas");
   }
 }

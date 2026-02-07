@@ -1135,12 +1135,16 @@ export async function getQuestionForSubject(
       ? sql`AND q."difficulty" = ${difficulty}`
       : sql``;
 
+    // D1: Excluir questões REJEITADAS pelo Professor Revisor
+    const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
+
     const result = await db.execute(sql`
       SELECT q.* FROM "Question" q
       WHERE q."subjectId" = ${subjectId}
         AND q."isActive" = true
         ${usedClause}
         ${difficultyClause}
+        ${reviewClause}
       ORDER BY q."timesUsed" ASC, RANDOM()
       LIMIT 1
     `) as any[];
@@ -1179,6 +1183,9 @@ export async function getQuestionForContent(
       ? sql`AND q."id" NOT IN (${sql.join(usedQuestionIds.map((id) => sql`${id}`), sql`, `)})`
       : sql``;
 
+    // D1: Excluir questões REJEITADAS pelo Professor Revisor
+    const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
+
     // 1. Tentar por topicId (mais preciso)
     if (topicId) {
       const byTopic = await db.execute(sql`
@@ -1186,6 +1193,7 @@ export async function getQuestionForContent(
         WHERE q."topicId" = ${topicId}
           AND q."isActive" = true
           ${usedClause}
+          ${reviewClause}
         ORDER BY q."timesUsed" ASC, RANDOM()
         LIMIT 1
       `) as any[];
