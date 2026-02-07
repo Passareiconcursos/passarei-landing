@@ -11,11 +11,42 @@ import {
   getMnemonicForContent,
 } from "./database";
 import { generateEnhancedContent } from "./ai-service";
+import { activeSessions } from "./learning-session";
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
 
 // Intervalo do scheduler: verificar a cada 30 minutos
 const CHECK_INTERVAL_MS = 30 * 60 * 1000;
+
+// Artigos corretos para cada concurso (gênero gramatical)
+const ARTIGO_CONCURSO: Record<string, string> = {
+  PF: "a",          // a Polícia Federal
+  PRF: "a",         // a Polícia Rodoviária Federal
+  PMERJ: "a",       // a PM do RJ
+  PCERJ: "a",       // a Polícia Civil do RJ
+  PMSP: "a",        // a PM de SP
+  PCESP: "a",       // a Polícia Civil de SP
+  PM: "a",          // a Polícia Militar
+  PC: "a",          // a Polícia Civil
+  CBM: "o",         // o Corpo de Bombeiros
+  PP: "a",          // a Polícia Penal
+  PP_FEDERAL: "a",  // a Polícia Penal Federal
+  PL_FEDERAL: "a",  // a Polícia Legislativa Federal
+  PF_FERROVIARIA: "a", // a Polícia Ferroviária
+  PJ_CNJ: "a",      // a Polícia Judicial do CNJ
+  ABIN: "a",        // a ABIN
+  EXERCITO: "o",    // o Exército
+  MARINHA: "a",     // a Marinha
+  AERONAUTICA: "a", // a Aeronáutica
+  DEPEN: "o",       // o DEPEN
+  SEAP: "a",        // a SEAP
+  GM: "a",          // a Guarda Municipal
+  OUTRO: "o",       // genérico
+};
+
+function getArtigoConcurso(examType: string): string {
+  return ARTIGO_CONCURSO[examType] || "o";
+}
 
 /**
  * Obtém hora atual em Brasília (America/Sao_Paulo)
@@ -89,11 +120,11 @@ async function checkAndSendReminders(bot: TelegramBot) {
           continue;
         }
 
+        // Registrar lembrete ANTES de enviar (previne duplicação por race condition)
+        await recordReminderSent(user.telegramId, currentHour);
+
         // Enviar conteúdo proativo
         await sendProactiveContent(bot, user, access.reason, currentHour);
-
-        // Registrar lembrete enviado
-        await recordReminderSent(user.telegramId, currentHour);
 
         // Delay entre usuários para evitar rate limit (1 segundo)
         await new Promise((r) => setTimeout(r, 1000));
@@ -121,17 +152,26 @@ async function sendProactiveContent(
   const turno = currentHour <= 11 ? "Manhã" : currentHour <= 17 ? "Tarde" : "Noite";
 
   try {
-    // 1. Mensagem de lembrete
+    // Verificar se o aluno já está com sessão de estudo ativa
+    if (activeSessions.has(user.telegramId)) {
+      console.log(`⏭️ [Reminder] ${user.telegramId} já tem sessão ativa, pulando lembrete`);
+      return;
+    }
+
+    // 1. Mensagem de lembrete (com artigo correto de gênero)
     const greetings: Record<string, string> = {
       "Manhã": "Bom dia",
       "Tarde": "Boa tarde",
       "Noite": "Boa noite",
     };
 
+    const examType = user.examType || "concurso";
+    const artigo = getArtigoConcurso(examType);
+
     await bot.sendMessage(
       chatId,
-      `${greetings[turno]}! Hora de estudar para o *${user.examType || "concurso"}*\n\n` +
-        `${accessReason === "free_first_day" ? "🎁 Usando questão grátis!" : ""}\n` +
+      `${greetings[turno]}! Hora de estudar para ${artigo} *${examType}*` +
+        `${accessReason === "free_first_day" ? "\n🎁 Usando questão grátis!" : ""}\n\n` +
         `📚 Preparando seu conteúdo...`,
       { parse_mode: "Markdown" },
     );
@@ -286,6 +326,9 @@ async function getSmartReminderContent(user: any): Promise<any | null> {
       ? sql`AND c."id" NOT IN (${sql.join(usedIds.map((id: string) => sql`${id}`), sql`, `)})`
       : sql``;
 
+    // D1: Excluir conteúdos REJEITADOS pelo Professor Revisor
+    const reviewClause = sql`AND (c."reviewStatus" IS NULL OR c."reviewStatus" != 'REJEITADO')`;
+
     // 1. Priorizar matérias de dificuldade (70% das vezes)
     const shouldPrioritizeDifficulty = Math.random() < 0.7;
 
@@ -296,6 +339,7 @@ async function getSmartReminderContent(user: any): Promise<any | null> {
         WHERE s."displayName" IN (${sql.join(user.dificuldades.map((d: string) => sql`${d}`), sql`, `)})
           AND c."isActive" = true
           ${usedIdsClause}
+          ${reviewClause}
         ORDER BY RANDOM()
         LIMIT 1
       `) as any[];
@@ -311,6 +355,7 @@ async function getSmartReminderContent(user: any): Promise<any | null> {
         WHERE s."displayName" IN (${sql.join(user.facilidades.map((f: string) => sql`${f}`), sql`, `)})
           AND c."isActive" = true
           ${usedIdsClause}
+          ${reviewClause}
         ORDER BY RANDOM()
         LIMIT 1
       `) as any[];
@@ -318,10 +363,11 @@ async function getSmartReminderContent(user: any): Promise<any | null> {
       if (result.length > 0) return result[0];
     }
 
-    // 3. Fallback: qualquer conteúdo do examType ou geral
+    // 3. Fallback: qualquer conteúdo (exceto rejeitados)
     const result = await db.execute(sql`
       SELECT * FROM "Content"
       WHERE "isActive" = true
+        AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
         ${usedIdsClause}
       ORDER BY RANDOM()
       LIMIT 1
@@ -329,10 +375,11 @@ async function getSmartReminderContent(user: any): Promise<any | null> {
 
     if (result.length > 0) return result[0];
 
-    // 4. Se todos já foram vistos, resetar e pegar qualquer um
+    // 4. Se todos já foram vistos, resetar e pegar qualquer um (exceto rejeitados)
     const fallback = await db.execute(sql`
       SELECT * FROM "Content"
       WHERE "isActive" = true
+        AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
       ORDER BY RANDOM()
       LIMIT 1
     `) as any[];
