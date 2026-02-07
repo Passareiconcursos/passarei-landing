@@ -420,7 +420,7 @@ export const essays = pgTable("essays", {
   // Status
   status: essayStatusEnum("status").notNull().default("SUBMITTED"),
 
-  // Notas (5 critérios ENEM: 0-200 cada)
+  // Notas (5 competências de redação: 0-200 cada)
   score1: integer("score_1"), // Competência 1: Domínio da norma culta
   score2: integer("score_2"), // Competência 2: Compreensão do tema
   score3: integer("score_3"), // Competência 3: Seleção e organização

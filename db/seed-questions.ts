@@ -1472,18 +1472,18 @@ const QUESTIONS: Record<string, QuestionSeed[]> = {
         { letter: "D", text: "Apresentação, complicação e resolução" },
       ],
       correctAnswer: "B",
-      explanation: "A dissertação argumentativa segue: INTRODUÇÃO (contextualização + tese), DESENVOLVIMENTO (argumentos que sustentam a tese, geralmente 2 parágrafos) e CONCLUSÃO (retomada da tese + proposta de intervenção no ENEM).",
+      explanation: "A dissertação argumentativa segue: INTRODUÇÃO (contextualização + tese), DESENVOLVIMENTO (argumentos que sustentam a tese, geralmente 2 parágrafos) e CONCLUSÃO (retomada da tese + proposta de intervenção em provas discursivas).",
       difficulty: "FACIL",
     },
     {
-      statement: "No ENEM, a redação que não respeitar os direitos humanos recebe nota zero.",
+      statement: "Em provas discursivas de concursos, a redação que desrespeitar os direitos humanos pode ser anulada ou receber nota zero.",
       questionType: "CERTO_ERRADO",
       alternatives: [
         { letter: "C", text: "Certo" },
         { letter: "E", text: "Errado" },
       ],
       correctAnswer: "C",
-      explanation: "A redação do ENEM recebe nota ZERO se desrespeitar os direitos humanos. A Competência 5 exige proposta de intervenção que respeite os direitos humanos. Propostas que incentivem violência, discriminação ou intolerância zeram a redação.",
+      explanation: "Bancas como CESPE/CEBRASPE e FCC podem ZERAR a redação que desrespeite os direitos humanos. A proposta de intervenção deve respeitar os direitos humanos. Propostas que incentivem violência, discriminação ou intolerância podem anular a redação.",
       difficulty: "FACIL",
     },
     {
@@ -1500,14 +1500,14 @@ const QUESTIONS: Record<string, QuestionSeed[]> = {
       difficulty: "FACIL",
     },
     {
-      statement: "A proposta de intervenção no ENEM deve conter, obrigatoriamente, o agente, a ação, o modo/meio e o detalhamento.",
+      statement: "Em provas discursivas de concursos, a proposta de intervenção deve conter o agente, a ação, o modo/meio e o detalhamento.",
       questionType: "CERTO_ERRADO",
       alternatives: [
         { letter: "C", text: "Certo" },
         { letter: "E", text: "Errado" },
       ],
       correctAnswer: "C",
-      explanation: "A proposta de intervenção completa no ENEM exige 5 elementos: AGENTE (quem vai fazer), AÇÃO (o que será feito), MODO/MEIO (como será feito), EFEITO/FINALIDADE (para quê) e DETALHAMENTO de pelo menos um dos anteriores.",
+      explanation: "Uma proposta de intervenção completa deve conter 5 elementos: AGENTE (quem vai fazer), AÇÃO (o que será feito), MODO/MEIO (como será feito), EFEITO/FINALIDADE (para quê) e DETALHAMENTO de pelo menos um dos anteriores. Bancas como CESPE valorizam propostas específicas e viáveis.",
       difficulty: "MEDIO",
     },
     {

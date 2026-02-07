@@ -47,7 +47,7 @@ TEMA DA REDAÇÃO: ${theme}
 TEXTO DO CANDIDATO:
 ${text}
 
-Corrija esta redação usando os 5 critérios do ENEM (0-200 pontos cada):
+Corrija esta redação usando os 5 critérios de avaliação de redação para concursos públicos (0-200 pontos cada):
 
 1. **Competência 1** - Domínio da norma culta da língua escrita
 2. **Competência 2** - Compreensão da proposta e aplicação de conceitos
