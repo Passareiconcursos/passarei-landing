@@ -108,18 +108,19 @@
 ## FASE E - Espelhamento MiniChat
 
 ### E1. MiniChat importar funcoes compartilhadas
-- [ ] Usar funcoes do database.ts (getSmartContent, etc)
-- [ ] Nao quebrar funcionamento atual
+- [x] Usar funcoes do database.ts (getQuestionForContent)
+- [x] Nao quebrar funcionamento atual
 
 ### E2. Espelhar melhorias
-- [ ] Botao intermediario no MiniChat
-- [ ] Formato Certo/Errado
-- [ ] Sincronizacao conteudo<->questao
+- [x] Botao intermediario no MiniChat
+- [x] Formato Certo/Errado
+- [x] Sincronizacao conteudo<->questao (Question table)
 
 ### E3. Adequar frontend
-- [ ] Remover ENEM das opcoes do MiniChat
-- [ ] Atualizar textos da landing page
-- [ ] Verificar precos e features nas paginas de oferta
+- [x] Remover ENEM das opcoes do MiniChat (ja limpo)
+- [x] Filtro reviewStatus em todas as queries MiniChat
+- [ ] Atualizar textos da landing page (manual)
+- [ ] Verificar precos e features nas paginas de oferta (manual)
 
 ---
 
@@ -159,4 +160,8 @@
 | 07/02 | C4 | Comando /parar e /sair com relatorio | CONCLUIDO |
 | 07/02 | C5 | Removido aproveitamento por troca de materia | CONCLUIDO |
 | 07/02 | D1 | Pipeline Professor Revisor (script, auto-migrate, review filter) | CONCLUIDO |
-| 07/02 | D | Fase D | EM ANDAMENTO |
+| 07/02 | D | Fase D completa | CONCLUIDO |
+| 07/02 | E1 | MiniChat: import getQuestionForContent, filtro reviewStatus | CONCLUIDO |
+| 07/02 | E2 | MiniChat: botão intermediário, Certo/Errado, sync Question table | CONCLUIDO |
+| 07/02 | E3 | MiniChat: ENEM limpo, review filter em queries | CONCLUIDO |
+| 07/02 | E | Fase E completa | CONCLUIDO |

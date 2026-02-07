@@ -421,6 +421,7 @@ export function MiniChat() {
   const [actualScore, setActualScore] = useState(0);
   const [currentApiQuestion, setCurrentApiQuestion] = useState<any>(null);
   const [totalQuestions, setTotalQuestions] = useState(5); // Padrão 5 para demo, API pode retornar 21
+  const [pendingQuestionData, setPendingQuestionData] = useState<any>(null); // E2: intermediate button
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -1191,6 +1192,19 @@ export function MiniChat() {
   const handleQuestionAnswer = async (selectedIndex: number) => {
     if (isTyping || chatState.step !== "questions") return;
 
+    // E2: Botão intermediário - "Responder questão" clicado
+    if (pendingQuestionData && selectedIndex === 0) {
+      const data = pendingQuestionData;
+      setPendingQuestionData(null);
+
+      addUserMessage("✅ Responder questão");
+
+      // Mostrar a questão real com alternativas
+      let questionText = `📝 **${data.question.pergunta}**`;
+      addQuestionMessage(questionText, data.question.opcoes, -1);
+      return;
+    }
+
     // Se temos questão da API, usar fluxo da API (usar ref para valor atualizado)
     if (currentApiQuestion && sessionIdRef.current) {
       await handleApiQuestionAnswer(selectedIndex);
@@ -1279,6 +1293,7 @@ export function MiniChat() {
         sessionId: sessionIdRef.current,
         questionId: question.id,
         answer: selectedIndex,
+        linkedQuestionId: question.questionId || null, // E2: questão vinculada (Question table)
       };
 
       // Se for questão gerada por IA, enviar dados adicionais para o backend processar
@@ -1467,31 +1482,42 @@ export function MiniChat() {
         setCurrentApiQuestion(data.question);
         setTotalQuestions(data.totalQuestions || 21);
 
-        // Mostrar conteúdo enriquecido pela IA (se disponível)
-        let questionText = `📝 **QUESTÃO ${data.questionNumber}/${data.totalQuestions}**\n\n`;
+        // E2: Mostrar conteúdo separado (intermediate button pattern)
+        const content = data.content;
+        if (content) {
+          let contentText = `📝 **QUESTÃO ${data.questionNumber}/${data.totalQuestions}**\n\n`;
+          if (data.question.materia) contentText += `📚 *${data.question.materia}*\n`;
+          if (content.titulo) contentText += `🎯 *${content.titulo}*\n\n`;
+          if (content.texto) contentText += content.texto;
+          addBotMessage(contentText);
+          await wait(1500);
 
-        // Adicionar tema/matéria
-        if (data.question.materia) {
-          questionText += `📚 *${data.question.materia}*\n`;
+          if (content.pontosChave) {
+            addBotMessage(`💡 **Pontos-chave:**\n${content.pontosChave}`);
+            await wait(1500);
+          }
+          if (content.dica) {
+            addBotMessage(`🧠 **Dica:**\n${content.dica}`);
+            await wait(1000);
+          }
+
+          // E2: Botão intermediário - mostrar questão ao clicar
+          addQuestionMessage(
+            "📝 **Pronto para responder a questão sobre este conteúdo?**",
+            ["✅ Responder questão"],
+            -1,
+          );
+          // Guardar que estamos no passo intermediário
+          setPendingQuestionData(data);
+        } else {
+          // Fallback: formato antigo (sem content separado)
+          let questionText = `📝 **QUESTÃO ${data.questionNumber}/${data.totalQuestions}**\n\n`;
+          if (data.question.materia) questionText += `📚 *${data.question.materia}*\n`;
+          if (data.question.tema) questionText += `🎯 *${data.question.tema}*\n\n`;
+          questionText += data.question.pergunta;
+
+          addQuestionMessage(questionText, data.question.opcoes, -1);
         }
-        if (data.question.tema) {
-          questionText += `🎯 *${data.question.tema}*\n\n`;
-        }
-
-        // Mostrar pontos-chave da IA (se disponível)
-        if (data.question.pontosChave) {
-          addBotMessage(`💡 **Pontos-chave:**\n${data.question.pontosChave}`);
-          await wait(2000);
-        }
-
-        // Mostrar a pergunta
-        questionText += data.question.pergunta;
-
-        addQuestionMessage(
-          questionText,
-          data.question.opcoes,
-          -1, // Não revelar resposta correta no frontend
-        );
       } else {
         // Fallback para questões locais - LOGAR MOTIVO
         console.warn("[MiniChat] API retornou sem questao. Usando fallback local. Motivo:", data.error || "desconhecido");

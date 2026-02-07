@@ -11,6 +11,7 @@ import {
   generateEnhancedContent,
   generateExplanation,
 } from "./telegram/ai-service";
+import { getQuestionForContent } from "./telegram/database";
 
 // ============================================
 // CONFIGURAÇÕES
@@ -71,6 +72,7 @@ async function getQuestionFromDatabase(
           WHERE "isActive" = true
             AND "id" NOT IN (${sql.join(usedIds.map((id) => sql`${id}`), sql`, `)})
             AND ("subject" ~* ${subjectFilter} OR "examType" = ${examType})
+            AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
           ORDER BY RANDOM()
           LIMIT 1
         `);
@@ -79,6 +81,7 @@ async function getQuestionFromDatabase(
           SELECT * FROM "Content"
           WHERE "isActive" = true
             AND ("subject" ~* ${subjectFilter} OR "examType" = ${examType})
+            AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
           ORDER BY RANDOM()
           LIMIT 1
         `);
@@ -93,6 +96,7 @@ async function getQuestionFromDatabase(
           SELECT * FROM "Content"
           WHERE "isActive" = true
             AND "id" NOT IN (${sql.join(usedIds.map((id) => sql`${id}`), sql`, `)})
+            AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
           ORDER BY RANDOM()
           LIMIT 1
         `);
@@ -100,17 +104,19 @@ async function getQuestionFromDatabase(
         result = await db.execute(sql`
           SELECT * FROM "Content"
           WHERE "isActive" = true
+            AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
           ORDER BY RANDOM()
           LIMIT 1
         `);
       }
     }
 
-    // Último fallback: qualquer conteúdo
+    // Último fallback: qualquer conteúdo (exceto rejeitados)
     if (!result || result.length === 0) {
-      console.log(`[MiniChat] Tentando fallback 2: qualquer conteudo (incluindo inativos)`);
+      console.log(`[MiniChat] Tentando fallback 2: qualquer conteudo (exceto rejeitados)`);
       result = await db.execute(sql`
         SELECT * FROM "Content"
+        WHERE ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
         ORDER BY RANDOM()
         LIMIT 1
       `);
@@ -303,6 +309,52 @@ function formatQuestionForFrontend(content: any) {
     opcoes: options,
     correta: content.correctOption || 0,
     explicacaoBase: content.explanation || "",
+    isCertoErrado: false,
+  };
+}
+
+// E2: Formatar questão vinculada (do Question table, como no Telegram)
+function formatLinkedQuestion(content: any, question: any) {
+  let alternatives: Array<{ letter: string; text: string }> = [];
+
+  try {
+    const raw = typeof question.alternatives === "string"
+      ? JSON.parse(question.alternatives)
+      : question.alternatives;
+
+    if (Array.isArray(raw)) {
+      alternatives = raw.map((a: any) =>
+        typeof a === "string"
+          ? { letter: a.charAt(0), text: a }
+          : { letter: a.letter, text: a.text },
+      );
+    }
+  } catch {
+    alternatives = [];
+  }
+
+  const isCertoErrado = question.questionType === "CERTO_ERRADO";
+
+  // Converter alternativas para formato de opções do frontend
+  const opcoes = alternatives.map((a) =>
+    isCertoErrado ? a.text : `${a.letter}) ${a.text}`,
+  );
+
+  // Encontrar índice da resposta correta
+  const correctLetter = question.correctAnswer || "A";
+  const correta = alternatives.findIndex((a) => a.letter === correctLetter);
+
+  return {
+    id: content.id,
+    questionId: question.id,
+    materia: content.subject || "Geral",
+    tema: content.title,
+    conteudo: content.textContent,
+    pergunta: question.statement,
+    opcoes,
+    correta: correta >= 0 ? correta : 0,
+    explicacaoBase: question.explanation || "",
+    isCertoErrado,
   };
 }
 
@@ -484,8 +536,27 @@ export function registerMiniChatRoutes(app: Express) {
       session.usedContentIds.push(content.id);
       sessions.set(sessionId, session);
 
+      // E2: Buscar questão vinculada ao conteúdo (Question table, como no Telegram)
+      let linkedQuestion: any = null;
+      if (!content.isAIGenerated && content.subjectId) {
+        try {
+          linkedQuestion = await getQuestionForContent(
+            content.subjectId,
+            content.topicId || null,
+            session.usedContentIds, // reusar para evitar repetições
+          );
+          if (linkedQuestion) {
+            console.log(`[MiniChat] Questão vinculada encontrada: ${linkedQuestion.id}`);
+          }
+        } catch (err) {
+          console.log(`[MiniChat] Erro ao buscar questão vinculada (usando embedded):`, err);
+        }
+      }
+
       // Formatar para o frontend
-      const question = formatQuestionForFrontend(content);
+      const question = linkedQuestion
+        ? formatLinkedQuestion(content, linkedQuestion)
+        : formatQuestionForFrontend(content);
 
       // Gerar conteúdo enriquecido com IA (mesmo serviço do Telegram)
       // Pular se a questão já foi gerada pela IA (já está enriquecida)
@@ -493,8 +564,8 @@ export function registerMiniChatRoutes(app: Express) {
       if (!content.isAIGenerated) {
         try {
           enhanced = await generateEnhancedContent(
-            question.tema,
-            question.conteudo,
+            content.title,
+            content.textContent,
             session.concurso || "concurso policial",
           );
         } catch (aiError) {
@@ -502,22 +573,28 @@ export function registerMiniChatRoutes(app: Express) {
         }
       }
 
-      console.log(`[MiniChat] Retornando questao: ${question.tema} (AI Generated: ${!!content.isAIGenerated})`);
+      console.log(`[MiniChat] Retornando questao: ${question.tema} (linked: ${!!linkedQuestion}, AI: ${!!content.isAIGenerated})`);
 
       res.json({
         success: true,
         questionNumber: session.currentQuestion + 1,
         totalQuestions: MAX_FREE_QUESTIONS,
+        // E2: Enviar conteúdo separado da questão (intermediate button pattern)
+        content: {
+          titulo: content.title,
+          texto: content.textContent || content.definition || "",
+          pontosChave: enhanced?.keyPoints || content.keyPoints || null,
+          exemplo: enhanced?.example || content.example || null,
+          dica: enhanced?.tip || content.tip || null,
+        },
         question: {
           id: question.id,
+          questionId: linkedQuestion?.id || null,
           materia: question.materia,
           tema: question.tema,
           pergunta: question.pergunta,
           opcoes: question.opcoes,
-          // Conteúdo enriquecido pela IA
-          pontosChave: enhanced?.keyPoints || null,
-          exemplo: enhanced?.example || null,
-          dica: enhanced?.tip || null,
+          isCertoErrado: question.isCertoErrado || false,
           isAIGenerated: !!content.isAIGenerated,
         },
       });
@@ -541,7 +618,9 @@ export function registerMiniChatRoutes(app: Express) {
         return res.status(404).json({ error: "Sessao nao encontrada" });
       }
 
+      const { linkedQuestionId } = req.body; // E2: ID da questão vinculada (Question table)
       let content: any = null;
+      let linkedQuestion: any = null;
       let isAIGenerated = false;
       let cachedAIQuestion = null;
 
@@ -559,6 +638,17 @@ export function registerMiniChatRoutes(app: Express) {
         if (contentResult && contentResult.length > 0) {
           content = contentResult[0] as any;
         }
+
+        // E2: Se há questão vinculada, buscar do Question table
+        if (linkedQuestionId) {
+          const qResult = await db.execute(sql`
+            SELECT * FROM "Question" WHERE "id" = ${linkedQuestionId} LIMIT 1
+          `);
+          if (qResult && qResult.length > 0) {
+            linkedQuestion = qResult[0] as any;
+            console.log(`[MiniChat] Questão vinculada encontrada para validação: ${linkedQuestionId}`);
+          }
+        }
       }
 
       // Se não encontrou no banco e não é IA, retornar erro
@@ -574,8 +664,28 @@ export function registerMiniChatRoutes(app: Express) {
       let textContent = "";
       let explanation = "";
 
-      if (content) {
-        // Questão do banco de dados
+      if (linkedQuestion) {
+        // E2: Questão vinculada (Question table) - prioridade
+        let alternatives: Array<{ letter: string; text: string }> = [];
+        try {
+          const raw = typeof linkedQuestion.alternatives === "string"
+            ? JSON.parse(linkedQuestion.alternatives)
+            : linkedQuestion.alternatives;
+          alternatives = Array.isArray(raw) ? raw.map((a: any) =>
+            typeof a === "string" ? { letter: a.charAt(0), text: a } : a
+          ) : [];
+        } catch { alternatives = []; }
+
+        const correctLetter = linkedQuestion.correctAnswer || "A";
+        correctOption = alternatives.findIndex((a) => a.letter === correctLetter);
+        if (correctOption < 0) correctOption = 0;
+        const isCertoErrado = linkedQuestion.questionType === "CERTO_ERRADO";
+        options = alternatives.map((a) => isCertoErrado ? a.text : `${a.letter}) ${a.text}`);
+        title = String(content?.title || "");
+        textContent = String(content?.textContent || "");
+        explanation = String(linkedQuestion.explanation || "");
+      } else if (content) {
+        // Questão embedded do Content
         correctOption = Number(content.correctOption) || 0;
         try {
           options =
