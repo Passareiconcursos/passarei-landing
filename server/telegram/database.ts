@@ -1167,6 +1167,49 @@ export async function getQuestionForSubject(
 }
 
 /**
+ * Busca questão vinculada ao conteúdo: primeiro por topicId, depois por subjectId
+ */
+export async function getQuestionForContent(
+  subjectId: string,
+  topicId: string | null,
+  usedQuestionIds: string[] = [],
+): Promise<any | null> {
+  try {
+    const usedClause = usedQuestionIds.length > 0
+      ? sql`AND q."id" NOT IN (${sql.join(usedQuestionIds.map((id) => sql`${id}`), sql`, `)})`
+      : sql``;
+
+    // 1. Tentar por topicId (mais preciso)
+    if (topicId) {
+      const byTopic = await db.execute(sql`
+        SELECT q.* FROM "Question" q
+        WHERE q."topicId" = ${topicId}
+          AND q."isActive" = true
+          ${usedClause}
+        ORDER BY q."timesUsed" ASC, RANDOM()
+        LIMIT 1
+      `) as any[];
+
+      if (byTopic.length > 0) {
+        await db.execute(sql`
+          UPDATE "Question" SET "timesUsed" = "timesUsed" + 1
+          WHERE "id" = ${byTopic[0].id}
+        `);
+        console.log(`✅ [Question] Encontrada por topicId: ${byTopic[0].id}`);
+        return byTopic[0];
+      }
+      console.log(`⚠️ [Question] Nenhuma questão para topicId ${topicId}, tentando subjectId...`);
+    }
+
+    // 2. Fallback: por subjectId
+    return getQuestionForSubject(subjectId, usedQuestionIds);
+  } catch (error) {
+    console.error("❌ Erro ao buscar questão por conteúdo:", error);
+    return null;
+  }
+}
+
+/**
  * Registra tentativa de resposta a uma questão
  */
 export async function recordQuestionAttempt(

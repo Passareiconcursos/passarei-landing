@@ -9,6 +9,7 @@ import {
   recordSM2Review,
   getSM2DueReviews,
   getQuestionForSubject,
+  getQuestionForContent,
   recordQuestionAttempt,
   getStudyProgress,
   saveStudyProgress,
@@ -44,6 +45,8 @@ interface LearningSession {
   currentSubjectName: string | null;
   currentSubjectQuestions: number;
   currentSubjectCorrect: number;
+  _skipRetries?: number;
+  pendingQuestion?: any; // Questão aguardando clique no botão "Responder"
 }
 
 const activeSessions = new Map<string, LearningSession>();
@@ -326,24 +329,7 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
 
   // Verificar se mudou de matéria
   if (session.currentSubject !== contentSubjectId) {
-    // Se tinha matéria anterior, enviar resumo de aproveitamento
-    if (session.currentSubject && session.currentSubjectQuestions > 0) {
-      const percent = Math.round(
-        (session.currentSubjectCorrect / session.currentSubjectQuestions) * 100
-      );
-      const emoji = percent >= 70 ? "🎉" : percent >= 50 ? "👍" : "💪";
-
-      await bot.sendMessage(
-        session.chatId,
-        `${emoji} *Aproveitamento em ${session.currentSubjectName}:*\n\n` +
-          `✅ Acertos: ${session.currentSubjectCorrect}/${session.currentSubjectQuestions} (${percent}%)\n\n` +
-          `───────────────`,
-        { parse_mode: "Markdown" }
-      );
-      await new Promise((r) => setTimeout(r, 1500));
-    }
-
-    // Atualizar matéria atual
+    // Atualizar matéria atual (sem aproveitamento por troca - C5)
     session.currentSubject = contentSubjectId;
     session.currentSubjectName = subjectName;
     session.currentSubjectQuestions = 0;
@@ -401,17 +387,19 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
     { parse_mode: "Markdown" },
   );
 
-  await new Promise((r) => setTimeout(r, 3000));
-
   // ============================================
-  // FASE 5: TENTAR QUESTÃO REAL DO BANCO
+  // FASE 5: TENTAR QUESTÃO REAL DO BANCO (por topicId → subjectId)
   // ============================================
+  const contentTopicId = (content.topicId as string) || null;
   const realQuestion = contentSubjectId
-    ? await getQuestionForSubject(contentSubjectId, session.usedQuestionIds)
+    ? await getQuestionForContent(contentSubjectId, contentTopicId, session.usedQuestionIds)
     : null;
 
   if (realQuestion) {
-    // QUESTÃO REAL DO BANCO
+    // Resetar retries (encontrou questão)
+    session._skipRetries = 0;
+
+    // QUESTÃO REAL DO BANCO - preparar e armazenar
     session.currentQuestionId = realQuestion.id as string;
     session.usedQuestionIds.push(realQuestion.id as string);
 
@@ -451,83 +439,63 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
       questionType: realQuestion.questionType,
     };
 
-    // Formatar opções
-    const optionsText = alternatives
-      .map((alt) => `${alt.letter}) ${alt.text}`)
-      .join("\n\n");
-
-    // Botões com letras
-    const keyboard = {
-      inline_keyboard: alternatives.map(
-        (alt, idx: number) => [
-          {
-            text: isCertoErrado ? alt.text : `Questão ${alt.letter}`,
-            callback_data: `answer_${idx}`,
-          },
-        ]
-      ),
+    // Armazenar dados para exibir quando o aluno clicar no botão
+    const diffEmoji = realQuestion.difficulty === "FACIL" ? "🟢" : realQuestion.difficulty === "MEDIO" ? "🟡" : "🔴";
+    session.pendingQuestion = {
+      alternatives,
+      isCertoErrado,
+      diffEmoji,
+      statement: realQuestion.statement,
     };
 
-    const diffEmoji = realQuestion.difficulty === "FACIL" ? "🟢" : realQuestion.difficulty === "MEDIO" ? "🟡" : "🔴";
+    // ============================================
+    // B3: BOTÃO INTERMEDIÁRIO - não enviar questão direto
+    // ============================================
+    session.currentStep = "content";
+
+    const readyKeyboard = {
+      inline_keyboard: [
+        [{ text: "✅ Responder questão", callback_data: "ready_question" }],
+      ],
+    };
 
     await bot.sendMessage(
       session.chatId,
-      `✍️ *QUESTÃO ${diffEmoji}*\n\n` +
-        `❓ ${realQuestion.statement}\n\n` +
-        `───────────────\n` +
-        `${optionsText}\n` +
-        `───────────────\n\n` +
-        `👇 *Escolha sua resposta:*`,
-      {
-        parse_mode: "Markdown",
-        reply_markup: keyboard,
-      },
+      `📝 *Questão preparada sobre este conteúdo!*\n\nQuando estiver pronto, clique abaixo 👇`,
+      { parse_mode: "Markdown", reply_markup: readyKeyboard },
     );
   } else {
-    // FALLBACK: Gerar questão a partir do conteúdo
-    session.currentQuestionId = null;
+    // SEM QUESTÃO REAL: sinalizar e pular para próximo conteúdo
+    console.warn(`⚠️ [ALERTA] Conteúdo "${title}" (subject: ${contentSubjectId}, topic: ${contentTopicId}) SEM QUESTÃO no banco`);
 
-    const contentForQuestion = {
-      ...content,
-      textContent: originalDefinition,
-      definition: originalDefinition,
-      description: originalDefinition,
-    };
-    const question = await generateMultipleChoice(contentForQuestion, session);
-    session.currentQuestion = { ...question, isRealQuestion: false };
+    // Não cobrar crédito por conteúdo sem questão (reverter consumo)
+    session.contentsSent--;
 
-    const optionsText = question.options
-      .map((opt: string, idx: number) => {
-        const letter = String.fromCharCode(65 + idx);
-        return `${letter}) ${opt}`;
-      })
-      .join("\n\n");
+    // Tentar próximo conteúdo (máximo 3 tentativas para evitar loop)
+    if (!session._skipRetries) session._skipRetries = 0;
+    session._skipRetries++;
 
-    const keyboard = {
-      inline_keyboard: question.options.map((opt: string, idx: number) => [
-        {
-          text: `Questão ${String.fromCharCode(65 + idx)}`,
-          callback_data: `answer_${idx}`,
-        },
-      ]),
-    };
+    if (session._skipRetries <= 3) {
+      await bot.sendMessage(
+        session.chatId,
+        `⏭️ _Buscando próximo conteúdo..._`,
+        { parse_mode: "Markdown" },
+      );
+      await new Promise((r) => setTimeout(r, 1000));
+      await sendNextContent(bot, session);
+      return;
+    }
 
+    // Esgotou tentativas: informar aluno
+    session._skipRetries = 0;
     await bot.sendMessage(
       session.chatId,
-      `✍️ *EXERCÍCIO*\n\n` +
-        `❓ ${question.question}\n\n` +
-        `───────────────\n` +
-        `${optionsText}\n` +
-        `───────────────\n\n` +
-        `👇 *Escolha sua resposta:*`,
-      {
-        parse_mode: "Markdown",
-        reply_markup: keyboard,
-      },
+      `⚠️ *Estamos preparando mais questões para esta matéria.*\n\nUse /estudar novamente em breve!`,
+      { parse_mode: "Markdown" },
     );
+    activeSessions.delete(session.userId);
+    return;
   }
-
-  session.currentStep = "waiting_answer";
 }
 
 // ============================================
@@ -875,6 +843,50 @@ export async function handleLearningCallback(
   }
 
   if (!session) return false;
+
+  // ============================================
+  // B3: BOTÃO "RESPONDER QUESTÃO" - exibir questão pendente
+  // ============================================
+  if (data === "ready_question" && session.pendingQuestion) {
+    await bot.answerCallbackQuery(query.id);
+
+    const { alternatives, isCertoErrado, diffEmoji, statement } = session.pendingQuestion;
+
+    // Formatar opções
+    const optionsText = alternatives
+      .map((alt: any) => `${alt.letter}) ${alt.text}`)
+      .join("\n\n");
+
+    // Botões com letras (Certo/Errado usa texto completo)
+    const keyboard = {
+      inline_keyboard: alternatives.map(
+        (alt: any, idx: number) => [
+          {
+            text: isCertoErrado ? alt.text : `Questão ${alt.letter}`,
+            callback_data: `answer_${idx}`,
+          },
+        ]
+      ),
+    };
+
+    await bot.sendMessage(
+      session.chatId,
+      `✍️ *QUESTÃO ${diffEmoji}*\n\n` +
+        `❓ ${statement}\n\n` +
+        `───────────────\n` +
+        `${optionsText}\n` +
+        `───────────────\n\n` +
+        `👇 *Escolha sua resposta:*`,
+      {
+        parse_mode: "Markdown",
+        reply_markup: keyboard,
+      },
+    );
+
+    session.pendingQuestion = undefined;
+    session.currentStep = "waiting_answer";
+    return true;
+  }
 
   if (data.startsWith("answer_") && session.currentStep === "waiting_answer") {
     const answerIdx = parseInt(data.replace("answer_", ""));
