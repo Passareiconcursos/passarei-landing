@@ -470,7 +470,9 @@ export async function isUserActive(telegramId: string): Promise<UserActiveStatus
         "credits",
         "firstDayFreeUsed",
         "firstInteractionDate",
-        "planStatus"
+        "planStatus",
+        "examType",
+        "lastStudyContentIds"
       FROM "User"
       WHERE "telegramId" = ${telegramId}
     `);
@@ -525,11 +527,12 @@ export async function isUserActive(telegramId: string): Promise<UserActiveStatus
     }
 
     // 4. SEM ACESSO
+    const studiedCount = safeParseJson(user.lastStudyContentIds, []).length;
     return {
       isActive: false,
       reason: "inactive",
       credits: credits,
-      message: getInactiveMessage(freeRemaining <= 0 && !isFirstDay),
+      message: getInactiveMessage(freeRemaining <= 0 && !isFirstDay, user.examType, studiedCount),
     };
   } catch (error) {
     console.error("❌ Erro ao verificar status do usuário:", error);
@@ -541,10 +544,14 @@ export async function isUserActive(telegramId: string): Promise<UserActiveStatus
   }
 }
 
-function getInactiveMessage(expiredFreeQuestions: boolean): string {
+function getInactiveMessage(expiredFreeQuestions: boolean, examType?: string, studiedCount?: number): string {
+  const statsLine = (studiedCount && studiedCount > 0)
+    ? `\n📊 Você já estudou *${studiedCount} questão(ões)*${examType ? ` para *${examType}*` : ""}. Não pare agora!\n`
+    : "";
+
   if (expiredFreeQuestions) {
     return `⏰ *SUAS QUESTÕES GRÁTIS EXPIRARAM!*
-
+${statsLine}
 Suas 21 questões grátis eram válidas apenas no primeiro dia.
 
 🎓 *PLANO CALOURO* - R$ 89,90/mês
@@ -560,7 +567,7 @@ Acesse passarei.com.br para assinar! 🚀`;
   }
 
   return `❌ *ACESSO INATIVO*
-
+${statsLine}
 Para continuar estudando, você precisa:
 
 💳 Adicionar créditos (R$ 0,99/questão)

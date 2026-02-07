@@ -22,6 +22,12 @@ import { startReminderScheduler, handleReminderAnswer } from "./reminder";
 const token = process.env.TELEGRAM_BOT_TOKEN || "";
 let bot: TelegramBot | null = null;
 
+function safeParseJsonBot(value: any, fallback: any): any {
+  if (!value) return fallback;
+  if (typeof value === "object") return value;
+  try { return JSON.parse(value); } catch { return fallback; }
+}
+
 export async function startTelegramBot() {
   if (!token) return console.error("❌ Token");
   console.log("🤖 Iniciando...");
@@ -83,6 +89,39 @@ export async function startTelegramBot() {
             reply_markup: keyboard,
           });
           return;
+        }
+
+        // VERIFICAR SE TEM PERFIL DE ESTUDO COMPLETO
+        const profileResult = await db.execute(sql`
+          SELECT "examType", "onboardingCompleted", "dificuldades", "lastStudyContentIds"
+          FROM "User" WHERE "telegramId" = ${telegramId} LIMIT 1
+        `) as any[];
+
+        const profile = profileResult[0];
+        if (!profile?.examType || !profile?.onboardingCompleted) {
+          console.log(`📋 [Bot] Usuário ${telegramId} sem perfil (menu), redirecionando para onboarding`);
+          const name = query.from?.first_name || "Estudante";
+          await bot!.sendMessage(
+            chatId,
+            `📋 *Antes de estudar, vamos montar seu plano personalizado!*\n\n` +
+              `São *8 perguntas rápidas* para criar seu perfil de estudos.`,
+            { parse_mode: "Markdown" },
+          );
+          await new Promise((r) => setTimeout(r, 1500));
+          await startOnboarding(bot!, chatId, telegramId, name);
+          return;
+        }
+
+        // Mensagem de continuidade
+        const studiedIds = safeParseJsonBot(profile.lastStudyContentIds, []);
+        if (studiedIds.length > 0) {
+          await bot!.sendMessage(
+            chatId,
+            `📚 *Continuando seus estudos para ${profile.examType}*\n` +
+              `📊 ${studiedIds.length} questão(ões) já estudada(s)\n\n` +
+              `Preparando nova questão...`,
+            { parse_mode: "Markdown" },
+          );
         }
 
         const { startLearningSession } = await import(
@@ -251,6 +290,37 @@ export async function startTelegramBot() {
         );
         return;
       }
+
+      if (data === "menu_main") {
+        console.log(`📋 [Bot] Menu principal via botão por ${telegramId}`);
+        const userInfo = await db.execute(sql`
+          SELECT plan, "planStatus"
+          FROM "User" WHERE "telegramId" = ${telegramId} LIMIT 1
+        `) as any[];
+
+        const hasActive = userInfo?.[0]?.planStatus === "active";
+        const planName = userInfo?.[0]?.plan?.toUpperCase() || "INATIVO";
+        const planInfo = hasActive ? `✅ Plano ${planName} ativo` : `⚠️ Plano inativo`;
+
+        const keyboard = {
+          inline_keyboard: [
+            [
+              { text: "📚 Estudar", callback_data: "menu_estudar" },
+              { text: "🎯 Escolher Concurso", callback_data: "menu_concurso" },
+            ],
+            [
+              { text: "📊 Meu Progresso", callback_data: "menu_progresso" },
+              { text: "❓ Ajuda", callback_data: "menu_ajuda" },
+            ],
+          ],
+        };
+        await bot!.sendMessage(
+          chatId,
+          `📋 *Menu Principal - Passarei*\n\n${planInfo}\n\nEscolha uma opção abaixo:`,
+          { parse_mode: "Markdown", reply_markup: keyboard },
+        );
+        return;
+      }
     }
 
     // 4. Processar concurso
@@ -268,8 +338,71 @@ export async function startTelegramBot() {
 
       const concursoId = data.replace("concurso_", "");
       console.log(
-        `✅ [Bot] Concurso escolhido: ${concursoId} por ${telegramId}`,
+        `🎯 [Bot] Concurso escolhido: ${concursoId} por ${telegramId}`,
       );
+
+      try {
+        // Verificar se já tem um concurso diferente (pedir confirmação)
+        const currentUser = await db.execute(sql`
+          SELECT "examType" FROM "User" WHERE "telegramId" = ${telegramId} LIMIT 1
+        `) as any[];
+
+        const currentExam = currentUser[0]?.examType;
+
+        if (currentExam && currentExam !== concursoId && currentExam !== "OUTRO") {
+          // Já tem concurso diferente - pedir confirmação
+          await bot!.answerCallbackQuery(query.id);
+          const keyboard = {
+            inline_keyboard: [
+              [{ text: "✅ Sim, trocar de concurso", callback_data: `confirmconcurso_${concursoId}` }],
+              [{ text: "❌ Cancelar", callback_data: "cancelconcurso" }],
+            ],
+          };
+          await bot!.sendMessage(
+            chatId,
+            `⚠️ *Atenção!*\n\n` +
+              `Você está estudando para *${currentExam}*.\n\n` +
+              `Ao trocar para *${concursoId}*, seu progresso de estudo será *reiniciado*.\n\n` +
+              `Deseja continuar?`,
+            { parse_mode: "Markdown", reply_markup: keyboard },
+          );
+          return;
+        }
+
+        // Primeiro concurso ou mesmo concurso - aplicar direto
+        await db.execute(sql`
+          UPDATE "User"
+          SET
+            "examType" = ${concursoId},
+            "updatedAt" = NOW()
+          WHERE "telegramId" = ${telegramId}
+        `);
+
+        await resetStudyProgress(telegramId);
+
+        await bot!.answerCallbackQuery(query.id, {
+          text: "✅ Concurso atualizado!",
+        });
+
+        await bot!.sendMessage(
+          chatId,
+          `✅ *Concurso definido!*\n\n` +
+            `Agora você está estudando para: *${concursoId}*\n\n` +
+            `Use /estudar para começar a praticar questões! 📚`,
+          { parse_mode: "Markdown" },
+        );
+      } catch (error) {
+        console.error("❌ Erro ao salvar concurso:", error);
+        await bot!.answerCallbackQuery(query.id, {
+          text: "❌ Erro ao atualizar",
+        });
+      }
+    }
+
+    // 5. Confirmar troca de concurso
+    if (data.startsWith("confirmconcurso_")) {
+      const concursoId = data.replace("confirmconcurso_", "");
+      console.log(`✅ [Bot] Troca de concurso confirmada: ${concursoId} por ${telegramId}`);
 
       try {
         await db.execute(sql`
@@ -280,8 +413,6 @@ export async function startTelegramBot() {
           WHERE "telegramId" = ${telegramId}
         `);
 
-        // Resetar progresso de estudo ao mudar de concurso
-        // (facilidades, dificuldades e conteúdos vistos são específicos do concurso)
         await resetStudyProgress(telegramId);
 
         await bot!.answerCallbackQuery(query.id, {
@@ -292,16 +423,27 @@ export async function startTelegramBot() {
           chatId,
           `✅ *Concurso atualizado!*\n\n` +
             `Agora você está estudando para: *${concursoId}*\n\n` +
-            `🔄 Seu progresso de estudo foi reiniciado para o novo concurso.\n\n` +
+            `🔄 Seu progresso anterior foi reiniciado.\n\n` +
             `Use /estudar para começar a praticar questões! 📚`,
           { parse_mode: "Markdown" },
         );
       } catch (error) {
-        console.error("❌ Erro ao salvar concurso:", error);
+        console.error("❌ Erro ao confirmar troca de concurso:", error);
         await bot!.answerCallbackQuery(query.id, {
           text: "❌ Erro ao atualizar",
         });
       }
+    }
+
+    if (data === "cancelconcurso") {
+      await bot!.answerCallbackQuery(query.id, {
+        text: "Troca cancelada",
+      });
+      await bot!.sendMessage(
+        chatId,
+        `👍 *Tudo certo!* Você continua no mesmo concurso.\n\nUse /estudar para continuar estudando! 📚`,
+        { parse_mode: "Markdown" },
+      );
     }
   });
 
@@ -505,6 +647,39 @@ export async function startTelegramBot() {
         return;
       }
 
+      // VERIFICAR SE TEM PERFIL DE ESTUDO COMPLETO
+      const profileResult = await db.execute(sql`
+        SELECT "examType", "onboardingCompleted", "dificuldades", "lastStudyContentIds"
+        FROM "User" WHERE "telegramId" = ${telegramId} LIMIT 1
+      `) as any[];
+
+      const profile = profileResult[0];
+      if (!profile?.examType || !profile?.onboardingCompleted) {
+        console.log(`📋 [Bot] Usuário ${telegramId} sem perfil, redirecionando para onboarding`);
+        const name = msg.from?.first_name || "Estudante";
+        await bot!.sendMessage(
+          chatId,
+          `📋 *Antes de estudar, vamos montar seu plano personalizado!*\n\n` +
+            `São *8 perguntas rápidas* para criar seu perfil de estudos.`,
+          { parse_mode: "Markdown" },
+        );
+        await new Promise((r) => setTimeout(r, 1500));
+        await startOnboarding(bot!, chatId, telegramId, name);
+        return;
+      }
+
+      // Mensagem de continuidade
+      const studiedIds = safeParseJsonBot(profile.lastStudyContentIds, []);
+      if (studiedIds.length > 0) {
+        await bot!.sendMessage(
+          chatId,
+          `📚 *Continuando seus estudos para ${profile.examType}*\n` +
+            `📊 ${studiedIds.length} questão(ões) já estudada(s)\n\n` +
+            `Preparando nova questão...`,
+          { parse_mode: "Markdown" },
+        );
+      }
+
       const { startLearningSession } = await import("./learning-session");
       await startLearningSession(bot!, chatId, telegramId);
     } catch (error: any) {
@@ -527,7 +702,8 @@ export async function startTelegramBot() {
     try {
       // Buscar dados do usuário
       const userData = await db.execute(sql`
-          SELECT id, plan, "planStatus", "createdAt", "examType"
+          SELECT id, plan, "planStatus", "createdAt", "examType",
+            "cargo", "facilidades", "dificuldades", "lastStudyContentIds"
           FROM "User"
           WHERE "telegramId" = ${telegramId}
           LIMIT 1
@@ -584,11 +760,29 @@ export async function startTelegramBot() {
       mensagem += `${planEmoji} Plano: *${planName}*\n`;
       mensagem += `📅 Membro há: *${diasDesde} dia(s)*\n`;
 
-      // Adicionar concurso escolhido
+      // Adicionar concurso e cargo
       if (user.examType) {
         mensagem += `🎯 Concurso: *${user.examType}*\n`;
       }
+      if (user.cargo) {
+        mensagem += `💼 Cargo: *${user.cargo}*\n`;
+      }
       mensagem += `\n`;
+
+      // Pontos fortes e fracos
+      const facilidades = safeParseJsonBot(user.facilidades, []);
+      const dificuldades = safeParseJsonBot(user.dificuldades, []);
+
+      if (facilidades.length > 0 || dificuldades.length > 0) {
+        mensagem += `🧠 *Seu Perfil de Estudos:*\n`;
+        if (facilidades.length > 0) {
+          mensagem += `✅ Pontos fortes: ${facilidades.join(", ")}\n`;
+        }
+        if (dificuldades.length > 0) {
+          mensagem += `🔴 Precisa reforçar: ${dificuldades.join(", ")}\n`;
+        }
+        mensagem += `\n`;
+      }
 
       // Estatísticas
       mensagem += `📚 *Estatísticas de Estudo:*\n\n`;
@@ -660,13 +854,46 @@ export async function startTelegramBot() {
         mensagem += result.message + "\n\n";
 
         if (result.type === "GRATUITY") {
-          mensagem += `🎉 Seu plano *${result.grantedPlan}* foi ativado por *${result.grantedDays} dias*!\n\n`;
-          mensagem += `Digite /estudar para começar a estudar! 📚`;
+          mensagem += `🎉 Seu plano *${result.grantedPlan}* foi ativado por *${result.grantedDays} dias*!`;
+          await bot!.sendMessage(chatId, mensagem, { parse_mode: "Markdown" });
+
+          // Verificar se precisa de onboarding antes de estudar
+          const profileCheck = await db.execute(sql`
+            SELECT "examType", "onboardingCompleted"
+            FROM "User" WHERE "telegramId" = ${telegramId} LIMIT 1
+          `) as any[];
+
+          const userProfile = profileCheck[0];
+          if (!userProfile?.examType || !userProfile?.onboardingCompleted) {
+            console.log(`📋 [Bot] Usuário ${telegramId} ativou código mas sem perfil, iniciando onboarding`);
+            await new Promise((r) => setTimeout(r, 2000));
+            await bot!.sendMessage(
+              chatId,
+              `📋 *Agora vamos montar seu plano de estudos!*\n\n` +
+                `São *8 perguntas rápidas* para personalizar sua experiência.`,
+              { parse_mode: "Markdown" },
+            );
+            await new Promise((r) => setTimeout(r, 1500));
+            const name = msg.from?.first_name || "Estudante";
+            await startOnboarding(bot!, chatId, telegramId, name);
+          } else {
+            await new Promise((r) => setTimeout(r, 1000));
+            const keyboard = {
+              inline_keyboard: [
+                [{ text: "📚 Começar a estudar", callback_data: "menu_estudar" }],
+                [{ text: "📊 Ver meu progresso", callback_data: "menu_progresso" }],
+              ],
+            };
+            await bot!.sendMessage(
+              chatId,
+              `Pronto para estudar? 🚀`,
+              { parse_mode: "Markdown", reply_markup: keyboard },
+            );
+          }
         } else if (result.type === "DISCOUNT") {
           mensagem += `💰 Use este desconto ao fazer sua assinatura no site!`;
+          await bot!.sendMessage(chatId, mensagem, { parse_mode: "Markdown" });
         }
-
-        await bot!.sendMessage(chatId, mensagem, { parse_mode: "Markdown" });
       } else {
         await bot!.sendMessage(
           chatId,

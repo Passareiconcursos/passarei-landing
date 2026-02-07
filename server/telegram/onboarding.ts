@@ -1,4 +1,3 @@
-import { startLearningSession } from "./learning-session";
 import TelegramBot from "node-telegram-bot-api";
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
@@ -535,33 +534,27 @@ async function finishOnboarding(
         `🎯 Focar em: *${data.dificuldades?.join(", ") || "Todas as matérias"}*\n` +
         `📅 Tempo: *${data.timeUntilExam}*\n` +
         `⏰ Horário de estudo: *${scheduleText}*\n\n` +
-        `━━━━━━━━━━━━━━━━\n\n` +
-        `🎁 *Você tem 21 questões GRÁTIS hoje!*\n\n` +
-        `⏳ Preparando sua primeira aula...`,
+        `━━━━━━━━━━━━━━━━`,
       { parse_mode: "Markdown" },
     );
 
-    await new Promise((r) => setTimeout(r, 3000));
+    await new Promise((r) => setTimeout(r, 2000));
+
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: "📚 Começar a estudar agora!", callback_data: "menu_estudar" }],
+        [{ text: "📋 Ver menu principal", callback_data: "menu_main" }],
+      ],
+    };
 
     await bot.sendMessage(
       chatId,
-      `✅ *Plano de estudos criado!*\n\n` +
-        `🚀 *Preparando sua primeira questão...*\n\n` +
-        `📚 Começaremos com: *${data.dificuldades?.[0] || "Direito Penal"}*\n\n` +
-        `Em instantes você receberá o primeiro conteúdo! 💪`,
-      { parse_mode: "Markdown" },
+      `✅ *Tudo pronto!*\n\n` +
+        `📚 Começaremos focando em: *${data.dificuldades?.[0] || "Direito Penal"}*\n\n` +
+        `🎁 Você tem *21 questões GRÁTIS* hoje!\n\n` +
+        `Quando estiver pronto, clique abaixo para começar 👇`,
+      { parse_mode: "Markdown", reply_markup: keyboard },
     );
-
-    setTimeout(() => {
-      startLearningSession(
-        bot,
-        chatId,
-        telegramId,
-        data.examType!,
-        data.dificuldades || [],
-        data.facilidades || [],
-      );
-    }, 3000);
   } catch (error) {
     console.error("Erro ao finalizar:", error);
     await bot.sendMessage(

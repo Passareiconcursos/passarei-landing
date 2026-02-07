@@ -8,7 +8,7 @@ import activationRoutes from "./activation/test-routes";
 import paymentRoutes from "./payment/routes";
 import refundRoutes from "./payment/refund-routes";
 import { registerEditalRoutes } from "./edital-routes";
-// import { registerPrismaRoutes } from "./routes-prisma"; // DESABILITADO - usando Supabase
+
 import { registerSupabaseRoutes } from "./routes-supabase";
 import { registerMiniChatRoutes } from "./minichat-routes";
 import { registerEssayRoutes } from "./essay-routes";

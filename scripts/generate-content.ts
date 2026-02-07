@@ -249,12 +249,21 @@ async function saveContent(content: GeneratedContent): Promise<string> {
  * Salvar questões no banco
  */
 async function saveQuestions(
-  contentId: string,
+  subjectId: string,
   questions: GeneratedQuestion[],
 ): Promise<void> {
   try {
     for (const question of questions) {
       const questionId = `question_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Converter alternativas de string[] para {letter, text}[]
+      const alternatives = question.options.map((opt, idx) => ({
+        letter: String.fromCharCode(65 + idx),
+        text: opt,
+      }));
+
+      // Converter correctAnswer de indice (0,1,2,3) para letra ("A","B","C","D")
+      const correctLetter = String.fromCharCode(65 + question.correctAnswer);
 
       await db.execute(sql`
         INSERT INTO "Question" (
@@ -270,10 +279,10 @@ async function saveQuestions(
           "updatedAt"
         ) VALUES (
           ${questionId},
-          ${contentId},
+          ${subjectId},
           ${question.question},
-          ${JSON.stringify(question.options)},
-          ${question.correctAnswer.toString()},
+          ${JSON.stringify(alternatives)}::jsonb,
+          ${correctLetter},
           ${question.explanation},
           ${mapDifficulty(question.difficulty)},
           'MULTIPLA_ESCOLHA',
@@ -282,7 +291,7 @@ async function saveQuestions(
         )
       `);
 
-      console.log(`💾 Questão salva: ${questionId}`);
+      console.log(`💾 Questão salva: ${questionId} (subject: ${subjectId}, gabarito: ${correctLetter})`);
 
       // Aguardar 100ms entre questões
       await new Promise((r) => setTimeout(r, 100));
@@ -322,8 +331,8 @@ async function generateSubject(
       // Gerar questões
       const questions = await generateQuestions(content, questionsPerContent);
 
-      // Salvar questões
-      await saveQuestions(contentId, questions);
+      // Salvar questões (usando o subjectId real, nao o contentId)
+      await saveQuestions(content.subject, questions);
       questionCount += questions.length;
 
       // Aguardar 2s entre gerações (rate limit)
