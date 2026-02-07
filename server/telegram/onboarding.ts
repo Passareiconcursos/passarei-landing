@@ -161,6 +161,7 @@ export async function startOnboarding(
       `🎯 Bem-vindo ao *PASSAREI* - seu assistente de estudos para concursos!\n\n` +
       `📚 Vou criar um plano personalizado para você em *8 perguntas rápidas*.\n\n` +
       `🎁 *BÔNUS:* Você tem *21 questões GRÁTIS* hoje para testar!\n\n` +
+      `💡 *Dica:* A qualquer momento, use /menu para acessar todas as opções, /parar para encerrar a sessão ou /ajuda para suporte.\n\n` +
       `Vamos começar? 💪`,
     { parse_mode: "Markdown" },
   );

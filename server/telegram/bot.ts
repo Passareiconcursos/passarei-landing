@@ -16,7 +16,7 @@ import {
   handleOnboardingMessage,
   onboardingStates,
 } from "./onboarding";
-import { handleLearningCallback } from "./learning-session";
+import { handleLearningCallback, activeSessions, endSessionWithReport } from "./learning-session";
 import { startReminderScheduler, handleReminderAnswer } from "./reminder";
 
 const token = process.env.TELEGRAM_BOT_TOKEN || "";
@@ -278,6 +278,7 @@ export async function startTelegramBot() {
           "❓ *Ajuda - Passarei Concursos*\n\n" +
             "📚 *Comandos disponíveis:*\n\n" +
             "▪️ `/estudar` - Iniciar sessão de estudos\n" +
+            "▪️ `/parar` - Encerrar sessão e ver relatório\n" +
             "▪️ `/concurso` - Escolher concurso\n" +
             "▪️ `/progresso` - Ver suas estatísticas\n" +
             "▪️ `/menu` - Menu principal\n" +
@@ -906,6 +907,25 @@ export async function startTelegramBot() {
       await bot!.sendMessage(
         chatId,
         "⚠️ Erro ao processar seu código. Tente novamente em instantes.",
+        { parse_mode: "Markdown" },
+      );
+    }
+  });
+
+  // C4: Comando /parar - encerrar sessão voluntariamente com relatório
+  bot.onText(/\/(parar|sair)/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramId = String(msg.from?.id);
+
+    console.log(`✋ [Bot] Comando /parar de ${telegramId}`);
+
+    const session = activeSessions.get(telegramId);
+    if (session) {
+      await endSessionWithReport(bot!, session, "voluntary");
+    } else {
+      await bot!.sendMessage(
+        chatId,
+        `ℹ️ Nenhuma sessão de estudo ativa.\n\nUse /estudar para começar!`,
         { parse_mode: "Markdown" },
       );
     }

@@ -47,6 +47,8 @@ interface LearningSession {
   currentSubjectCorrect: number;
   _skipRetries?: number;
   pendingQuestion?: any; // Questão aguardando clique no botão "Responder"
+  lastInteractionAt: Date; // C1: controle de inatividade 30min
+  subjectStats: Record<string, { name: string; correct: number; total: number }>; // C1: stats por matéria
 }
 
 const activeSessions = new Map<string, LearningSession>();
@@ -65,6 +67,133 @@ const FEEDBACK_WRONG = [
   { title: "QUASE LÁ!", msg: "Resposta incorreta, entenda:" },
   { title: "FOCO TOTAL!", msg: "Errou, veja a explicação:" },
 ];
+
+const INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // 30 minutos
+
+// ============================================
+// C1: RELATÓRIO CONSOLIDADO DE APROVEITAMENTO
+// ============================================
+function generateConsolidatedReport(session: LearningSession): string {
+  const total = session.correctAnswers + session.wrongAnswers;
+  const pct = total > 0 ? Math.round((session.correctAnswers / total) * 100) : 0;
+  const elapsed = Math.round((Date.now() - session.startTime.getTime()) / 60000);
+
+  let msg = `📊 *RELATÓRIO DE ESTUDOS*\n\n`;
+  msg += `⏱️ Tempo de estudo: *${elapsed} min*\n`;
+  msg += `📚 Questões respondidas: *${total}*\n`;
+  msg += `✅ Acertos: *${session.correctAnswers}*\n`;
+  msg += `❌ Erros: *${session.wrongAnswers}*\n`;
+  msg += `📈 Aproveitamento: *${pct}%*\n`;
+
+  // Stats por matéria
+  const subjects = Object.values(session.subjectStats);
+  if (subjects.length > 0) {
+    msg += `\n───────────────\n📚 *Por matéria:*\n\n`;
+
+    let best: { name: string; pct: number } | null = null;
+    let worst: { name: string; pct: number } | null = null;
+
+    for (const s of subjects) {
+      if (s.total === 0) continue;
+      const sPct = Math.round((s.correct / s.total) * 100);
+      const emoji = sPct >= 70 ? "🟢" : sPct >= 50 ? "🟡" : "🔴";
+      msg += `${emoji} ${s.name}: ${s.correct}/${s.total} (${sPct}%)\n`;
+
+      if (!best || sPct > best.pct) best = { name: s.name, pct: sPct };
+      if (!worst || sPct < worst.pct) worst = { name: s.name, pct: sPct };
+    }
+
+    if (best && worst && best.name !== worst.name) {
+      msg += `\n💚 Melhor: *${best.name}* (${best.pct}%)`;
+      msg += `\n🔴 Reforçar: *${worst.name}* (${worst.pct}%)`;
+    }
+  }
+
+  // Motivação
+  msg += `\n\n`;
+  if (pct >= 80) msg += `🏆 *Excelente desempenho! Continue assim!*`;
+  else if (pct >= 60) msg += `✅ *Bom trabalho! Você está evoluindo!*`;
+  else if (pct >= 40) msg += `💪 *Continue praticando! Cada questão conta!*`;
+  else if (total > 0) msg += `📚 *Não desista! Revise os conteúdos e tente novamente!*`;
+  else msg += `📖 *Comece a estudar para ver seu progresso!*`;
+
+  return msg;
+}
+
+// Salvar desempenho diário por matéria no banco (C2: alimenta estudo adaptativo)
+async function saveDailyPerformance(telegramId: string, subjectStats: Record<string, { name: string; correct: number; total: number }>) {
+  try {
+    const subjects = Object.entries(subjectStats);
+    if (subjects.length === 0) return;
+
+    // Salvar dificuldades atualizadas baseado no desempenho
+    const weakSubjects: string[] = [];
+    for (const [, stats] of subjects) {
+      if (stats.total > 0) {
+        const pct = (stats.correct / stats.total) * 100;
+        if (pct < 50) weakSubjects.push(stats.name);
+      }
+    }
+
+    if (weakSubjects.length > 0) {
+      // Mesclar com dificuldades existentes
+      const existing = await db.execute(sql`
+        SELECT "dificuldades" FROM "User" WHERE "telegramId" = ${telegramId} LIMIT 1
+      `) as any[];
+
+      let currentDiffs: string[] = [];
+      if (existing[0]?.dificuldades) {
+        const raw = existing[0].dificuldades;
+        currentDiffs = typeof raw === "string" ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
+      }
+
+      // Adicionar novas dificuldades sem duplicar
+      const merged = Array.from(new Set([...currentDiffs, ...weakSubjects]));
+
+      await db.execute(sql`
+        UPDATE "User"
+        SET "dificuldades" = ${JSON.stringify(merged)}::jsonb,
+            "lastActiveAt" = NOW()
+        WHERE "telegramId" = ${telegramId}
+      `);
+      console.log(`📊 [C2] Dificuldades atualizadas para ${telegramId}: ${merged.join(", ")}`);
+    } else {
+      await db.execute(sql`
+        UPDATE "User" SET "lastActiveAt" = NOW() WHERE "telegramId" = ${telegramId}
+      `);
+    }
+  } catch (error) {
+    console.error("❌ [C2] Erro ao salvar desempenho:", error);
+  }
+}
+
+// Verificar se houve inatividade de 30min
+function checkInactivity(session: LearningSession): boolean {
+  return Date.now() - session.lastInteractionAt.getTime() > INACTIVITY_LIMIT_MS;
+}
+
+// Encerrar sessão com relatório consolidado
+async function endSessionWithReport(
+  bot: TelegramBot,
+  session: LearningSession,
+  reason: "limit" | "inactivity" | "voluntary",
+) {
+  const telegramId = session.userId;
+  let header = "";
+  if (reason === "limit") header = `⏰ *Limite diário atingido!*\n\n`;
+  else if (reason === "inactivity") header = `⏸️ *Sessão pausada por inatividade (30min)*\n\n`;
+  else header = `✋ *Sessão encerrada*\n\n`;
+
+  const report = generateConsolidatedReport(session);
+  await bot.sendMessage(session.chatId, header + report, { parse_mode: "Markdown" });
+
+  // Salvar progresso e desempenho
+  const trimmedIds = session.usedContentIds.slice(-200);
+  await saveStudyProgress(telegramId, trimmedIds);
+  await saveDailyPerformance(telegramId, session.subjectStats);
+
+  activeSessions.delete(telegramId);
+}
 
 export async function startLearningSession(
   bot: TelegramBot,
@@ -113,6 +242,8 @@ export async function startLearningSession(
     currentSubjectName: null,
     currentSubjectQuestions: 0,
     currentSubjectCorrect: 0,
+    lastInteractionAt: new Date(),
+    subjectStats: {},
   };
 
   activeSessions.set(telegramId, session);
@@ -255,6 +386,24 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
   const access = await checkQuestionAccess(session.userId);
 
   if (!access.canAccess) {
+    // C1: Gatilho 1 - Limite diário atingido → relatório consolidado
+    if (access.reason === "limit_reached") {
+      await endSessionWithReport(bot, session, "limit");
+      // Mostrar opções de upgrade
+      const keyboard = {
+        inline_keyboard: [
+          [{ text: "⭐ Upgrade Veterano (30/dia)", callback_data: "buy_veterano" }],
+          [{ text: "📋 Ver menu principal", callback_data: "menu_main" }],
+        ],
+      };
+      await bot.sendMessage(
+        session.chatId,
+        `Volte amanhã para continuar estudando!`,
+        { parse_mode: "Markdown", reply_markup: keyboard },
+      );
+      return;
+    }
+
     session.currentStep = "blocked";
     const keyboard = {
       inline_keyboard: [
@@ -850,6 +999,13 @@ export async function handleLearningCallback(
   if (data === "ready_question" && session.pendingQuestion) {
     await bot.answerCallbackQuery(query.id);
 
+    // C1: Verificar inatividade 30min
+    if (checkInactivity(session)) {
+      await endSessionWithReport(bot, session, "inactivity");
+      return true;
+    }
+    session.lastInteractionAt = new Date();
+
     const { alternatives, isCertoErrado, diffEmoji, statement } = session.pendingQuestion;
 
     // Formatar opções
@@ -897,12 +1053,30 @@ export async function handleLearningCallback(
     // Delay para dar tempo do usuário processar
     await new Promise((r) => setTimeout(r, 1500)); // 1,5 segundos
 
+    // C1: Atualizar interação
+    session.lastInteractionAt = new Date();
+
     // Incrementar contador de questões da matéria atual
     session.currentSubjectQuestions++;
 
+    // C1: Registrar stats por matéria para relatório consolidado
+    if (session.currentSubject) {
+      if (!session.subjectStats[session.currentSubject]) {
+        session.subjectStats[session.currentSubject] = {
+          name: session.currentSubjectName || "Conteúdo",
+          correct: 0,
+          total: 0,
+        };
+      }
+      session.subjectStats[session.currentSubject].total++;
+      if (isCorrect) {
+        session.subjectStats[session.currentSubject].correct++;
+      }
+    }
+
     if (isCorrect) {
       session.correctAnswers++;
-      session.currentSubjectCorrect++; // Contador por matéria
+      session.currentSubjectCorrect++;
       const fb =
         FEEDBACK_CORRECT[Math.floor(Math.random() * FEEDBACK_CORRECT.length)];
       await bot.sendMessage(session.chatId, `✅ *${fb.title}*\n\n${fb.msg}`, {
@@ -1022,30 +1196,25 @@ VALUES (${userId}, ${session.currentContent.id}, ${answerIdx}, ${isCorrect}, NOW
 
   if (data === "next_question") {
     await bot.answerCallbackQuery(query.id);
+
+    // C1: Verificar inatividade 30min
+    if (checkInactivity(session)) {
+      await endSessionWithReport(bot, session, "inactivity");
+      return true;
+    }
+    session.lastInteractionAt = new Date();
+
     await sendNextContent(bot, session);
     return true;
   }
 
   if (data === "stop_session") {
     await bot.answerCallbackQuery(query.id);
-    const total = session.correctAnswers + session.wrongAnswers;
-    const pct =
-      total > 0 ? Math.round((session.correctAnswers / total) * 100) : 0;
-    await bot.sendMessage(
-      session.chatId,
-      `📊 *RELATÓRIO*\n\n📚 ${session.contentsSent} questões\n✅ ${session.correctAnswers} acertos\n❌ ${session.wrongAnswers} erros\n📈 ${pct}%\n\nVolte amanhã! 🚀`,
-      { parse_mode: "Markdown" },
-    );
-
-    // Salvar progresso antes de encerrar
-    const trimmedIds = session.usedContentIds.slice(-200);
-    await saveStudyProgress(telegramId, trimmedIds);
-
-    activeSessions.delete(telegramId);
+    await endSessionWithReport(bot, session, "voluntary");
     return true;
   }
 
   return false;
 }
 
-export { activeSessions };
+export { activeSessions, endSessionWithReport };
