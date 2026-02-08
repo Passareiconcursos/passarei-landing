@@ -266,8 +266,8 @@ async function migrateEssaysTable() {
 
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS essays (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      user_id TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
       theme TEXT NOT NULL,
       prompt TEXT,
       text TEXT NOT NULL,
@@ -298,11 +298,11 @@ async function migrateEssaysTable() {
 
   console.log("  ✅ Tabela essays criada");
 
-  // Adicionar colunas de redação na User se não existirem
+  // Adicionar colunas de redação na User se não existirem (camelCase = Prisma legacy)
   const essayCol = await db.execute(sql`
     SELECT EXISTS (
       SELECT FROM information_schema.columns
-      WHERE table_name = 'User' AND column_name = 'monthly_essays_used'
+      WHERE table_name = 'User' AND column_name = 'monthlyEssaysUsed'
     ) as exists
   `) as any[];
 
@@ -310,9 +310,9 @@ async function migrateEssaysTable() {
     console.log("  🔄 Adicionando colunas de redação na User...");
     await db.execute(sql`
       ALTER TABLE "User"
-      ADD COLUMN IF NOT EXISTS monthly_essays_used INTEGER NOT NULL DEFAULT 0,
-      ADD COLUMN IF NOT EXISTS last_essay_month VARCHAR(7),
-      ADD COLUMN IF NOT EXISTS total_essays_submitted INTEGER NOT NULL DEFAULT 0
+      ADD COLUMN IF NOT EXISTS "monthlyEssaysUsed" INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS "lastEssayMonth" VARCHAR(7),
+      ADD COLUMN IF NOT EXISTS "totalEssaysSubmitted" INTEGER NOT NULL DEFAULT 0
     `);
     console.log("  ✅ Colunas de redação adicionadas na User");
   }
