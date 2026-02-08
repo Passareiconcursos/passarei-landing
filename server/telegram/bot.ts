@@ -20,6 +20,17 @@ import { handleLearningCallback, activeSessions, endSessionWithReport } from "./
 import { startReminderScheduler, handleReminderAnswer } from "./reminder";
 
 const token = process.env.TELEGRAM_BOT_TOKEN || "";
+
+// ============================================
+// ESTADO DE REDAÇÃO (fluxo multi-step)
+// ============================================
+interface RedacaoState {
+  step: "waiting_theme" | "waiting_text";
+  theme?: string;
+  chatId: number;
+}
+
+const redacaoStates = new Map<string, RedacaoState>();
 let bot: TelegramBot | null = null;
 
 function safeParseJsonBot(value: any, fallback: any): any {
@@ -279,6 +290,7 @@ export async function startTelegramBot() {
             "📚 *Comandos disponíveis:*\n\n" +
             "▪️ `/estudar` - Iniciar sessão de estudos\n" +
             "▪️ `/parar` - Encerrar sessão e ver relatório\n" +
+            "▪️ `/redacao` - Enviar redação para correção IA\n" +
             "▪️ `/concurso` - Escolher concurso\n" +
             "▪️ `/progresso` - Ver suas estatísticas\n" +
             "▪️ `/menu` - Menu principal\n" +
@@ -289,6 +301,54 @@ export async function startTelegramBot() {
             "🎓 _Bons estudos!_",
           { parse_mode: "Markdown" },
         );
+        return;
+      }
+
+      if (data === "menu_redacao") {
+        console.log(`📝 [Bot] Menu Redação clicado por ${telegramId}`);
+
+        // Verificar acesso
+        const INTERNAL_URL = `http://localhost:${process.env.PORT || 5000}`;
+        try {
+          const accessRes = await fetch(`${INTERNAL_URL}/api/essays/check-access/${telegramId}`);
+          const access = await accessRes.json();
+
+          if (!access.success || !access.canAccess) {
+            const keyboard = {
+              inline_keyboard: [
+                [{ text: "🌐 Acessar passarei.com.br", url: "https://passarei.com.br" }],
+              ],
+            };
+            await bot!.sendMessage(chatId, `❌ ${access.message || "Sem acesso."}`, {
+              parse_mode: "Markdown",
+              reply_markup: keyboard,
+            });
+            return;
+          }
+
+          let creditInfo = "";
+          if (access.reason === "veterano_free") {
+            creditInfo = `\n📊 Correções gratuitas restantes: *${access.freeRemaining}*`;
+          } else if (access.reason === "paid") {
+            creditInfo = `\n💰 Créditos: R$ ${Number(access.credits).toFixed(2)}`;
+          }
+
+          redacaoStates.set(telegramId, { step: "waiting_theme", chatId });
+
+          await bot!.sendMessage(
+            chatId,
+            `📝 *Correção de Redação com IA*${creditInfo}\n\n` +
+              `Qual é o *tema* da sua redação?\n\n` +
+              `_Exemplo: "A importância da segurança pública no Brasil"_\n\n` +
+              `Para cancelar, envie /cancelar`,
+            { parse_mode: "Markdown" },
+          );
+        } catch (error) {
+          console.error("❌ [Bot] Erro no menu_redacao:", error);
+          await bot!.sendMessage(chatId, "⚠️ Erro ao iniciar. Tente /redacao.", {
+            parse_mode: "Markdown",
+          });
+        }
         return;
       }
 
@@ -307,10 +367,13 @@ export async function startTelegramBot() {
           inline_keyboard: [
             [
               { text: "📚 Estudar", callback_data: "menu_estudar" },
-              { text: "🎯 Escolher Concurso", callback_data: "menu_concurso" },
+              { text: "📝 Redação", callback_data: "menu_redacao" },
             ],
             [
-              { text: "📊 Meu Progresso", callback_data: "menu_progresso" },
+              { text: "🎯 Concurso", callback_data: "menu_concurso" },
+              { text: "📊 Progresso", callback_data: "menu_progresso" },
+            ],
+            [
               { text: "❓ Ajuda", callback_data: "menu_ajuda" },
             ],
           ],
@@ -573,10 +636,13 @@ export async function startTelegramBot() {
     const keyboard = [
       [
         { text: "📚 Estudar", callback_data: "menu_estudar" },
-        { text: "🎯 Escolher Concurso", callback_data: "menu_concurso" },
+        { text: "📝 Redação", callback_data: "menu_redacao" },
       ],
       [
-        { text: "📊 Meu Progresso", callback_data: "menu_progresso" },
+        { text: "🎯 Concurso", callback_data: "menu_concurso" },
+        { text: "📊 Progresso", callback_data: "menu_progresso" },
+      ],
+      [
         { text: "❓ Ajuda", callback_data: "menu_ajuda" },
       ],
     ];
@@ -605,6 +671,138 @@ export async function startTelegramBot() {
     if (onboardingStates.has(telegramId)) {
       await handleOnboardingMessage(bot!, msg);
       return;
+    }
+
+    // Fluxo de redação (captura tema e texto)
+    if (redacaoStates.has(telegramId) && msg.text && !msg.text.startsWith("/")) {
+      const state = redacaoStates.get(telegramId)!;
+      const chatId = msg.chat.id;
+
+      if (state.step === "waiting_theme") {
+        // Recebeu o tema, agora pedir o texto
+        state.theme = msg.text.trim();
+        state.step = "waiting_text";
+        redacaoStates.set(telegramId, state);
+
+        await bot!.sendMessage(
+          chatId,
+          `📋 Tema: *${state.theme}*\n\n` +
+            `Agora envie o *texto completo* da sua redação.\n\n` +
+            `_Cole todo o texto em uma única mensagem._\n\n` +
+            `Para cancelar, envie /cancelar`,
+          { parse_mode: "Markdown" },
+        );
+        return;
+      }
+
+      if (state.step === "waiting_text") {
+        const essayText = msg.text.trim();
+        const wordCount = essayText.split(/\s+/).length;
+
+        // Validar tamanho mínimo
+        if (wordCount < 50) {
+          await bot!.sendMessage(
+            chatId,
+            `⚠️ Texto muito curto (${wordCount} palavras).\n\nUma redação precisa ter pelo menos 50 palavras. Envie novamente.`,
+            { parse_mode: "Markdown" },
+          );
+          return;
+        }
+
+        // Limpar estado antes de processar
+        const theme = state.theme!;
+        redacaoStates.delete(telegramId);
+
+        await bot!.sendMessage(
+          chatId,
+          `⏳ *Corrigindo sua redação...*\n\n` +
+            `📋 Tema: ${theme}\n` +
+            `📄 ${wordCount} palavras\n\n` +
+            `_Aguarde, a correção leva alguns segundos._`,
+          { parse_mode: "Markdown" },
+        );
+
+        try {
+          // Chamar API interna
+          const INTERNAL_URL = `http://localhost:${process.env.PORT || 5000}`;
+          const response = await fetch(`${INTERNAL_URL}/api/essays/submit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telegramId, theme, text: essayText }),
+          });
+
+          const result = await response.json();
+
+          if (result.success && result.correction) {
+            const { scores, feedback } = result.correction;
+
+            // Mensagem principal com notas
+            let msg1 = `📊 *Resultado da Correção*\n\n`;
+            msg1 += `📋 Tema: *${theme}*\n`;
+            msg1 += `📄 Palavras: ${wordCount}\n\n`;
+            msg1 += `🏆 *Nota Total: ${scores.total}/1000*\n\n`;
+            msg1 += `📝 *Competências:*\n`;
+            msg1 += `  1️⃣ Norma culta: *${scores.comp1}/200*\n`;
+            msg1 += `  2️⃣ Compreensão: *${scores.comp2}/200*\n`;
+            msg1 += `  3️⃣ Argumentação: *${scores.comp3}/200*\n`;
+            msg1 += `  4️⃣ Coesão: *${scores.comp4}/200*\n`;
+            msg1 += `  5️⃣ Intervenção: *${scores.comp5}/200*\n`;
+
+            if (result.wasFree) {
+              msg1 += `\n✅ Correção gratuita`;
+            } else if (result.amountPaid > 0) {
+              msg1 += `\n💰 Debitado: R$ ${Number(result.amountPaid).toFixed(2)}`;
+            }
+
+            await bot!.sendMessage(chatId, msg1, { parse_mode: "Markdown" });
+
+            // Feedback geral
+            await bot!.sendMessage(
+              chatId,
+              `💬 *Feedback Geral:*\n\n${feedback.general}`,
+              { parse_mode: "Markdown" },
+            );
+
+            // Feedback por competência (em uma mensagem para não spammar)
+            let msg2 = `📋 *Feedback Detalhado:*\n\n`;
+            msg2 += `*1. Norma culta:* ${feedback.comp1}\n\n`;
+            msg2 += `*2. Compreensão:* ${feedback.comp2}\n\n`;
+            msg2 += `*3. Argumentação:* ${feedback.comp3}\n\n`;
+            msg2 += `*4. Coesão:* ${feedback.comp4}\n\n`;
+            msg2 += `*5. Intervenção:* ${feedback.comp5}`;
+
+            await bot!.sendMessage(chatId, msg2, { parse_mode: "Markdown" });
+
+            // Botões finais
+            const keyboard = {
+              inline_keyboard: [
+                [{ text: "📝 Escrever outra redação", callback_data: "menu_redacao" }],
+                [{ text: "📚 Estudar", callback_data: "menu_estudar" }],
+                [{ text: "📋 Menu", callback_data: "menu_main" }],
+              ],
+            };
+            await bot!.sendMessage(
+              chatId,
+              "O que deseja fazer agora?",
+              { reply_markup: keyboard },
+            );
+          } else {
+            await bot!.sendMessage(
+              chatId,
+              `❌ *Erro na correção.*\n\n${result.error || "Tente novamente."}`,
+              { parse_mode: "Markdown" },
+            );
+          }
+        } catch (error) {
+          console.error("❌ [Bot] Erro ao enviar redação:", error);
+          await bot!.sendMessage(
+            chatId,
+            "⚠️ Erro ao processar sua redação. Tente novamente.",
+            { parse_mode: "Markdown" },
+          );
+        }
+        return;
+      }
     }
 
     if (msg.text?.startsWith("/")) return;
@@ -942,6 +1140,87 @@ export async function startTelegramBot() {
         "Exemplo: `/codigo BETA2026`",
       { parse_mode: "Markdown" },
     );
+  });
+
+  // ============================================
+  // Comando /redacao - Enviar redação para correção IA
+  // ============================================
+  bot.onText(/\/redacao/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramId = String(msg.from?.id);
+
+    console.log(`📝 [Bot] Comando /redacao de ${telegramId}`);
+
+    try {
+      // Verificar se tem sessão de estudo ativa
+      if (activeSessions.has(telegramId)) {
+        await bot!.sendMessage(
+          chatId,
+          "⚠️ Você tem uma sessão de estudo ativa.\n\nUse /parar para encerrar antes de enviar uma redação.",
+          { parse_mode: "Markdown" },
+        );
+        return;
+      }
+
+      // Verificar acesso via API interna
+      const INTERNAL_URL = `http://localhost:${process.env.PORT || 5000}`;
+      const accessRes = await fetch(`${INTERNAL_URL}/api/essays/check-access/${telegramId}`);
+      const access = await accessRes.json();
+
+      if (!access.success || !access.canAccess) {
+        const keyboard = {
+          inline_keyboard: [
+            [{ text: "🌐 Acessar passarei.com.br", url: "https://passarei.com.br" }],
+          ],
+        };
+        await bot!.sendMessage(
+          chatId,
+          `❌ *Sem acesso à correção de redações.*\n\n${access.message || "Ative seu plano para usar este recurso."}`,
+          { parse_mode: "Markdown", reply_markup: keyboard },
+        );
+        return;
+      }
+
+      // Informar sobre créditos disponíveis
+      let creditInfo = "";
+      if (access.reason === "veterano_free") {
+        creditInfo = `\n📊 Correções gratuitas restantes: *${access.freeRemaining}*`;
+      } else if (access.reason === "paid") {
+        creditInfo = `\n💰 Créditos: R$ ${Number(access.credits).toFixed(2)} (R$ ${Number(access.price).toFixed(2)}/redação)`;
+      }
+
+      // Salvar estado e pedir tema
+      redacaoStates.set(telegramId, { step: "waiting_theme", chatId });
+
+      await bot!.sendMessage(
+        chatId,
+        `📝 *Correção de Redação com IA*${creditInfo}\n\n` +
+          `Qual é o *tema* da sua redação?\n\n` +
+          `_Exemplo: "A importância da segurança pública no Brasil"_\n\n` +
+          `Para cancelar, envie /cancelar`,
+        { parse_mode: "Markdown" },
+      );
+    } catch (error) {
+      console.error("❌ [Bot] Erro no /redacao:", error);
+      await bot!.sendMessage(
+        chatId,
+        "⚠️ Erro ao iniciar correção de redação. Tente novamente.",
+        { parse_mode: "Markdown" },
+      );
+    }
+  });
+
+  // Comando /cancelar - cancelar redação em andamento
+  bot.onText(/\/cancelar/, async (msg) => {
+    const telegramId = String(msg.from?.id);
+    if (redacaoStates.has(telegramId)) {
+      redacaoStates.delete(telegramId);
+      await bot!.sendMessage(
+        msg.chat.id,
+        "❌ Envio de redação cancelado.",
+        { parse_mode: "Markdown" },
+      );
+    }
   });
 }
 export { bot };

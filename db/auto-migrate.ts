@@ -28,6 +28,9 @@ export async function runAutoMigrations() {
     // 6. Colunas de revisão (Professor Revisor - Fase D)
     await migrateReviewColumns();
 
+    // 7. Tabela de redações (essays)
+    await migrateEssaysTable();
+
     console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
   } catch (error) {
     console.error("⚠️ [Auto-Migrate] Erro (não fatal):", error);
@@ -234,6 +237,84 @@ async function createDefaultPromoCodes() {
       VALUES ('BETA001', 'Beta tester - VETERANO 30 dias', 'GRATUITY', 'VETERANO', 30, 1, true)
     `);
     console.log("  ✅ Código BETA001 criado (VETERANO 30 dias, 1 uso)");
+  }
+}
+
+async function migrateEssaysTable() {
+  // Verificar se tabela essays existe
+  const exists = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables
+      WHERE table_name = 'essays'
+    ) as exists
+  `) as any[];
+
+  if (exists[0]?.exists) {
+    return;
+  }
+
+  console.log("  🔄 Criando tabela essays...");
+
+  // Criar enum de status se não existir
+  await db.execute(sql`
+    DO $$ BEGIN
+      CREATE TYPE essay_status AS ENUM ('DRAFT', 'SUBMITTED', 'CORRECTING', 'CORRECTED', 'ERROR');
+    EXCEPTION
+      WHEN duplicate_object THEN null;
+    END $$;
+  `);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS essays (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      theme TEXT NOT NULL,
+      prompt TEXT,
+      text TEXT NOT NULL,
+      word_count INTEGER NOT NULL DEFAULT 0,
+      status essay_status NOT NULL DEFAULT 'SUBMITTED',
+      score_1 INTEGER,
+      score_2 INTEGER,
+      score_3 INTEGER,
+      score_4 INTEGER,
+      score_5 INTEGER,
+      total_score INTEGER,
+      feedback TEXT,
+      feedback_comp_1 TEXT,
+      feedback_comp_2 TEXT,
+      feedback_comp_3 TEXT,
+      feedback_comp_4 TEXT,
+      feedback_comp_5 TEXT,
+      was_free BOOLEAN NOT NULL DEFAULT false,
+      amount_paid REAL DEFAULT 0,
+      submitted_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      corrected_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_essays_user_id ON essays(user_id)`);
+
+  console.log("  ✅ Tabela essays criada");
+
+  // Adicionar colunas de redação na User se não existirem
+  const essayCol = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.columns
+      WHERE table_name = 'User' AND column_name = 'monthly_essays_used'
+    ) as exists
+  `) as any[];
+
+  if (!essayCol[0]?.exists) {
+    console.log("  🔄 Adicionando colunas de redação na User...");
+    await db.execute(sql`
+      ALTER TABLE "User"
+      ADD COLUMN IF NOT EXISTS monthly_essays_used INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS last_essay_month VARCHAR(7),
+      ADD COLUMN IF NOT EXISTS total_essays_submitted INTEGER NOT NULL DEFAULT 0
+    `);
+    console.log("  ✅ Colunas de redação adicionadas na User");
   }
 }
 
