@@ -56,6 +56,14 @@ Sua função é avaliar QUESTÕES de concurso. Avalie a questão abaixo seguindo
 4. EXPLICAÇÃO: A explicação é correta e didática? (0-2 pontos)
 5. FORMATO: Segue padrão de banca (CESPE, FCC)? (0-1 ponto)
 
+IMPORTANTE SOBRE O FORMATO DO GABARITO:
+- As alternativas são listadas com prefixo [0], [1], [2], [3].
+- O gabarito pode estar em DOIS formatos:
+  a) ÍNDICE NUMÉRICO: "0"=primeira, "1"=segunda, "2"=terceira, "3"=quarta
+  b) LETRA: "A"=primeira, "B"=segunda, "C"=terceira, "D"=quarta
+- Verifique se o CONTEÚDO da alternativa indicada pelo gabarito é de fato a resposta correta.
+- NÃO rejeite apenas por formato do gabarito. Foque no CONTEÚDO da alternativa apontada.
+
 Responda EXATAMENTE neste formato JSON:
 {
   "score": <número 0-10>,
@@ -66,7 +74,7 @@ Responda EXATAMENTE neste formato JSON:
 Regras:
 - Score >= 6: APROVADO
 - Score < 6: REJEITADO
-- Se o GABARITO estiver ERRADO: REJEITADO automaticamente (score = 0)
+- Se o CONTEÚDO da alternativa indicada pelo gabarito estiver ERRADO: REJEITADO automaticamente (score = 0)
 - Se mencionar ENEM como concurso alvo: REJEITADO
 - Questão Certo/Errado: verificar se o gabarito bate com a afirmação`;
 
@@ -124,7 +132,10 @@ async function reviewQuestion(question: any): Promise<ReviewResult> {
     : question.alternatives;
 
   const altsFormatted = Array.isArray(alts)
-    ? alts.map((a: any) => typeof a === "string" ? a : `${a.letter}) ${a.text}`).join("\n")
+    ? alts.map((a: any, i: number) => {
+        const text = typeof a === "string" ? a : (a.text || a);
+        return `[${i}] ${text}`;
+      }).join("\n")
     : "N/A";
 
   const prompt = `QUESTÃO PARA REVISÃO:
