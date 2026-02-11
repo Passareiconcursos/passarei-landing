@@ -224,9 +224,9 @@ export default function Checkout() {
           </div>
           {pkg === "veterano" && (
             <ul className="mt-4 space-y-2 text-sm text-gray-600">
-              <li>✅ 300 questões personalizadas/mês</li>
+              <li>✅ 900 questões personalizadas/mês</li>
               <li>✅ 2 correções de redação/mês</li>
-              <li>✅ Todas as apostilas inclusas</li>
+              <li>✅ Simulados mensais completos</li>
               <li>✅ Revisão espaçada inteligente</li>
             </ul>
           )}
@@ -288,7 +288,8 @@ export default function Checkout() {
             Pagamento 100% seguro via Mercado Pago
           </div>
           <p className="text-xs text-gray-400">
-            Até 80% mais acessível que cursos tradicionais. IA de última geração focada em carreiras policiais.
+            Até 80% mais acessível que cursos tradicionais. IA de última geração
+            focada em carreiras policiais.
           </p>
           <p className="text-xs text-gray-400">
             Garantia de 7 dias ou seu dinheiro de volta.

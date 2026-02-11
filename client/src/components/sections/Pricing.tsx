@@ -51,19 +51,19 @@ export function Pricing() {
       description: "Anual • Para levar os estudos a sério",
       features: [
         "30 questões por dia (900/mês)",
-        "2 correções de redação/mês",
+        "2 correções de redação/mês Gratuitas",
         "Revisão espaçada SM2 (memorização)",
         "Simulados mensais completos",
         "Intensivo nas suas dificuldades",
-        "Redação extra por R$ 1,99",
+        "Milhares de Questões corrigidas",
         "Suporte prioritário",
         "Troque de concurso quando quiser",
-        "Economia de 50% vs mensal",
+        "Poupe até 80% no valor dos cursos tradicionais",
       ],
       cta: "Garantir Desconto",
       highlight: true,
       popular: true,
-      badge: "O MAIS ESCOLHIDO 50% OFF",
+      badge: "O MAIS ESCOLHIDO 80% OFF",
       annualNote: "Cobrado Mensalmente Como Assinatura Anual",
       action: "checkout",
       checkoutPlan: "veterano_anual",
@@ -220,16 +220,28 @@ export function Pricing() {
           <div className="bg-gray-50 rounded-2xl p-8 mb-8">
             <div className="grid md:grid-cols-3 gap-6 mb-8">
               <div className="text-center">
-                <div className="text-red-500 line-through text-lg mb-1">R$ 109,90/mês</div>
-                <div className="text-gray-500 text-sm">Cursos tradicionais (plano básico)</div>
+                <div className="text-red-500 line-through text-lg mb-1">
+                  R$ 109,90/mês
+                </div>
+                <div className="text-gray-500 text-sm">
+                  Cursos tradicionais (plano básico)
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-red-500 line-through text-lg mb-1">R$ 219,90/mês</div>
-                <div className="text-gray-500 text-sm">Cursos tradicionais (plano premium)</div>
+                <div className="text-red-500 line-through text-lg mb-1">
+                  R$ 219,90/mês
+                </div>
+                <div className="text-gray-500 text-sm">
+                  Cursos tradicionais (plano premium)
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-[#18cb96] text-2xl font-bold mb-1">R$ 44,90/mês</div>
-                <div className="text-[#18cb96] text-sm font-semibold">Passarei (Plano Veterano)</div>
+                <div className="text-[#18cb96] text-2xl font-bold mb-1">
+                  R$ 44,90/mês
+                </div>
+                <div className="text-[#18cb96] text-sm font-semibold">
+                  Passarei (Plano Veterano)
+                </div>
               </div>
             </div>
 
@@ -237,27 +249,36 @@ export function Pricing() {
               <div className="flex items-start gap-3 bg-white rounded-xl p-4">
                 <Zap className="w-6 h-6 text-[#18cb96] flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-gray-900 text-sm">IA de última geração</p>
+                  <p className="font-semibold text-gray-900 text-sm">
+                    IA de última geração
+                  </p>
                   <p className="text-gray-600 text-xs">
-                    Questões e correções geradas por IA avançada, a mesma tecnologia que as bancas já utilizam na elaboração de provas
+                    Questões e correções geradas por IA avançada, a mesma
+                    tecnologia que as bancas já utilizam na elaboração de provas
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-3 bg-white rounded-xl p-4">
                 <Shield className="w-6 h-6 text-[#18cb96] flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-gray-900 text-sm">Conteúdo sempre atualizado</p>
+                  <p className="font-semibold text-gray-900 text-sm">
+                    Conteúdo sempre atualizado
+                  </p>
                   <p className="text-gray-600 text-xs">
-                    Acompanhamos editais e mudanças legislativas em tempo real. Nenhum professor consegue atualizar tão rápido
+                    Acompanhamos editais e mudanças legislativas em tempo real.
+                    Nenhum professor consegue atualizar tão rápido
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-3 bg-white rounded-xl p-4">
                 <TrendingDown className="w-6 h-6 text-[#18cb96] flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-gray-900 text-sm">Infraestrutura enxuta</p>
+                  <p className="font-semibold text-gray-900 text-sm">
+                    Infraestrutura enxuta
+                  </p>
                   <p className="text-gray-600 text-xs">
-                    Sem custos com estúdio, professores ou equipe comercial. O preço baixo é o resultado direto da eficiência
+                    Sem custos com estúdio, professores ou equipe comercial. O
+                    preço baixo é o resultado direto da eficiência
                   </p>
                 </div>
               </div>
@@ -265,7 +286,8 @@ export function Pricing() {
           </div>
 
           <p className="text-center text-gray-400 text-xs">
-            Preços de referência baseados em plataformas tradicionais de concursos. Consulte os sites oficiais para valores atualizados.
+            Preços de referência baseados em plataformas tradicionais de
+            concursos. Consulte os sites oficiais para valores atualizados.
           </p>
         </div>
       </div>
