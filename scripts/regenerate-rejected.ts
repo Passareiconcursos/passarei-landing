@@ -107,12 +107,20 @@ async function main() {
 
   console.log(`📋 Config: limit=${limit}, dryRun=${dryRun}`);
 
-  // Buscar conteúdos rejeitados
+  // Buscar conteúdos rejeitados APENAS superficiais (não irrelevantes)
+  // Irrelevantes já foram deletados pelo cleanup, mas esta query
+  // adiciona proteção extra para não regenerar temas fora do escopo
   const rejected = await db.execute(sql`
     SELECT id, title, "subjectId", "topicId", "textContent", difficulty, "reviewNotes"
     FROM "Content"
     WHERE "reviewStatus" = 'REJEITADO'
-    ORDER BY "reviewScore" ASC
+    AND "reviewNotes" NOT ILIKE '%não é relevant%'
+    AND "reviewNotes" NOT ILIKE '%foge completamente%'
+    AND "reviewNotes" NOT ILIKE '%totalmente irrelevante%'
+    AND "reviewNotes" NOT ILIKE '%completamente inadequad%'
+    AND "reviewNotes" NOT ILIKE '%fora do escopo%'
+    AND "reviewNotes" NOT ILIKE '%baixíssima relevância%'
+    ORDER BY "reviewScore" DESC
     LIMIT ${limit}
   `) as any[];
 

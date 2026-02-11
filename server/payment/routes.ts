@@ -208,8 +208,8 @@ router.post("/webhooks/mercadopago", async (req: Request, res: Response) => {
             ${paymentData.payment_type_id || null},
             ${paymentData.installments || 1},
             ${JSON.stringify(paymentData)},
-            ${paymentData.date_created ? new Date(paymentData.date_created) : null},
-            ${paymentData.date_approved ? new Date(paymentData.date_approved) : null},
+            ${paymentData.date_created ? new Date(paymentData.date_created).toISOString() : null},
+            ${paymentData.date_approved ? new Date(paymentData.date_approved).toISOString() : null},
             NOW(),
             NOW()
           )
@@ -492,7 +492,8 @@ router.post("/webhooks/subscription", async (req: Request, res: Response) => {
     res.status(200).send("OK");
   } catch (error) {
     console.error("❌ Erro no webhook de assinatura:", error);
-    res.status(500).send("Error");
+    // SEMPRE retornar 200 para webhooks MP, senão ele reenvia infinitamente
+    res.status(200).json({ success: false, error: "Internal error" });
   }
 });
 
@@ -501,8 +502,6 @@ router.post("/webhooks/subscription", async (req: Request, res: Response) => {
 // ============================================
 
 router.post("/manual-activation", handleManualActivation);
-
-export default router;
 
 // ============================================
 // PROCESSAR PAGAMENTO DO BRICK
@@ -561,10 +560,7 @@ router.post("/process-brick", async (req: Request, res: Response) => {
         email: payer?.email || "suporte@passarei.com.br",
         first_name: buyerFirstName || payer?.first_name || payer?.firstName || "",
         last_name: buyerLastName || payer?.last_name || payer?.lastName || "",
-        identification: payer?.identification || {
-          type: "CPF",
-          number: "00000000000",
-        },
+        identification: payer?.identification?.number ? payer.identification : undefined,
         phone: payer?.phone ? {
           area_code: payer.phone.area_code || payer.phone.areaCode || "",
           number: payer.phone.number || "",
@@ -653,7 +649,7 @@ router.post("/process-brick", async (req: Request, res: Response) => {
             ${deviceId || null},
             ${clientIp || null},
             ${JSON.stringify(paymentData)},
-            ${paymentData.date_created ? new Date(paymentData.date_created) : null},
+            ${paymentData.date_created ? new Date(paymentData.date_created).toISOString() : null},
             NOW(),
             NOW()
           )
@@ -721,3 +717,5 @@ router.post("/process-brick", async (req: Request, res: Response) => {
     });
   }
 });
+
+export default router;

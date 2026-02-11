@@ -37,7 +37,9 @@ export default function Checkout() {
   // Mapear 'plan' para 'pkg' se necessário
   const pkgMap: Record<string, string> = {
     calouro: "calouro_mensal",
+    calouro_mensal: "calouro_mensal",
     veterano: "veterano",
+    veterano_anual: "veterano",
   };
 
   const pkg = pkgMap[pkgParam] || pkgParam;
@@ -267,8 +269,8 @@ export default function Checkout() {
           <div id="payment-brick"></div>
         </div>
 
-        {/* Segurança */}
-        <div className="mt-6 text-center text-sm text-gray-500">
+        {/* Segurança e valor */}
+        <div className="mt-6 space-y-3 text-center text-sm text-gray-500">
           <div className="flex items-center justify-center gap-2">
             <svg
               className="w-4 h-4"
@@ -285,6 +287,12 @@ export default function Checkout() {
             </svg>
             Pagamento 100% seguro via Mercado Pago
           </div>
+          <p className="text-xs text-gray-400">
+            Até 80% mais acessível que cursos tradicionais. IA de última geração focada em carreiras policiais.
+          </p>
+          <p className="text-xs text-gray-400">
+            Garantia de 7 dias ou seu dinheiro de volta.
+          </p>
         </div>
       </div>
     </div>
