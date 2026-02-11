@@ -76,8 +76,13 @@ texto da dica`,
         ? tipMatch[1].trim()
         : "Fique atento a este tema nas provas objetivas.",
     };
-  } catch (error) {
-    console.error("❌ Erro ao gerar conteúdo com IA:", error);
+  } catch (error: any) {
+    const isCredits = error?.message?.includes("credit") || error?.status === 429;
+    if (isCredits) {
+      console.warn("⚠️ [AI] Créditos Anthropic insuficientes - usando fallback");
+    } else {
+      console.error("❌ Erro ao gerar conteúdo com IA:", error);
+    }
     return {
       keyPoints:
         "• Conceito fundamental\n• Aplicável em provas\n• Tema recorrente",

@@ -76,10 +76,8 @@ const INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // 30 minutos
 function generateConsolidatedReport(session: LearningSession): string {
   const total = session.correctAnswers + session.wrongAnswers;
   const pct = total > 0 ? Math.round((session.correctAnswers / total) * 100) : 0;
-  const elapsed = Math.round((Date.now() - session.startTime.getTime()) / 60000);
 
   let msg = `📊 *RELATÓRIO DE ESTUDOS*\n\n`;
-  msg += `⏱️ Tempo de estudo: *${elapsed} min*\n`;
   msg += `📚 Questões respondidas: *${total}*\n`;
   msg += `✅ Acertos: *${session.correctAnswers}*\n`;
   msg += `❌ Erros: *${session.wrongAnswers}*\n`;
@@ -153,13 +151,13 @@ async function saveDailyPerformance(telegramId: string, subjectStats: Record<str
       await db.execute(sql`
         UPDATE "User"
         SET "dificuldades" = ${JSON.stringify(merged)}::jsonb,
-            "lastActiveAt" = NOW()
+            last_active_at = NOW()
         WHERE "telegramId" = ${telegramId}
       `);
       console.log(`📊 [C2] Dificuldades atualizadas para ${telegramId}: ${merged.join(", ")}`);
     } else {
       await db.execute(sql`
-        UPDATE "User" SET "lastActiveAt" = NOW() WHERE "telegramId" = ${telegramId}
+        UPDATE "User" SET last_active_at = NOW() WHERE "telegramId" = ${telegramId}
       `);
     }
   } catch (error) {
@@ -185,7 +183,19 @@ async function endSessionWithReport(
   else header = `✋ *Sessão encerrada*\n\n`;
 
   const report = generateConsolidatedReport(session);
-  await bot.sendMessage(session.chatId, header + report, { parse_mode: "Markdown" });
+
+  // Botão para continuar estudando (exceto quando atingiu limite)
+  const reportKeyboard = reason !== "limit" ? {
+    inline_keyboard: [
+      [{ text: "📚 Continuar estudando", callback_data: "resume_study" }],
+      [{ text: "📋 Menu principal", callback_data: "menu_main" }],
+    ],
+  } : undefined;
+
+  await bot.sendMessage(session.chatId, header + report, {
+    parse_mode: "Markdown",
+    reply_markup: reportKeyboard,
+  });
 
   // Salvar progresso e desempenho
   const trimmedIds = session.usedContentIds.slice(-200);
@@ -391,6 +401,33 @@ async function getSmartContent(session: LearningSession) {
   }
 }
 
+// Parse textContent que já pode conter PONTOS-CHAVE/EXEMPLO/DICA embutidos
+function parseTextContent(text: string): {
+  definition: string;
+  keyPoints: string | null;
+  example: string | null;
+  tip: string | null;
+} {
+  const pontosIdx = text.indexOf("PONTOS-CHAVE:");
+  if (pontosIdx === -1) {
+    return { definition: text, keyPoints: null, example: null, tip: null };
+  }
+
+  const definition = text.substring(0, pontosIdx).trim();
+  const rest = text.substring(pontosIdx);
+
+  const keyPointsMatch = rest.match(/PONTOS-CHAVE:\n([\s\S]*?)(?=\n\nEXEMPLO:|\nEXEMPLO:)/);
+  const exampleMatch = rest.match(/EXEMPLO:\n([\s\S]*?)(?=\n\nDICA:|\nDICA:)/);
+  const tipMatch = rest.match(/DICA:\n([\s\S]*?)$/);
+
+  return {
+    definition,
+    keyPoints: keyPointsMatch ? keyPointsMatch[1].trim() : null,
+    example: exampleMatch ? exampleMatch[1].trim() : null,
+    tip: tipMatch ? tipMatch[1].trim() : null,
+  };
+}
+
 async function sendNextContent(bot: TelegramBot, session: LearningSession) {
   const access = await checkQuestionAccess(session.userId);
 
@@ -505,29 +542,42 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
   }
 
   const title = (content.title as string) || "Conteúdo";
-  const definition = (
+  const rawText = (
     content.textContent ||
     content.definition ||
     content.description ||
     "Definição não disponível"
   ) as string;
-  // Salvar definição original antes da IA modificar
-  const originalDefinition = definition;
 
-  // Gerar conteúdo enriquecido com IA
-  await bot.sendMessage(
-    session.chatId,
-    `⏳ _Preparando conteúdo personalizado..._`,
-    { parse_mode: "Markdown" },
-  );
-  const enhanced = await generateEnhancedContent(
-    title,
-    definition,
-    session.examType,
-  );
-  const keyPoints = enhanced.keyPoints;
-  const example = enhanced.example;
-  const tip = enhanced.tip;
+  // Parse textContent para extrair seções (evita duplicação + economiza API)
+  const parsed = parseTextContent(rawText);
+  const definition = parsed.definition;
+  let keyPoints: string;
+  let example: string;
+  let tip: string;
+
+  if (parsed.keyPoints && parsed.example && parsed.tip) {
+    // Conteúdo já tem seções estruturadas - usar direto (sem chamada IA)
+    console.log(`📗 [Content] Usando seções embutidas de "${title}" (sem chamada IA)`);
+    keyPoints = parsed.keyPoints;
+    example = parsed.example;
+    tip = parsed.tip;
+  } else {
+    // Sem seções estruturadas - gerar com IA
+    await bot.sendMessage(
+      session.chatId,
+      `⏳ _Preparando conteúdo personalizado..._`,
+      { parse_mode: "Markdown" },
+    );
+    const enhanced = await generateEnhancedContent(
+      title,
+      definition,
+      session.examType,
+    );
+    keyPoints = enhanced.keyPoints;
+    example = enhanced.example;
+    tip = enhanced.tip;
+  }
 
   // Buscar mnemônico relevante para este conteúdo
   const mnemonic = contentSubjectId
@@ -997,6 +1047,12 @@ export async function handleLearningCallback(
         { parse_mode: "Markdown" },
       );
     }
+    return true;
+  }
+
+  if (data === "resume_study") {
+    await bot.answerCallbackQuery(query.id);
+    await startLearningSession(bot, chatId, telegramId);
     return true;
   }
 
