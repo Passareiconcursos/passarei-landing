@@ -22,6 +22,9 @@ export async function generateEnhancedContent(
   textContent: string,
   examType: string,
 ): Promise<EnhancedContent> {
+  // Fallback inteligente: extrai do próprio textContent ao invés de mostrar genérico
+  const smartFallback = buildSmartFallback(title, textContent);
+
   try {
     const response = await anthropic.messages.create({
       model: MODEL,
@@ -58,38 +61,58 @@ texto da dica`,
     const text =
       response.content[0].type === "text" ? response.content[0].text : "";
 
-    // Parse da resposta
+    // Parse da resposta (regex mais robusto - aceita variações de formatação)
     const keyPointsMatch = text.match(
-      /PONTOS-CHAVE:\n([\s\S]*?)(?=\nEXEMPLO:)/,
+      /PONTOS[- ]CHAVE:?\s*\n([\s\S]*?)(?=\n\s*EXEMPLO)/i,
     );
-    const exampleMatch = text.match(/EXEMPLO:\n([\s\S]*?)(?=\nDICA:)/);
-    const tipMatch = text.match(/DICA:\n([\s\S]*?)$/);
+    const exampleMatch = text.match(/EXEMPLO[^:]*:?\s*\n([\s\S]*?)(?=\n\s*DICA)/i);
+    const tipMatch = text.match(/DICA[^:]*:?\s*\n([\s\S]*?)$/i);
 
-    return {
-      keyPoints: keyPointsMatch
-        ? keyPointsMatch[1].trim()
-        : "• Conceito fundamental\n• Aplicável em provas\n• Tema recorrente",
-      example: exampleMatch
-        ? exampleMatch[1].trim()
-        : "Aplicação prática em situações do cotidiano policial.",
-      tip: tipMatch
-        ? tipMatch[1].trim()
-        : "Fique atento a este tema nas provas objetivas.",
+    const result = {
+      keyPoints: keyPointsMatch ? keyPointsMatch[1].trim() : smartFallback.keyPoints,
+      example: exampleMatch ? exampleMatch[1].trim() : smartFallback.example,
+      tip: tipMatch ? tipMatch[1].trim() : smartFallback.tip,
     };
+
+    // Log se regex falhou para debug
+    if (!keyPointsMatch || !exampleMatch || !tipMatch) {
+      console.warn(`⚠️ [AI] Regex parcial para "${title}" - KP:${!!keyPointsMatch} EX:${!!exampleMatch} TIP:${!!tipMatch}`);
+    }
+
+    return result;
   } catch (error: any) {
     const isCredits = error?.message?.includes("credit") || error?.status === 429;
     if (isCredits) {
-      console.warn("⚠️ [AI] Créditos Anthropic insuficientes - usando fallback");
+      console.warn("⚠️ [AI] Créditos Anthropic insuficientes - usando fallback inteligente");
     } else {
-      console.error("❌ Erro ao gerar conteúdo com IA:", error);
+      console.error("❌ Erro ao gerar conteúdo com IA:", error?.message || error);
     }
-    return {
-      keyPoints:
-        "• Conceito fundamental\n• Aplicável em provas\n• Tema recorrente",
-      example: "Aplicação prática em situações do cotidiano policial.",
-      tip: "Fique atento a este tema nas provas objetivas.",
-    };
+    return smartFallback;
   }
+}
+
+// Extrai pontos-chave do próprio textContent ao invés de mostrar "Conceito fundamental"
+function buildSmartFallback(title: string, textContent: string): EnhancedContent {
+  // Quebrar o textContent em frases significativas
+  const sentences = textContent
+    .split(/[.;]\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 15 && s.length < 200);
+
+  // Usar as primeiras frases como pontos-chave
+  const points = sentences.slice(0, 3).map(s => `• ${s}`);
+  const keyPoints = points.length > 0
+    ? points.join("\n")
+    : `• ${title}: conceito essencial para concursos policiais`;
+
+  // Usar uma frase do meio como exemplo
+  const midIdx = Math.floor(sentences.length / 2);
+  const example = sentences[midIdx] || `Aplicação de ${title} no contexto policial.`;
+
+  // Usar a última frase como dica
+  const tip = sentences[sentences.length - 1] || `${title} é tema recorrente em provas de concursos policiais.`;
+
+  return { keyPoints, example, tip };
 }
 
 // Gerar explicação após acerto/erro
