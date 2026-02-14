@@ -23,13 +23,13 @@ router.get("/packages", (req: Request, res: Response) => {
     packages: CREDIT_PACKAGES,
     veterano: {
       id: "veterano_monthly",
-      amount: 49.9,
-      label: "Plano Veterano - R$ 49,90/mês",
+      amount: 44.9,
+      label: "Plano Veterano - R$ 44,90/mês (cobrado anualmente)",
       benefits: [
-        "300 questões personalizadas/mês",
+        "900 questões personalizadas/mês",
         "2 correções de redação/mês com IA",
-        "Todas as apostilas inclusas",
         "Revisão inteligente SM2",
+        "Suporte prioritário",
       ],
     },
   });
@@ -245,12 +245,12 @@ router.post("/webhooks/mercadopago", async (req: Request, res: Response) => {
             .json({ success: false, error: "Email não encontrado" });
         }
 
-        // Determinar plano baseado no valor
+        // Determinar plano baseado no valor (R$44,90 mensal ou R$538,80 anual = veterano)
         let plan: "calouro" | "veterano" = "calouro";
         if (amount >= 40 && amount <= 50) {
-          plan = "veterano";
+          plan = "veterano"; // mensal via assinatura
         } else if (amount >= 500 && amount <= 550) {
-          plan = "veterano";
+          plan = "veterano"; // anual via Brick
         }
 
         console.log(`📦 [Webhook] Plano: ${plan}`);
@@ -477,9 +477,11 @@ router.post("/webhooks/subscription", async (req: Request, res: Response) => {
           const [telegramId] = externalRef.split("|");
 
           await db.execute(sql`
-            UPDATE "User" 
-            SET "plan" = 'VETERANO',
-                "planExpiresAt" = NOW() + INTERVAL '30 days',
+            UPDATE "User"
+            SET plan = 'veterano',
+                "planStatus" = 'active',
+                "planStartDate" = NOW(),
+                "planEndDate" = NOW() + INTERVAL '30 days',
                 "updatedAt" = NOW()
             WHERE "telegramId" = ${telegramId}
           `);
@@ -534,7 +536,7 @@ router.post("/process-brick", async (req: Request, res: Response) => {
 
     // Encontrar valor do pacote
     const pkg = CREDIT_PACKAGES.find((p) => p.id === packageId);
-    const amount = pkg ? pkg.amount : packageId === "veterano" ? 49.9 : 5;
+    const amount = pkg ? pkg.amount : packageId === "veterano" ? 44.9 : 5;
 
     // Processar pagamento via API do Mercado Pago
     console.log(
@@ -554,10 +556,10 @@ router.post("/process-brick", async (req: Request, res: Response) => {
       payment_method_id,
       description: `${packageName} - Passarei Concursos`,
       statement_descriptor: "PASSAREI",
-      binary_mode: true, // Aprovação instantânea sem revisão manual
+      binary_mode: false, // Permite revisão manual do MP (melhora taxa de aprovação)
       external_reference: `${telegramId}|${packageId}|${payer?.email || ""}|${Date.now()}`,
       payer: {
-        email: payer?.email || "suporte@passarei.com.br",
+        email: payer?.email || formData?.email || "",
         first_name: buyerFirstName || payer?.first_name || payer?.firstName || "",
         last_name: buyerLastName || payer?.last_name || payer?.lastName || "",
         identification: payer?.identification?.number ? payer.identification : undefined,
@@ -611,7 +613,7 @@ router.post("/process-brick", async (req: Request, res: Response) => {
     const paymentData = await mpPayment.create({
       body: payloadMP,
       requestOptions: {
-        idempotencyKey: `${telegramId}-${Date.now()}`,
+        idempotencyKey: `${telegramId}-${packageId}-${token?.substring(0, 16)}`,
       },
     });
     console.log(

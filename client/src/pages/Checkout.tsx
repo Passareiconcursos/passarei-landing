@@ -15,7 +15,7 @@ const PACKAGES = {
   veterano: {
     amount: 538.8,
     questions: 10800,
-    label: "Plano Veterano - Anual",
+    label: "Plano Veterano - Anual (12x de R$ 44,90)",
   },
 };
 

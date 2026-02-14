@@ -19,7 +19,7 @@ export const CREDIT_PACKAGES = [
   {
     id: "veterano_anual",
     amount: 538.8,
-    questions: 900,
+    questions: 10800,
     label: "Plano Veterano - R$ 538,80/ano (R$ 44,90/mês)",
   },
 ];
@@ -32,8 +32,8 @@ export const VETERANO_SUBSCRIPTION_URL =
 // Plano Veterano
 export const VETERANO_PLAN = {
   id: "veterano_monthly",
-  amount: 49.9,
-  label: "Plano Veterano - R$ 49,90/mês",
+  amount: 44.9,
+  label: "Plano Veterano - R$ 44,90/mês",
 };
 
 interface CreatePaymentParams {
@@ -77,7 +77,7 @@ export async function createPaymentPreference(params: CreatePaymentParams) {
           pending: `${baseUrl}/pagamento/pendente`,
         },
         auto_return: "approved",
-        notification_url: `${baseUrl}/api/webhooks/mercadopago`,
+        notification_url: `${baseUrl}/api/payment/webhooks/mercadopago`,
       },
     });
 
@@ -124,7 +124,7 @@ export async function createVeteranoPreference(params: {
           pending: `${baseUrl}/pagamento/pendente`,
         },
         auto_return: "approved",
-        notification_url: `${baseUrl}/api/webhooks/mercadopago`,
+        notification_url: `${baseUrl}/api/payment/webhooks/mercadopago`,
       },
     });
 
@@ -207,7 +207,7 @@ export async function createVeteranoSubscription(
         auto_recurring: {
           frequency: 1,
           frequency_type: "months",
-          transaction_amount: 49.9,
+          transaction_amount: 44.9,
           currency_id: "BRL",
         },
         back_url: `${baseUrl}/assinatura/sucesso`,

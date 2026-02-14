@@ -85,17 +85,17 @@ function getUpgradeMessage(): string {
   return (
     `⬆️ *FAÇA UPGRADE*\n\n` +
     `📦 *Plano FREE* (atual)\n` +
-    `• 2 matérias/dia\n` +
+    `• 7 questões/dia\n` +
     `• Sem correção de redação\n\n` +
-    `📦 *Plano CALOURO* - R$ 12,90/mês\n` +
-    `• 10 matérias/dia\n` +
-    `• 1 redação grátis/dia\n\n` +
-    `📦 *Plano VETERANO* - R$ 9,90/mês\n` +
-    `• 30 matérias/dia\n` +
-    `• 3 redações grátis/dia\n` +
-    `• Programa de afiliados\n\n` +
+    `📦 *Plano CALOURO* - R$ 89,90/mês\n` +
+    `• 10 questões/dia (300/mês)\n` +
+    `• Correção detalhada com IA\n\n` +
+    `📦 *Plano VETERANO* - R$ 44,90/mês (anual)\n` +
+    `• 30 questões/dia (900/mês)\n` +
+    `• 2 redações/mês com IA\n` +
+    `• Suporte prioritário\n\n` +
     `💳 Para assinar, acesse:\n` +
-    `passarei.com.br/assinar\n\n` +
+    `passarei.com.br\n\n` +
     `_Ou digite "suporte" para ajuda._`
   );
 }

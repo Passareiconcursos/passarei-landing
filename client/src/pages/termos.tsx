@@ -98,9 +98,9 @@ export default function Termos() {
               planos pagos podem adquirir correções de redação adicionais:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground mb-4 space-y-2">
-              <li>Plano Calouro: R$ 1,90 por redação extra</li>
+              <li>Plano Calouro: R$ 1,99 por redação extra</li>
               <li>
-                Plano Veterano: R$ 0,99 por redação extra (50% de desconto)
+                Plano Veterano: 2 correções/mês inclusas, extras por R$ 1,99
               </li>
             </ul>
           </section>

@@ -17,7 +17,7 @@ export function Comparativo() {
     },
     {
       name: "Custo/dia",
-      passarei: "R$ 1,49",
+      passarei: "R$ 1,50",
       cursinhos: "R$ 4,33",
       livros: "Variável",
     },
@@ -146,7 +146,7 @@ export function Comparativo() {
             Passarei vs. Cursinhos Tradicionais
           </h2>
           <p className="text-xl text-muted-foreground">
-            Economia de até R$ 960/ano (61%)
+            Economia de até R$ 1.020/ano (65%)
           </p>
         </div>
 

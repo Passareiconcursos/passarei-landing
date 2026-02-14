@@ -454,7 +454,7 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
     const keyboard = {
       inline_keyboard: [
         [{ text: "💳 Comprar Créditos", callback_data: "buy_credits" }],
-        [{ text: "⭐ Plano Veterano R$ 49,90", callback_data: "buy_veterano" }],
+        [{ text: "⭐ Plano Veterano R$ 44,90/mês", callback_data: "buy_veterano" }],
         [{ text: "📊 Ver meu saldo", callback_data: "check_balance" }],
       ],
     };

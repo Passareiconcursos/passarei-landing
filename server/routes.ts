@@ -240,10 +240,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         SELECT COUNT(*) as count FROM "User" WHERE plan = 'VETERANO'
       `);
 
-      // MRR (simplificado: CALOURO = R$29.90, VETERANO = R$89.90)
+      // MRR (CALOURO = R$89,90/mês, VETERANO = R$44,90/mês)
       const calouros = Number((calourosResult as any[])[0]?.count || 0);
       const veteranos = Number((veteranosResult as any[])[0]?.count || 0);
-      const mrr = (calouros * 29.90) + (veteranos * 89.90);
+      const mrr = (calouros * 89.90) + (veteranos * 44.90);
 
       // Conversão do mês (leads → pagos)
       const monthLeadsResult = await db.execute(sql`

@@ -30,7 +30,7 @@ export function FAQ() {
       number: 4,
       question: "Quais são os limites de cada plano?",
       answer:
-        "PLANO FREE (R$ 0):\n• 21 questões grátis (única vez)\n• Correção detalhada com IA\n• Sem cartão de crédito\n\nPLANO CALOURO (R$ 89,90/mês):\n• 300 questões personalizadas/mês\n• Correção detalhada de cada alternativa\n• Explicações completas com IA\n• Sem compromisso - cancele quando quiser\n• Créditos não expiram\n\nPLANO VETERANO (R$ 44,90/mês cobrado anualmente):\n• 900 questões/mês (3x mais que Calouro!)\n• 2 correções de redação/mês com IA\n• Intensivo nas suas dificuldades\n• Revisão espaçada inteligente\n• Plano de estudos personalizado\n• Simulados mensais\n• Suporte prioritário\n• Troque de concurso quando quiser\n• Poupe R$ 539,40/ano (Comparação ao calouro)",
+        "PLANO FREE (R$ 0):\n• 21 questões grátis (única vez)\n• Correção detalhada com IA\n• Sem cartão de crédito\n\nPLANO CALOURO (R$ 89,90/mês):\n• 300 questões personalizadas/mês\n• Correção detalhada de cada alternativa\n• Explicações completas com IA\n• Sem compromisso - cancele quando quiser\n\nPLANO VETERANO (R$ 44,90/mês cobrado anualmente):\n• 900 questões/mês (3x mais que Calouro!)\n• 2 correções de redação/mês com IA\n• Intensivo nas suas dificuldades\n• Revisão espaçada inteligente\n• Plano de estudos personalizado\n• Simulados mensais\n• Suporte prioritário\n• Troque de concurso quando quiser\n• Poupe R$ 540/ano vs Calouro mensal",
     },
     {
       number: 5,
@@ -54,7 +54,7 @@ export function FAQ() {
       number: 8,
       question: "Como vocês são tão mais baratos que os concorrentes?",
       answer:
-        "Automação inteligente:\n\n• Cursinhos tradicionais: R$ 129,90/mês\n• Passarei Veterano: R$ 44,90/mês (anual)\n• ECONOMIA: 50% ou mais!\n\nComo?\n• 100% Telegram (sem app caro)\n• IA faz correções (sem professor humano)\n• Conteúdo automatizado (sem filmagens)\n• Infraestrutura enxuta (sem aluguel de espaço)\n\nRepassamos TODA economia para você.\n\nMesmo conteúdo, menor custo.\n\nAlém disso:\n• Plano Veterano inclui 2 redações/mês\n• 900 questões/mês (3x mais que Calouro!)\n• São 10.800 questões de simulados por ano!\n• Poupe R$ 539,40/ano (Comparação ao calouro)\n• Suporte prioritário\n• Intensivo nas suas dificuldades",
+        "Automação inteligente:\n\n• Estratégia Concursos: a partir de R$ 109,90/mês\n• Passarei Veterano: R$ 44,90/mês (anual)\n• ECONOMIA: até 80%!\n\nComo?\n• 100% Telegram (sem app caro)\n• IA faz correções (sem professor humano)\n• Conteúdo automatizado (sem filmagens)\n• Infraestrutura enxuta (sem aluguel de espaço)\n\nRepassamos TODA economia para você.\n\nMesmo conteúdo, menor custo.\n\nAlém disso:\n• Plano Veterano inclui 2 redações/mês\n• 900 questões/mês (3x mais que Calouro!)\n• São 10.800 questões de simulados por ano!\n• Poupe R$ 540/ano vs Calouro mensal\n• Suporte prioritário\n• Intensivo nas suas dificuldades",
     },
   ];
 

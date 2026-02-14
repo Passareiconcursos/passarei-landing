@@ -135,10 +135,10 @@ export default function Reembolso() {
             </p>
             <ul className="list-disc pl-6 text-muted-foreground mb-4 space-y-2">
               <li>
-                <strong>Plano Calouro:</strong> Correções inclusas no plano
+                <strong>Plano Calouro:</strong> Correções extras por R$ 1,99 cada
               </li>
               <li>
-                <strong>Plano Veterano:</strong> 2 correções/mês inclusas
+                <strong>Plano Veterano:</strong> 2 correções/mês inclusas, extras por R$ 1,99
               </li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mb-4 mt-4">
