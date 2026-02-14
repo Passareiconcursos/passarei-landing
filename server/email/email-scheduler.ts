@@ -71,14 +71,13 @@ async function processDripStep(step: {
     // - Status NOVO (não convertido ainda)
     // - Cadastro há pelo menos X dias
     // - Ainda não recebeu este email (campo null)
-    // - Recebeu o email 1 (dripEmail1SentAt não é null)
+    // Nota: não exigimos dripEmail1SentAt (pode ter falhado async)
     const leads = await db.execute(sql`
-      SELECT id, name, email, "examType"
+      SELECT id, name, email, "examType", "dripEmail1SentAt"
       FROM leads
       WHERE status = 'NOVO'
-        AND "dripEmail1SentAt" IS NOT NULL
         AND ${sql.raw(`"${step.field}"`)} IS NULL
-        AND "createdAt" <= NOW() - INTERVAL '${sql.raw(String(step.daysAfter))} days'
+        AND created_at <= NOW() - INTERVAL '${sql.raw(String(step.daysAfter))} days'
       LIMIT 10
     `) as any[];
 
@@ -88,6 +87,17 @@ async function processDripStep(step: {
 
     for (const lead of leads) {
       try {
+        // Se email 1 nunca foi enviado, marcar agora (recovery do async falho)
+        if (!lead.dripEmail1SentAt) {
+          console.log(`📧 [Drip] Marcando email 1 como enviado para ${lead.email} (recovery)`);
+          await db.execute(sql`
+            UPDATE leads
+            SET "dripEmail1SentAt" = created_at,
+                "updatedAt" = NOW()
+            WHERE id = ${lead.id}
+          `);
+        }
+
         const result = await step.send({
           leadEmail: lead.email,
           leadName: lead.name,
@@ -102,6 +112,7 @@ async function processDripStep(step: {
                 "updatedAt" = NOW()
             WHERE id = ${lead.id}
           `);
+          console.log(`✅ [Drip ${step.step}/4] Email enviado para ${lead.email}`);
         }
 
         // Delay entre envios (evitar rate limit)

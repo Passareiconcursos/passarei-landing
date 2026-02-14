@@ -225,18 +225,20 @@ async function createDefaultPromoCodes() {
     console.log("  ✅ Código DONO2026 criado (VETERANO ~100 anos)");
   }
 
-  // Código BETA001 - modelo para beta testers (1 uso, 30 dias)
-  const betaExists = await db.execute(sql`
-    SELECT id FROM promo_codes WHERE code = 'BETA001' LIMIT 1
-  `) as any[];
+  // Códigos BETA001-BETA010 - para beta testers (1 uso cada, 30 dias)
+  for (let i = 1; i <= 10; i++) {
+    const code = `BETA${String(i).padStart(3, "0")}`;
+    const exists = await db.execute(sql`
+      SELECT id FROM promo_codes WHERE code = ${code} LIMIT 1
+    `) as any[];
 
-  if (!betaExists || betaExists.length === 0) {
-    console.log("  🔄 Criando código BETA001...");
-    await db.execute(sql`
-      INSERT INTO promo_codes (code, description, type, granted_plan, granted_days, max_uses, is_active)
-      VALUES ('BETA001', 'Beta tester - VETERANO 30 dias', 'GRATUITY', 'VETERANO', 30, 1, true)
-    `);
-    console.log("  ✅ Código BETA001 criado (VETERANO 30 dias, 1 uso)");
+    if (!exists || exists.length === 0) {
+      await db.execute(sql`
+        INSERT INTO promo_codes (code, description, type, granted_plan, granted_days, max_uses, is_active)
+        VALUES (${code}, ${"Beta tester - VETERANO 30 dias"}, 'GRATUITY', 'VETERANO', 30, 1, true)
+      `);
+      console.log(`  ✅ Código ${code} criado (VETERANO 30 dias, 1 uso)`);
+    }
   }
 }
 

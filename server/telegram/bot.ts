@@ -104,7 +104,7 @@ export async function startTelegramBot() {
 
         // VERIFICAR SE TEM PERFIL DE ESTUDO COMPLETO
         const profileResult = await db.execute(sql`
-          SELECT "examType", "onboardingCompleted", "dificuldades", "lastStudyContentIds"
+          SELECT "examType", "onboardingCompleted", "dificuldades", "lastStudyContentIds", "totalQuestionsAnswered"
           FROM "User" WHERE "telegramId" = ${telegramId} LIMIT 1
         `) as any[];
 
@@ -123,13 +123,13 @@ export async function startTelegramBot() {
           return;
         }
 
-        // Mensagem de continuidade
-        const studiedIds = safeParseJsonBot(profile.lastStudyContentIds, []);
-        if (studiedIds.length > 0) {
+        // Mensagem de continuidade - usar totalQuestionsAnswered (fonte real)
+        const totalAnswered = Number(profile.totalQuestionsAnswered || 0);
+        if (totalAnswered > 0) {
           await bot!.sendMessage(
             chatId,
             `📚 *Continuando seus estudos para ${profile.examType}*\n` +
-              `📊 ${studiedIds.length} questão(ões) já estudada(s)\n\n` +
+              `📊 ${totalAnswered} questão(ões) já respondida(s)\n\n` +
               `Preparando nova questão...`,
             { parse_mode: "Markdown" },
           );
@@ -848,7 +848,7 @@ export async function startTelegramBot() {
 
       // VERIFICAR SE TEM PERFIL DE ESTUDO COMPLETO
       const profileResult = await db.execute(sql`
-        SELECT "examType", "onboardingCompleted", "dificuldades", "lastStudyContentIds"
+        SELECT "examType", "onboardingCompleted", "dificuldades", "lastStudyContentIds", "totalQuestionsAnswered"
         FROM "User" WHERE "telegramId" = ${telegramId} LIMIT 1
       `) as any[];
 
@@ -867,13 +867,13 @@ export async function startTelegramBot() {
         return;
       }
 
-      // Mensagem de continuidade
-      const studiedIds = safeParseJsonBot(profile.lastStudyContentIds, []);
-      if (studiedIds.length > 0) {
+      // Mensagem de continuidade - usar totalQuestionsAnswered (fonte real)
+      const totalAnswered2 = Number(profile.totalQuestionsAnswered || 0);
+      if (totalAnswered2 > 0) {
         await bot!.sendMessage(
           chatId,
           `📚 *Continuando seus estudos para ${profile.examType}*\n` +
-            `📊 ${studiedIds.length} questão(ões) já estudada(s)\n\n` +
+            `📊 ${totalAnswered2} questão(ões) já respondida(s)\n\n` +
             `Preparando nova questão...`,
           { parse_mode: "Markdown" },
         );
@@ -1020,8 +1020,8 @@ export async function startTelegramBot() {
     }
   });
 
-  // Comando /codigo - Resgatar código promocional
-  bot.onText(/\/codigo (.+)/, async (msg, match) => {
+  // Comando /codigo ou /código - Resgatar código promocional
+  bot.onText(/\/c[oó]digo (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const telegramId = String(msg.from?.id);
     const code = match?.[1]?.trim().toUpperCase();
@@ -1130,7 +1130,7 @@ export async function startTelegramBot() {
   });
 
   // Comando /codigo sem argumento - mostrar ajuda
-  bot.onText(/^\/codigo$/, async (msg) => {
+  bot.onText(/^\/c[oó]digo$/, async (msg) => {
     const chatId = msg.chat.id;
     await bot!.sendMessage(
       chatId,
