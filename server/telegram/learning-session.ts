@@ -306,11 +306,6 @@ async function getSmartContent(session: LearningSession) {
       : sql``;
     // D1: Excluir conteúdos REJEITADOS pelo Professor Revisor
     const reviewClause = sql`AND (c."reviewStatus" IS NULL OR c."reviewStatus" != 'REJEITADO')`;
-    // FIX 1.2: Filtrar por examType do aluno (incluir conteúdo genérico/NULL)
-    const examTypeClause = session.examType
-      ? sql`AND (c."examType" = ${session.examType} OR c."examType" IS NULL)`
-      : sql``;
-
     // 2a. Tentar buscar de matérias de DIFICULDADE (70% das vezes)
     if (shouldPrioritizeDifficulty && session.difficulties.length > 0) {
       console.log(`🎯 [PLANO] Buscando matéria de DIFICULDADE...`);
@@ -322,7 +317,7 @@ async function getSmartContent(session: LearningSession) {
           AND c."isActive" = true
           ${usedIdsClause}
           ${reviewClause}
-          ${examTypeClause}
+
         ORDER BY RANDOM()
         LIMIT 1
       `);
@@ -345,7 +340,7 @@ async function getSmartContent(session: LearningSession) {
           AND c."isActive" = true
           ${usedIdsClause}
           ${reviewClause}
-          ${examTypeClause}
+
         ORDER BY RANDOM()
         LIMIT 1
       `);
@@ -357,12 +352,7 @@ async function getSmartContent(session: LearningSession) {
       console.log(`⚠️ [FACILIDADE] Nenhum conteúdo disponível, buscando geral...`);
     }
 
-    // 2c. Fallback: qualquer conteúdo não usado (filtrado por examType)
-    // FIX 1.2: Manter filtro por examType no fallback
-    const examTypeFallback = session.examType
-      ? sql`AND ("examType" = ${session.examType} OR "examType" IS NULL)`
-      : sql``;
-
+    // 2c. Fallback: qualquer conteúdo não usado
     console.log(`📚 [FALLBACK] Buscando qualquer conteúdo para ${session.examType}...`);
     if (session.usedContentIds.length > 0) {
       result = await db.execute(sql`
@@ -373,7 +363,7 @@ async function getSmartContent(session: LearningSession) {
             sql`, `,
           )})
           AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-          ${examTypeFallback}
+
         ORDER BY RANDOM()
         LIMIT 1
       `);
@@ -382,7 +372,7 @@ async function getSmartContent(session: LearningSession) {
         SELECT * FROM "Content"
         WHERE "isActive" = true
           AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-          ${examTypeFallback}
+
         ORDER BY RANDOM()
         LIMIT 1
       `);

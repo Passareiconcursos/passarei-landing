@@ -50,7 +50,7 @@ export async function sendEmail(data: EmailData) {
       to: data.to,
       subject: data.subject,
       html: data.html,
-      // reply_to: EMAIL_CONFIG.replyTo, // Descomente para ativar reply-to
+      replyTo: EMAIL_CONFIG.replyTo,
     });
 
     // Verificar se houve erro

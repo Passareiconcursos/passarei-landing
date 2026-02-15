@@ -52,7 +52,7 @@ export function generateLeadWelcomeEmail(data: LeadEmailData): string {
           <tr>
             <td style="background: linear-gradient(135deg, #18cb96 0%, #0ea5e9 100%); padding: 40px 30px; text-align: center;">
               <div style="background-color: #ffffff; width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 16px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                <img src="https://passarei-landing-production.up.railway.app/logo.png" alt="Passarei" style="width: 100%; height: 100%; object-fit: contain;" />
+                <img src="https://passarei.com.br/logo.png" alt="Passarei" style="width: 100%; height: 100%; object-fit: contain;" />
               </div>
               <h1 style="margin: 0 0 8px; color: #ffffff; font-size: 28px; font-weight: 700;">
                 Bem-vindo ao Passarei!
