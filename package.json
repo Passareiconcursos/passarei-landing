@@ -6,7 +6,7 @@
   "scripts": {
     "generate": "tsx scripts/generate-content.ts",
     "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "vite build",
+    "build": "npx vite build",
     "start": "NODE_ENV=production tsx server/index.ts",
     "check": "tsc",
     "db:push": "drizzle-kit push",

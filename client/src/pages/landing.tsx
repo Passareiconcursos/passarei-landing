@@ -15,6 +15,9 @@ import { Footer } from "@/components/sections/Footer";
 export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
+      <a href="#como-funciona" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-primary focus:text-white focus:px-4 focus:py-2 focus:top-2 focus:left-2 focus:rounded">
+        Pular para o conteúdo
+      </a>
       <Header />
       <Hero />
       <Concursos />
