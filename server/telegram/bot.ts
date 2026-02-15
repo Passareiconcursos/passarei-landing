@@ -282,6 +282,129 @@ export async function startTelegramBot() {
         return;
       }
 
+      if (data === "menu_planos") {
+        console.log(`💳 [Bot] Menu Planos clicado por ${telegramId}`);
+        const userPlan = await db.execute(sql`
+          SELECT plan, "planStatus", "planEndDate"
+          FROM "User" WHERE "telegramId" = ${telegramId} LIMIT 1
+        `) as any[];
+
+        const u = userPlan[0];
+        const planUpper = (u?.plan || "").toUpperCase();
+        const isActive = u?.planStatus === "active";
+        const endDate = u?.planEndDate ? new Date(u.planEndDate).toLocaleDateString("pt-BR") : null;
+
+        let statusText = "⚠️ Sem plano ativo";
+        if (isActive && planUpper) {
+          statusText = `✅ Plano *${planUpper}* ativo${endDate ? ` (até ${endDate})` : ""}`;
+        }
+
+        const keyboard = {
+          inline_keyboard: [
+            [{ text: "🎓 Calouro - R$ 89,90/mês", url: "https://passarei.com.br/checkout?plan=calouro" }],
+            [{ text: "🏆 Veterano - R$ 44,90/mês", url: "https://passarei.com.br/checkout?plan=veterano" }],
+            [{ text: "🎟️ Tenho um código", callback_data: "show_codigo_help" }],
+            [{ text: "⬅️ Voltar ao menu", callback_data: "menu_main" }],
+          ],
+        };
+        await bot!.sendMessage(
+          chatId,
+          `💳 *Planos - Passarei Concursos*\n\n` +
+            `${statusText}\n\n` +
+            `━━━━━━━━━━━━━━━━\n\n` +
+            `🎓 *CALOURO* - R$ 89,90/mês\n` +
+            `✅ 10 questões/dia (300/mês)\n` +
+            `✅ Questões inteligentes por IA\n` +
+            `✅ Relatórios de desempenho\n\n` +
+            `🏆 *VETERANO* - R$ 44,90/mês\n` +
+            `✅ 30 questões/dia (900/mês)\n` +
+            `✅ Tudo do Calouro\n` +
+            `✅ Correção de redação com IA\n` +
+            `✅ Prioridade no suporte\n\n` +
+            `👇 Escolha seu plano:`,
+          { parse_mode: "Markdown", reply_markup: keyboard },
+        );
+        return;
+      }
+
+      if (data === "show_codigo_help") {
+        await bot!.sendMessage(
+          chatId,
+          `🎟️ *Códigos Promocionais*\n\nPara resgatar um código, envie:\n\`/codigo SEUCODIGO\`\n\nExemplo: \`/codigo BETA001\``,
+          { parse_mode: "Markdown" },
+        );
+        return;
+      }
+
+      if (data === "menu_suporte") {
+        console.log(`💬 [Bot] Menu Suporte clicado por ${telegramId}`);
+        const keyboard = {
+          inline_keyboard: [
+            [{ text: "❌ Cancelar plano", callback_data: "suporte_cancelar" }],
+            [{ text: "📧 Enviar email ao suporte", url: "mailto:suporte@passarei.com.br" }],
+            [{ text: "⬅️ Voltar ao menu", callback_data: "menu_main" }],
+          ],
+        };
+        await bot!.sendMessage(
+          chatId,
+          `💬 *Suporte - Passarei Concursos*\n\n` +
+            `Precisa de ajuda? Estamos aqui!\n\n` +
+            `📧 Email: suporte@passarei.com.br\n` +
+            `💬 Telegram: @PassareiSuporte\n\n` +
+            `⏰ Atendimento: Seg-Sex, 9h-18h\n\n` +
+            `👇 Opções:`,
+          { parse_mode: "Markdown", reply_markup: keyboard },
+        );
+        return;
+      }
+
+      if (data === "suporte_cancelar") {
+        console.log(`❌ [Bot] Cancelar plano solicitado por ${telegramId}`);
+        const keyboard = {
+          inline_keyboard: [
+            [{ text: "✅ Sim, cancelar meu plano", callback_data: "confirmar_cancelamento" }],
+            [{ text: "⬅️ Não, voltar", callback_data: "menu_main" }],
+          ],
+        };
+        await bot!.sendMessage(
+          chatId,
+          `⚠️ *Cancelar Plano*\n\n` +
+            `Tem certeza que deseja cancelar seu plano?\n\n` +
+            `📌 Você manterá acesso até o final do período já pago.\n` +
+            `📌 Reembolso disponível em até 7 dias após a compra.\n\n` +
+            `Para reembolso, entre em contato: suporte@passarei.com.br`,
+          { parse_mode: "Markdown", reply_markup: keyboard },
+        );
+        return;
+      }
+
+      if (data === "confirmar_cancelamento") {
+        console.log(`🔴 [Bot] Confirmação de cancelamento por ${telegramId}`);
+        try {
+          await db.execute(sql`
+            UPDATE "User"
+            SET "planStatus" = 'cancelled', "updatedAt" = NOW()
+            WHERE "telegramId" = ${telegramId}
+          `);
+          await bot!.sendMessage(
+            chatId,
+            `✅ *Plano cancelado com sucesso.*\n\n` +
+              `Você manterá acesso até o final do período já pago.\n\n` +
+              `Esperamos te ver de volta em breve! 🎓\n\n` +
+              `Para reembolso (até 7 dias da compra), entre em contato:\n📧 suporte@passarei.com.br`,
+            { parse_mode: "Markdown" },
+          );
+        } catch (error) {
+          console.error("❌ [Bot] Erro ao cancelar plano:", error);
+          await bot!.sendMessage(
+            chatId,
+            "⚠️ Erro ao cancelar plano. Entre em contato com suporte@passarei.com.br",
+            { parse_mode: "Markdown" },
+          );
+        }
+        return;
+      }
+
       if (data === "menu_ajuda") {
         console.log(`❓ [Bot] Menu Ajuda clicado por ${telegramId}`);
         await bot!.sendMessage(
@@ -293,11 +416,11 @@ export async function startTelegramBot() {
             "▪️ `/redacao` - Enviar redação para correção IA\n" +
             "▪️ `/concurso` - Escolher concurso\n" +
             "▪️ `/progresso` - Ver suas estatísticas\n" +
-            "▪️ `/menu` - Menu principal\n" +
-            "▪️ `/ajuda` - Mostrar esta ajuda\n\n" +
+            "▪️ `/codigo CODIGO` - Resgatar código promocional\n" +
+            "▪️ `/menu` - Menu principal\n\n" +
             "💬 *Suporte:*\n" +
-            "📧 Email: suporte@passarei.com.br\n" +
-            "💬 Telegram: @PassareiSuporte\n\n" +
+            "📧 suporte@passarei.com.br\n" +
+            "💬 @PassareiSuporte\n\n" +
             "🎓 _Bons estudos!_",
           { parse_mode: "Markdown" },
         );
@@ -374,7 +497,8 @@ export async function startTelegramBot() {
               { text: "📊 Progresso", callback_data: "menu_progresso" },
             ],
             [
-              { text: "❓ Ajuda", callback_data: "menu_ajuda" },
+              { text: "💳 Planos", callback_data: "menu_planos" },
+              { text: "💬 Suporte", callback_data: "menu_suporte" },
             ],
           ],
         };
@@ -643,7 +767,8 @@ export async function startTelegramBot() {
         { text: "📊 Progresso", callback_data: "menu_progresso" },
       ],
       [
-        { text: "❓ Ajuda", callback_data: "menu_ajuda" },
+        { text: "💳 Planos", callback_data: "menu_planos" },
+        { text: "💬 Suporte", callback_data: "menu_suporte" },
       ],
     ];
 

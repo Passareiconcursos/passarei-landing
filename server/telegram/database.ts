@@ -141,8 +141,10 @@ export async function checkQuestionAccess(
 ): Promise<QuestionAccessResult> {
   try {
     const result = await db.execute(sql`
-      SELECT 
+      SELECT
         "plan",
+        "planStatus",
+        "planEndDate",
         "credits",
         "firstDayFreeUsed",
         "firstInteractionDate",
@@ -179,8 +181,14 @@ export async function checkQuestionAccess(
       user.dailyContentCount = 0;
     }
 
+    // Verificar planStatus e expiração
+    const planUpper = (user.plan || "").toUpperCase();
+    const planStatus = (user.planStatus || "").toLowerCase();
+    const planEndDate = user.planEndDate ? new Date(user.planEndDate) : null;
+    const isPlanActive = planStatus === "active" && (!planEndDate || planEndDate >= new Date());
+
     // 1. VETERANO - tem limite diário de 30 questões
-    if (user.plan === "VETERANO") {
+    if (planUpper === "VETERANO" && isPlanActive) {
       const remaining = VETERANO_DAILY_LIMIT - user.dailyContentCount;
       if (remaining > 0) {
         return {
@@ -202,7 +210,7 @@ export async function checkQuestionAccess(
     }
 
     // 2. CALOURO - tem limite diário de 10 questões
-    if (user.plan === "CALOURO") {
+    if (planUpper === "CALOURO" && isPlanActive) {
       const remaining = CALOURO_DAILY_LIMIT - user.dailyContentCount;
       if (remaining > 0) {
         return {
@@ -471,6 +479,7 @@ export async function isUserActive(telegramId: string): Promise<UserActiveStatus
         "firstDayFreeUsed",
         "firstInteractionDate",
         "planStatus",
+        "planEndDate",
         "examType",
         "lastStudyContentIds"
       FROM "User"
@@ -491,14 +500,23 @@ export async function isUserActive(telegramId: string): Promise<UserActiveStatus
       ? new Date(user.firstInteractionDate).toISOString().split("T")[0]
       : today;
 
-    // 1. PLANO ATIVO (VETERANO ou CALOURO)
-    if (user.plan === "VETERANO" || user.plan === "CALOURO") {
-      return {
-        isActive: true,
-        reason: "has_plan",
-        plan: user.plan,
-        message: `✅ Plano ${user.plan} ativo`,
-      };
+    // 1. PLANO ATIVO (VETERANO ou CALOURO) - verificar planStatus + expiração
+    const planUpper = (user.plan || "").toUpperCase();
+    if (planUpper === "VETERANO" || planUpper === "CALOURO") {
+      // Verificar se o plano está ativo e não expirou
+      const planStatus = (user.planStatus || "").toLowerCase();
+      const planEndDate = user.planEndDate ? new Date(user.planEndDate) : null;
+      const isExpired = planEndDate && planEndDate < new Date();
+
+      if (planStatus === "active" && !isExpired) {
+        return {
+          isActive: true,
+          reason: "has_plan",
+          plan: planUpper,
+          message: `✅ Plano ${planUpper} ativo`,
+        };
+      }
+      // Plano existe mas inativo/expirado → continuar verificação (créditos, etc.)
     }
 
     // 2. PRIMEIRO DIA - questões grátis
