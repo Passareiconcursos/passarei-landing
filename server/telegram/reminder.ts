@@ -548,6 +548,11 @@ async function getSmartReminderContent(user: any): Promise<any | null> {
 
     // D1: Excluir conteúdos REJEITADOS pelo Professor Revisor
     const reviewClause = sql`AND (c."reviewStatus" IS NULL OR c."reviewStatus" != 'REJEITADO')`;
+    // FIX 1.2: Filtrar por examType do aluno
+    const examType = user.examType || null;
+    const examTypeClause = examType
+      ? sql`AND (c."examType" = ${examType} OR c."examType" IS NULL)`
+      : sql``;
 
     // 1. Priorizar matérias de dificuldade (70% das vezes)
     const shouldPrioritizeDifficulty = Math.random() < 0.7;
@@ -567,6 +572,7 @@ async function getSmartReminderContent(user: any): Promise<any | null> {
           AND c."isActive" = true
           ${usedIdsClause}
           ${reviewClause}
+          ${examTypeClause}
         ORDER BY RANDOM()
         LIMIT 1
       `)) as any[];
@@ -586,6 +592,7 @@ async function getSmartReminderContent(user: any): Promise<any | null> {
           AND c."isActive" = true
           ${usedIdsClause}
           ${reviewClause}
+          ${examTypeClause}
         ORDER BY RANDOM()
         LIMIT 1
       `)) as any[];
@@ -593,12 +600,26 @@ async function getSmartReminderContent(user: any): Promise<any | null> {
       if (result.length > 0) return result[0];
     }
 
-    // 3. Fallback: qualquer conteúdo (exceto rejeitados)
+    // 3. Fallback: qualquer conteúdo do examType (exceto rejeitados)
+    const examTypeFallback = examType
+      ? sql`AND ("examType" = ${examType} OR "examType" IS NULL)`
+      : sql``;
+
+    // Nota: usedIdsClause usa alias "c." mas fallback não usa alias - reconstruir sem alias
+    const usedIdsFallback =
+      usedIds.length > 0
+        ? sql`AND "id" NOT IN (${sql.join(
+            usedIds.map((id: string) => sql`${id}`),
+            sql`, `,
+          )})`
+        : sql``;
+
     const result = (await db.execute(sql`
       SELECT * FROM "Content"
       WHERE "isActive" = true
         AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-        ${usedIdsClause}
+        ${usedIdsFallback}
+        ${examTypeFallback}
       ORDER BY RANDOM()
       LIMIT 1
     `)) as any[];
