@@ -426,6 +426,216 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/admin/leads/kpis - KPIs detalhados para aba Leads
+  app.get("/api/admin/leads/kpis", requireAuth, async (req, res) => {
+    try {
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      // Status distribution
+      const statusDist = await db.execute(sql`
+        SELECT status, COUNT(*) as count
+        FROM leads
+        GROUP BY status
+      `) as any[];
+
+      const statusMap: Record<string, number> = {};
+      let totalLeads = 0;
+      for (const row of statusDist) {
+        statusMap[row.status] = Number(row.count);
+        totalLeads += Number(row.count);
+      }
+
+      // Source distribution
+      const sourceDist = await db.execute(sql`
+        SELECT COALESCE(source, 'landing_page') as source, COUNT(*) as count
+        FROM leads
+        GROUP BY source
+      `) as any[];
+
+      const sourceMap: Record<string, number> = {};
+      for (const row of sourceDist) {
+        sourceMap[row.source] = Number(row.count);
+      }
+
+      // ExamType distribution
+      const examDist = await db.execute(sql`
+        SELECT COALESCE("examType", 'OUTRO') as exam_type, COUNT(*) as count
+        FROM leads
+        GROUP BY "examType"
+        ORDER BY count DESC
+      `) as any[];
+
+      const examMap: Record<string, number> = {};
+      for (const row of examDist) {
+        examMap[row.exam_type] = Number(row.count);
+      }
+
+      // This week leads
+      const weekResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM leads WHERE created_at >= ${weekAgo}
+      `) as any[];
+      const weekLeads = Number(weekResult[0]?.count || 0);
+
+      // This month leads
+      const monthResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM leads WHERE created_at >= ${monthAgo}
+      `) as any[];
+      const monthLeads = Number(monthResult[0]?.count || 0);
+
+      // Drip campaign progress
+      const dripStats = await db.execute(sql`
+        SELECT
+          COUNT(CASE WHEN "dripEmail1SentAt" IS NOT NULL THEN 1 END) as email1,
+          COUNT(CASE WHEN "dripEmail2SentAt" IS NOT NULL THEN 1 END) as email2,
+          COUNT(CASE WHEN "dripEmail3SentAt" IS NOT NULL THEN 1 END) as email3,
+          COUNT(CASE WHEN "dripEmail4SentAt" IS NOT NULL THEN 1 END) as email4,
+          COUNT(*) as total
+        FROM leads
+      `) as any[];
+
+      const drip = dripStats[0];
+
+      // Stalled leads (NOVO > 7 days)
+      const stalledResult = await db.execute(sql`
+        SELECT COUNT(*) as count FROM leads
+        WHERE status = 'NOVO' AND created_at <= ${weekAgo}
+      `) as any[];
+
+      // Conversion rate
+      const convertidos = statusMap["CONVERTIDO"] || 0;
+      const conversionRate = totalLeads > 0 ? ((convertidos / totalLeads) * 100).toFixed(1) : "0.0";
+
+      return res.json({
+        success: true,
+        kpis: {
+          total: totalLeads,
+          week: weekLeads,
+          month: monthLeads,
+          conversionRate: `${conversionRate}%`,
+          convertidos,
+          stalled: Number(stalledResult[0]?.count || 0),
+          status: statusMap,
+          source: sourceMap,
+          examType: examMap,
+          drip: {
+            email1: Number(drip.email1),
+            email2: Number(drip.email2),
+            email3: Number(drip.email3),
+            email4: Number(drip.email4),
+            total: Number(drip.total),
+          },
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching leads KPIs:", error);
+      return res.status(500).json({ success: false, error: "Erro ao buscar KPIs de leads." });
+    }
+  });
+
+  // GET /api/admin/promo-codes - List all promo codes with usage stats
+  app.get("/api/admin/promo-codes", requireAuth, async (req, res) => {
+    try {
+      const codes = await db.execute(sql`
+        SELECT
+          pc.*,
+          (SELECT COUNT(*) FROM promo_redemptions pr WHERE pr.promo_code_id = pc.id) as redemption_count
+        FROM promo_codes pc
+        ORDER BY pc.created_at DESC
+      `) as any[];
+
+      return res.json({ success: true, codes });
+    } catch (error) {
+      console.error("Error fetching promo codes:", error);
+      return res.status(500).json({ success: false, error: "Erro ao buscar códigos" });
+    }
+  });
+
+  // POST /api/admin/promo-codes - Create a new promo code
+  app.post("/api/admin/promo-codes", requireAuth, async (req, res) => {
+    try {
+      const { code, description, type, grantedPlan, grantedDays, maxUses } = req.body;
+
+      if (!code || !grantedPlan || !grantedDays) {
+        return res.status(400).json({ success: false, error: "Campos obrigatórios: code, grantedPlan, grantedDays" });
+      }
+
+      const id = `promo_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      await db.execute(sql`
+        INSERT INTO promo_codes (id, code, description, type, granted_plan, granted_days, max_uses, current_uses, is_active, created_at)
+        VALUES (
+          ${id},
+          ${code.toUpperCase()},
+          ${description || ""},
+          ${type || "beta"},
+          ${grantedPlan},
+          ${Number(grantedDays)},
+          ${Number(maxUses) || 1},
+          0,
+          true,
+          NOW()
+        )
+      `);
+
+      return res.json({ success: true, id });
+    } catch (error: any) {
+      if (error?.code === "23505") {
+        return res.status(400).json({ success: false, error: "Código já existe" });
+      }
+      console.error("Error creating promo code:", error);
+      return res.status(500).json({ success: false, error: "Erro ao criar código" });
+    }
+  });
+
+  // PATCH /api/admin/promo-codes/:id - Toggle active/inactive
+  app.patch("/api/admin/promo-codes/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+
+      await db.execute(sql`
+        UPDATE promo_codes SET is_active = ${Boolean(isActive)} WHERE id = ${id}
+      `);
+
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating promo code:", error);
+      return res.status(500).json({ success: false, error: "Erro ao atualizar código" });
+    }
+  });
+
+  // GET /api/admin/beta-testers - List users who redeemed promo codes
+  app.get("/api/admin/beta-testers", requireAuth, async (req, res) => {
+    try {
+      const testers = await db.execute(sql`
+        SELECT
+          u.id,
+          u.name,
+          u.email,
+          u."telegramId",
+          u.plan,
+          u."planStatus",
+          u."planStartDate",
+          u."planEndDate",
+          u.last_active_at,
+          u."totalQuestionsAnswered",
+          pr.promo_code_id,
+          pc.code as promo_code,
+          pr.redeemed_at
+        FROM promo_redemptions pr
+        JOIN "User" u ON pr.user_id = u.id
+        JOIN promo_codes pc ON pr.promo_code_id = pc.id
+        ORDER BY pr.redeemed_at DESC
+      `) as any[];
+
+      return res.json({ success: true, testers });
+    } catch (error) {
+      console.error("Error fetching beta testers:", error);
+      return res.status(500).json({ success: false, error: "Erro ao buscar beta testers" });
+    }
+  });
+
   // GET /api/admin/users - List users (alunos) with engagement metrics
   app.get("/api/admin/users", requireAuth, async (req, res) => {
     try {

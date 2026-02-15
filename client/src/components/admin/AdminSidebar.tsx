@@ -1,4 +1,4 @@
-import { LayoutDashboard, UserCheck, DollarSign, Settings, GraduationCap } from "lucide-react";
+import { LayoutDashboard, UserCheck, DollarSign, Settings, GraduationCap, Ticket } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -30,6 +30,11 @@ const menuItems = [
     title: "Alunos",
     url: "/educ/users",
     icon: GraduationCap,
+  },
+  {
+    title: "Beta Testers",
+    url: "/educ/beta",
+    icon: Ticket,
   },
   {
     title: "Financeiro",

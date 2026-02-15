@@ -18,12 +18,13 @@ async function enrichContentSections() {
   console.log("🔄 Buscando conteúdos sem seções estruturadas...\n");
 
   const contents = await db.execute(sql`
-    SELECT id, title, "textContent", "examType"
-    FROM "Content"
-    WHERE "isActive" = true
-      AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-      AND "textContent" NOT LIKE '%PONTOS-CHAVE:%'
-    ORDER BY "reviewStatus" DESC NULLS LAST
+    SELECT c.id, c.title, c."textContent", s."displayName" as subject_name
+    FROM "Content" c
+    LEFT JOIN "Subject" s ON c."subjectId" = s.id
+    WHERE c."isActive" = true
+      AND (c."reviewStatus" IS NULL OR c."reviewStatus" != 'REJEITADO')
+      AND c."textContent" NOT LIKE '%PONTOS-CHAVE:%'
+    ORDER BY c."reviewStatus" DESC NULLS LAST
   `) as any[];
 
   console.log(`📊 ${contents.length} conteúdos para enriquecer\n`);
@@ -35,7 +36,7 @@ async function enrichContentSections() {
     const content = contents[i];
     const title = content.title || "Sem título";
     const text = content.textContent || "";
-    const examType = content.examType || "PF";
+    const subjectName = content.subject_name || "Concursos Policiais";
 
     console.log(`[${i + 1}/${contents.length}] ${title}...`);
 
@@ -46,7 +47,7 @@ async function enrichContentSections() {
         messages: [
           {
             role: "user",
-            content: `Você é um professor especialista em concursos policiais (${examType}).
+            content: `Você é um professor especialista em ${subjectName} para concursos policiais.
 
 TEMA: ${title}
 DEFINIÇÃO: ${text}

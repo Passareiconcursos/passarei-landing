@@ -19,6 +19,7 @@ import Success from "./pages/Success";
 import EducUsers from "@/pages/educ-users";
 import EducRevenue from "@/pages/educ-revenue";
 import EducSettings from "@/pages/educ-settings";
+import EducBeta from "@/pages/educ-beta";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/educ/dashboard" component={EducDashboard} />
       <Route path="/educ/leads" component={EducLeads} />
       <Route path="/educ/users" component={EducUsers} />
+      <Route path="/educ/beta" component={EducBeta} />
       <Route path="/educ/revenue" component={EducRevenue} />
       <Route path="/educ/settings" component={EducSettings} />
       <Route path="/checkout" component={Checkout} />
