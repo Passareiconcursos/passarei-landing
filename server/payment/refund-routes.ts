@@ -282,7 +282,7 @@ router.get("/metrics", requireAuth, async (req: Request, res: Response) => {
     const counts = mrrResult[0] as any;
     const calouros = parseInt(counts?.calouro_count || "0");
     const veteranos = parseInt(counts?.veterano_count || "0");
-    const mrr = (calouros * 29.9) + (veteranos * 89.9);
+    const mrr = (calouros * 89.90) + (veteranos * 44.90);
 
     // Transações do mês
     const monthTransactions = await db.execute(sql`
