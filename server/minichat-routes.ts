@@ -404,13 +404,13 @@ export function registerMiniChatRoutes(app: Express) {
             name: "Mini-Chat User",
             email: email,
             phone: "",
-            examType: "",
+            exam_type: "",
             state: "",
-            acceptedWhatsApp: false,
+            accepted_whats_app: false,
             status: "NOVO",
             source: "minichat",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           });
 
           if (error) {
@@ -472,8 +472,8 @@ export function registerMiniChatRoutes(app: Express) {
           .from("leads")
           .update(
             {
-              examType: concurso || session.concurso,
-              updatedAt: new Date().toISOString(),
+              exam_type: concurso || session.concurso,
+              updated_at: new Date().toISOString(),
             },
             { id: session.odId }
           );
@@ -855,7 +855,7 @@ Seja motivador!`,
           .update(
             {
               status: "ENGAJADO",
-              updatedAt: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             },
             { id: session.odId }
           );

@@ -226,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const weekUsersResult = await db.execute(sql`
         SELECT COUNT(*) as count FROM "User"
         WHERE "telegramId" IS NOT NULL
-        AND created_at >= ${weekAgo}
+        AND "createdAt" >= ${weekAgo}
       `);
 
       // Planos
@@ -251,7 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       `);
       const monthPaidResult = await db.execute(sql`
         SELECT COUNT(*) as count FROM "User"
-        WHERE plan != 'FREE' AND created_at >= ${monthStart}
+        WHERE plan != 'FREE' AND "createdAt" >= ${monthStart}
       `);
 
       const monthLeads = Number((monthLeadsResult as any[])[0]?.count || 0);
@@ -461,9 +461,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // ExamType distribution
       const examDist = await db.execute(sql`
-        SELECT COALESCE("examType", 'OUTRO') as exam_type, COUNT(*) as count
+        SELECT COALESCE(exam_type, 'OUTRO') as exam_type, COUNT(*) as count
         FROM leads
-        GROUP BY "examType"
+        GROUP BY exam_type
         ORDER BY count DESC
       `) as any[];
 
@@ -689,7 +689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "planStatus",
           "planEndDate",
           last_active_at,
-          created_at,
+          "createdAt",
           "totalQuestionsAnswered"
         FROM "User"
         ${sql.raw(whereConditions)}
@@ -711,7 +711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           planStatus: u.planStatus,
           planEndDate: u.planEndDate,
           lastActiveAt: u.last_active_at,
-          createdAt: u.created_at,
+          createdAt: u.createdAt,
           totalQuestions: u.totalQuestionsAnswered || 0,
           isActive,
         };

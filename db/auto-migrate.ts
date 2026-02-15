@@ -46,59 +46,99 @@ async function migrateLeadsTable() {
     ) as exists
   `) as any[];
 
-  if (leadsExists[0]?.exists) {
-    return;
+  if (!leadsExists[0]?.exists) {
+    // Verificar se tabela "Lead" existe (PascalCase do Prisma)
+    const leadExists = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_name = 'Lead'
+      ) as exists
+    `) as any[];
+
+    if (leadExists[0]?.exists) {
+      console.log("  🔄 Renomeando 'Lead' para 'leads'...");
+      // Garantir que o enum existe antes de renomear
+      await db.execute(sql`
+        DO $$ BEGIN
+          CREATE TYPE lead_status AS ENUM ('NOVO', 'CONTATADO', 'QUALIFICADO', 'CONVERTIDO');
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `);
+      await db.execute(sql`ALTER TABLE "Lead" RENAME TO leads`);
+      console.log("  ✅ Tabela renomeada");
+    } else {
+      // Tabela não existe de nenhuma forma - criar do zero
+      console.log("  🔄 Criando tabela 'leads'...");
+
+      await db.execute(sql`
+        DO $$ BEGIN
+          CREATE TYPE lead_status AS ENUM ('NOVO', 'CONTATADO', 'QUALIFICADO', 'CONVERTIDO');
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `);
+
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS leads (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          name TEXT NOT NULL,
+          email TEXT NOT NULL UNIQUE,
+          phone TEXT NOT NULL,
+          exam_type TEXT NOT NULL,
+          state VARCHAR(2) NOT NULL,
+          status lead_status NOT NULL DEFAULT 'NOVO',
+          source TEXT DEFAULT 'landing_page',
+          notes TEXT,
+          assigned_to VARCHAR,
+          utm_source TEXT,
+          utm_medium TEXT,
+          utm_campaign TEXT,
+          accepted_whats_app BOOLEAN NOT NULL DEFAULT true,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          converted_at TIMESTAMP,
+          "dripEmail1SentAt" TIMESTAMP,
+          "dripEmail2SentAt" TIMESTAMP,
+          "dripEmail3SentAt" TIMESTAMP,
+          "dripEmail4SentAt" TIMESTAMP
+        )
+      `);
+      console.log("  ✅ Tabela 'leads' criada");
+      return;
+    }
   }
 
-  // Verificar se tabela "Lead" existe (PascalCase do Prisma)
-  const leadExists = await db.execute(sql`
-    SELECT EXISTS (
-      SELECT FROM information_schema.tables
-      WHERE table_name = 'Lead'
-    ) as exists
-  `) as any[];
+  // Tabela leads existe (pré-existente ou acabou de ser renomeada) - normalizar colunas Prisma
+  {
+    // Renomear colunas camelCase (Prisma) → snake_case (se existirem)
+    const camelCols = await db.execute(sql`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'leads' AND column_name = 'createdAt'
+    `) as any[];
 
-  if (leadExists[0]?.exists) {
-    console.log("  🔄 Renomeando 'Lead' para 'leads'...");
-    await db.execute(sql`ALTER TABLE "Lead" RENAME TO leads`);
-    console.log("  ✅ Tabela renomeada");
-  } else {
-    console.log("  🔄 Criando tabela 'leads'...");
-
-    await db.execute(sql`
-      DO $$ BEGIN
-        CREATE TYPE lead_status AS ENUM ('NOVO', 'CONTATADO', 'QUALIFICADO', 'CONVERTIDO');
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-    `);
-
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS leads (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name TEXT NOT NULL,
-        email TEXT NOT NULL UNIQUE,
-        phone TEXT NOT NULL,
-        exam_type TEXT NOT NULL,
-        state VARCHAR(2) NOT NULL,
-        status lead_status NOT NULL DEFAULT 'NOVO',
-        source TEXT DEFAULT 'landing_page',
-        notes TEXT,
-        assigned_to VARCHAR,
-        utm_source TEXT,
-        utm_medium TEXT,
-        utm_campaign TEXT,
-        accepted_whats_app BOOLEAN NOT NULL DEFAULT true,
-        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-        converted_at TIMESTAMP,
-        "dripEmail1SentAt" TIMESTAMP,
-        "dripEmail2SentAt" TIMESTAMP,
-        "dripEmail3SentAt" TIMESTAMP,
-        "dripEmail4SentAt" TIMESTAMP
-      )
-    `);
-    console.log("  ✅ Tabela 'leads' criada");
+    if (camelCols.length > 0) {
+      console.log("  🔄 Normalizando colunas leads (camelCase → snake_case)...");
+      await db.execute(sql`ALTER TABLE leads RENAME COLUMN "createdAt" TO created_at`);
+      await db.execute(sql`ALTER TABLE leads RENAME COLUMN "updatedAt" TO updated_at`);
+      // Renomear outras colunas camelCase se existirem
+      try { await db.execute(sql`ALTER TABLE leads RENAME COLUMN "convertedAt" TO converted_at`); } catch (_e) {}
+      try { await db.execute(sql`ALTER TABLE leads RENAME COLUMN "examType" TO exam_type`); } catch (_e) {}
+      try { await db.execute(sql`ALTER TABLE leads RENAME COLUMN "acceptedWhatsApp" TO accepted_whats_app`); } catch (_e) {}
+      // Adicionar colunas que podem não existir na tabela Prisma original
+      await db.execute(sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'landing_page'`);
+      await db.execute(sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS notes TEXT`);
+      await db.execute(sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS assigned_to VARCHAR`);
+      await db.execute(sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS utm_source TEXT`);
+      await db.execute(sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS utm_medium TEXT`);
+      await db.execute(sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS utm_campaign TEXT`);
+      // Adicionar drip columns se não existirem (renamed table may not have them)
+      await db.execute(sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS "dripEmail1SentAt" TIMESTAMP`);
+      await db.execute(sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS "dripEmail2SentAt" TIMESTAMP`);
+      await db.execute(sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS "dripEmail3SentAt" TIMESTAMP`);
+      await db.execute(sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS "dripEmail4SentAt" TIMESTAMP`);
+      console.log("  ✅ Colunas normalizadas");
+    }
   }
 }
 

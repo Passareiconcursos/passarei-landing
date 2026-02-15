@@ -2,7 +2,7 @@ import { supabaseHttp } from '../supabase-http'
 import { nanoid } from 'nanoid'
 
 export async function getAllLeads() {
-  const { data, error } = await supabaseHttp.from('Lead').select('*')
+  const { data, error } = await supabaseHttp.from('leads').select('*')
   
   if (error) throw error
   return data || []
@@ -16,14 +16,18 @@ export async function createLead(leadData: {
   state: string
   acceptedWhatsApp?: boolean
 }) {
-  const { data, error } = await supabaseHttp.from('Lead').insert({
+  const { data, error } = await supabaseHttp.from('leads').insert({
     id: nanoid(), // Gerar ID único
-    ...leadData,
-    acceptedWhatsApp: leadData.acceptedWhatsApp ?? false,
+    name: leadData.name,
+    email: leadData.email,
+    phone: leadData.phone,
+    exam_type: leadData.examType,
+    state: leadData.state,
+    accepted_whats_app: leadData.acceptedWhatsApp ?? false,
     status: 'NOVO',
     source: 'landing_page',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   })
 
   if (error) {

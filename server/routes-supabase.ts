@@ -44,7 +44,7 @@ export function registerSupabaseRoutes(app: Express) {
             try {
               await db.execute(sql`
                 UPDATE leads
-                SET "dripEmail1SentAt" = NOW(), "updatedAt" = NOW()
+                SET "dripEmail1SentAt" = NOW(), updated_at = NOW()
                 WHERE id = ${lead.id}
               `);
             } catch (e) {

@@ -73,7 +73,7 @@ async function processDripStep(step: {
     // - Ainda não recebeu este email (campo null)
     // Nota: não exigimos dripEmail1SentAt (pode ter falhado async)
     const leads = await db.execute(sql`
-      SELECT id, name, email, "examType", "dripEmail1SentAt"
+      SELECT id, name, email, exam_type as "examType", "dripEmail1SentAt"
       FROM leads
       WHERE status = 'NOVO'
         AND ${sql.raw(`"${step.field}"`)} IS NULL
@@ -93,7 +93,7 @@ async function processDripStep(step: {
           await db.execute(sql`
             UPDATE leads
             SET "dripEmail1SentAt" = created_at,
-                "updatedAt" = NOW()
+                updated_at = NOW()
             WHERE id = ${lead.id}
           `);
         }
@@ -109,7 +109,7 @@ async function processDripStep(step: {
           await db.execute(sql`
             UPDATE leads
             SET ${sql.raw(`"${step.field}"`)} = NOW(),
-                "updatedAt" = NOW()
+                updated_at = NOW()
             WHERE id = ${lead.id}
           `);
           console.log(`✅ [Drip ${step.step}/4] Email enviado para ${lead.email}`);
