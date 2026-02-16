@@ -16,6 +16,8 @@ export function Footer() {
                 src="/logo.png"
                 alt="Passarei - Concursos Policiais"
                 className="h-8 w-auto brightness-0 invert"
+                width={120}
+                height={32}
                 loading="lazy"
                 onError={(e) => {
                   console.error("Logo Footer não carregou");

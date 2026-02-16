@@ -48,6 +48,8 @@ export function Header() {
                 src="/logo.png"
                 alt="Passarei - Concursos Policiais"
                 className="h-8 md:h-10 w-auto"
+                width={120}
+                height={40}
                 loading="eager"
                 decoding="async"
                 onError={(e) => {

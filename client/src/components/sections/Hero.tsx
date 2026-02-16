@@ -1,10 +1,30 @@
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { MiniChat } from "@/components/MiniChat";
 
 export function Hero() {
   const [showMiniChat, setShowMiniChat] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const closeMiniChat = useCallback(() => {
+    setShowMiniChat(false);
+    triggerRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!showMiniChat) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeMiniChat();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [showMiniChat, closeMiniChat]);
 
   const scrollToHowItWorks = () => {
     document
@@ -33,6 +53,7 @@ export function Hero() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
               <Button
+                ref={triggerRef}
                 size="lg"
                 onClick={() => setShowMiniChat(true)}
                 className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
@@ -205,13 +226,20 @@ export function Hero() {
 
       {/* Modal do Mini-Chat - Desktop e Mobile */}
       {showMiniChat && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Chat Passarei"
+          ref={modalRef}
+          onClick={(e) => { if (e.target === e.currentTarget) closeMiniChat(); }}
+        >
           <div className="relative w-full max-w-md">
-            {/* Botão de fechar */}
             <button
-              onClick={() => setShowMiniChat(false)}
+              onClick={closeMiniChat}
               className="absolute -top-3 -right-3 z-10 bg-white text-gray-700 hover:text-red-500 hover:bg-red-50 rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-gray-200 hover:border-red-300 transition-all duration-200"
               aria-label="Fechar chat"
+              autoFocus
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -220,6 +248,7 @@ export function Hero() {
                 viewBox="0 0 24 24"
                 stroke="currentColor"
                 strokeWidth={2}
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -229,7 +258,6 @@ export function Hero() {
               </svg>
             </button>
 
-            {/* MiniChat renderizado diretamente */}
             <MiniChat />
           </div>
         </div>

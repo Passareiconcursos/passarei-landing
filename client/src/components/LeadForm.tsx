@@ -171,10 +171,11 @@ export function LeadForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Nome */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
+          <label htmlFor="lead-name" className="block text-sm font-medium text-gray-900 mb-2">
             Nome Completo *
           </label>
           <input
+            id="lead-name"
             type="text"
             name="name"
             value={formData.name}
@@ -188,10 +189,11 @@ export function LeadForm() {
 
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
+          <label htmlFor="lead-email" className="block text-sm font-medium text-gray-900 mb-2">
             Email *
           </label>
           <input
+            id="lead-email"
             type="email"
             name="email"
             value={formData.email}
@@ -205,10 +207,11 @@ export function LeadForm() {
 
         {/* WhatsApp */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
+          <label htmlFor="lead-phone" className="block text-sm font-medium text-gray-900 mb-2">
             WhatsApp *
           </label>
           <input
+            id="lead-phone"
             type="tel"
             name="phone"
             value={formData.phone}
@@ -223,11 +226,12 @@ export function LeadForm() {
 
         {/* Concurso */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
+          <label htmlFor="lead-examType" className="block text-sm font-medium text-gray-900 mb-2">
             Tipo de Concurso *
           </label>
           <div className="relative">
             <select
+              id="lead-examType"
               name="examType"
               value={formData.examType}
               onChange={handleChange}
@@ -294,7 +298,7 @@ export function LeadForm() {
                 ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                 <path
                   fillRule="evenodd"
                   d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -307,11 +311,12 @@ export function LeadForm() {
 
         {/* Estado */}
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-2">
+          <label htmlFor="lead-state" className="block text-sm font-medium text-gray-900 mb-2">
             Estado *
           </label>
           <div className="relative">
             <select
+              id="lead-state"
               name="state"
               value={formData.state}
               onChange={handleChange}
@@ -333,7 +338,7 @@ export function LeadForm() {
               ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                 <path
                   fillRule="evenodd"
                   d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -347,6 +352,7 @@ export function LeadForm() {
         {/* Checkbox */}
         <div className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg">
           <input
+            id="lead-acceptedWhatsApp"
             type="checkbox"
             name="acceptedWhatsApp"
             checked={formData.acceptedWhatsApp}
@@ -355,7 +361,7 @@ export function LeadForm() {
             required
             data-testid="checkbox-accept-whatsapp"
           />
-          <label className="text-sm text-gray-900">
+          <label htmlFor="lead-acceptedWhatsApp" className="text-sm text-gray-900">
             Aceito receber conteúdo educacional via WhatsApp *
           </label>
         </div>
