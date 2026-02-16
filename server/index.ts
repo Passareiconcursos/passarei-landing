@@ -24,7 +24,6 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use("/api/payment", paymentRoutes);
 app.use("/api/activation", activationRoutes);
 
 app.use((req, res, next) => {
@@ -70,7 +69,11 @@ app.use((req, res, next) => {
   registerPromoRoutes(app);
   app.use("/api/payment", paymentRoutes);
   app.use("/api/admin/financial", refundRoutes);
-  app.use("/api/email", emailTestRouter);
+
+  // Test routes: só em desenvolvimento (não expor em produção)
+  if (!process.env.RAILWAY_ENVIRONMENT) {
+    app.use("/api/email", emailTestRouter);
+  }
 
   // --- BLOCO DE SEO (A NOVIDADE) ---
   app.get("/robots.txt", (_req, res) => {

@@ -4,31 +4,22 @@ import { db } from "../db";
 import {
   leads,
   admins,
-  adminSessions,
   users,
   subscriptions,
   content,
-  categories,
-  subcategories,
   subjects,
   materials,
-  questions,
 } from "../db/schema";
 import {
-  insertLeadSchema,
   insertContentSchema,
   insertMaterialSchema,
-  insertQuestionSchema,
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import { eq, and, count, desc, asc, like, or, ne, sql } from "drizzle-orm";
 import {
   hashPassword,
   verifyPassword,
-  createAdminSession,
-  verifyAdminSession,
   logAuditAction,
-  requireRole,
 } from "./auth";
 import { verifyAdminSession as verifySupabaseSession } from "../lib/db/auth";
 import { requireAuth } from "./middleware-supabase";
@@ -83,59 +74,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // POST /api/admin/logout - Admin logout
-  app.post("/api/admin/logout", requireAuth, async (req, res) => {
-    try {
-      const token = req.cookies?.adminToken;
-      const admin = (req as any).admin;
-
-      if (token) {
-        // Delete session
-        await db.delete(adminSessions).where(eq(adminSessions.token, token));
-
-        // Log audit
-        await logAuditAction(admin.id, "LOGOUT", "admin", admin.id, null, req);
-      }
-
-      // Clear cookie
-      res.clearCookie("adminToken");
-
-      return res.json({
-        success: true,
-      });
-    } catch (error) {
-      console.error("Error during admin logout:", error);
-      return res.status(500).json({
-        success: false,
-        error: "Erro ao processar logout.",
-      });
-    }
-  });
-
-  // GET /api/admin/me - Get current admin info
-  app.get("/api/admin/me", requireAuth, async (req, res) => {
-    try {
-      const admin = (req as any).admin;
-
-      return res.json({
-        success: true,
-        admin: {
-          id: admin.id,
-          email: admin.email,
-          name: admin.name,
-          role: admin.role,
-          isActive: admin.isActive,
-          lastLoginAt: admin.lastLoginAt,
-        },
-      });
-    } catch (error) {
-      console.error("Error fetching admin info:", error);
-      return res.status(500).json({
-        success: false,
-        error: "Erro ao buscar informações do admin.",
-      });
-    }
-  });
+  // Auth routes (login, logout, me) are in routes-supabase.ts (Supabase HTTP auth)
 
   // GET /api/admin/stats - Get dashboard statistics
   app.get("/api/admin/stats", requireAuth, async (req, res) => {
@@ -534,76 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/admin/promo-codes - List all promo codes with usage stats
-  app.get("/api/admin/promo-codes", requireAuth, async (req, res) => {
-    try {
-      const codes = await db.execute(sql`
-        SELECT
-          pc.*,
-          (SELECT COUNT(*) FROM promo_redemptions pr WHERE pr.promo_code_id = pc.id) as redemption_count
-        FROM promo_codes pc
-        ORDER BY pc.created_at DESC
-      `) as any[];
-
-      return res.json({ success: true, codes });
-    } catch (error) {
-      console.error("Error fetching promo codes:", error);
-      return res.status(500).json({ success: false, error: "Erro ao buscar códigos" });
-    }
-  });
-
-  // POST /api/admin/promo-codes - Create a new promo code
-  app.post("/api/admin/promo-codes", requireAuth, async (req, res) => {
-    try {
-      const { code, description, type, grantedPlan, grantedDays, maxUses } = req.body;
-
-      if (!code || !grantedPlan || !grantedDays) {
-        return res.status(400).json({ success: false, error: "Campos obrigatórios: code, grantedPlan, grantedDays" });
-      }
-
-      const id = `promo_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      await db.execute(sql`
-        INSERT INTO promo_codes (id, code, description, type, granted_plan, granted_days, max_uses, current_uses, is_active, created_at)
-        VALUES (
-          ${id},
-          ${code.toUpperCase()},
-          ${description || ""},
-          ${type || "beta"},
-          ${grantedPlan},
-          ${Number(grantedDays)},
-          ${Number(maxUses) || 1},
-          0,
-          true,
-          NOW()
-        )
-      `);
-
-      return res.json({ success: true, id });
-    } catch (error: any) {
-      if (error?.code === "23505") {
-        return res.status(400).json({ success: false, error: "Código já existe" });
-      }
-      console.error("Error creating promo code:", error);
-      return res.status(500).json({ success: false, error: "Erro ao criar código" });
-    }
-  });
-
-  // PATCH /api/admin/promo-codes/:id - Toggle active/inactive
-  app.patch("/api/admin/promo-codes/:id", requireAuth, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { isActive } = req.body;
-
-      await db.execute(sql`
-        UPDATE promo_codes SET is_active = ${Boolean(isActive)} WHERE id = ${id}
-      `);
-
-      return res.json({ success: true });
-    } catch (error) {
-      console.error("Error updating promo code:", error);
-      return res.status(500).json({ success: false, error: "Erro ao atualizar código" });
-    }
-  });
+  // Promo codes routes (GET/POST/PATCH /api/admin/promo-codes) are in promo-routes.ts
 
   // GET /api/admin/beta-testers - List users who redeemed promo codes
   app.get("/api/admin/beta-testers", requireAuth, async (req, res) => {
