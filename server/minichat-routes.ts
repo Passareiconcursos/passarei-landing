@@ -21,12 +21,18 @@ const MAX_FREE_QUESTIONS = 21; // Questões grátis no minichat
 // ============================================
 // INTERFACE DE SESSÃO
 // ============================================
+interface SubjectStats {
+  correct: number;
+  total: number;
+}
+
 interface MiniChatSession {
   id: string;
   odId: string;
   email: string;
   concurso?: string;
   cargo?: string;
+  cargoId?: string;
   nivel?: string;
   facilidades?: string[];
   dificuldades?: string[];
@@ -34,6 +40,7 @@ interface MiniChatSession {
   score: number;
   completed: boolean;
   usedContentIds: string[];
+  subjectStats: Record<string, SubjectStats>;
   createdAt: Date;
 }
 
@@ -433,6 +440,7 @@ export function registerMiniChatRoutes(app: Express) {
         score: 0,
         completed: false,
         usedContentIds: [],
+        subjectStats: {},
         createdAt: new Date(),
       };
       sessions.set(sessionId, session);
@@ -450,7 +458,7 @@ export function registerMiniChatRoutes(app: Express) {
   // ============================================
   app.post("/api/minichat/onboarding", async (req, res) => {
     try {
-      const { sessionId, concurso, cargo, nivel, facilidades, dificuldades } =
+      const { sessionId, concurso, cargo, cargoId, nivel, facilidades, dificuldades } =
         req.body;
       const session = sessions.get(sessionId);
 
@@ -460,6 +468,7 @@ export function registerMiniChatRoutes(app: Express) {
 
       if (concurso) session.concurso = concurso;
       if (cargo) session.cargo = cargo;
+      if (cargoId) session.cargoId = cargoId;
       if (nivel) session.nivel = nivel;
       if (facilidades) session.facilidades = facilidades;
       if (dificuldades) session.dificuldades = dificuldades;
@@ -718,7 +727,16 @@ export function registerMiniChatRoutes(app: Express) {
 
       const isCorrect = answer === correctOption;
 
-      if (isCorrect) session.score++;
+      // Track per-subject stats
+      const subject = content?.subject || linkedQuestion?.subject || req.body.materia || "Geral";
+      if (!session.subjectStats[subject]) {
+        session.subjectStats[subject] = { correct: 0, total: 0 };
+      }
+      session.subjectStats[subject].total++;
+      if (isCorrect) {
+        session.score++;
+        session.subjectStats[subject].correct++;
+      }
       session.currentQuestion++;
       sessions.set(sessionId, session);
 
@@ -870,11 +888,24 @@ Seja motivador!`,
         `🎉 [MiniChat] Teste finalizado: ${sessionId} - ${session.score}/${total} (${percentage}%)`,
       );
 
+      // Build per-subject breakdown
+      const subjectBreakdown = Object.entries(session.subjectStats)
+        .map(([subject, stats]) => ({
+          subject,
+          correct: stats.correct,
+          total: stats.total,
+          percentage: stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0,
+        }))
+        .sort((a, b) => b.percentage - a.percentage);
+
       res.json({
         success: true,
         score: session.score,
         total: total,
         percentage: percentage,
+        subjectBreakdown,
+        bestSubject: subjectBreakdown[0]?.subject || null,
+        worstSubject: subjectBreakdown.length > 1 ? subjectBreakdown[subjectBreakdown.length - 1].subject : null,
       });
     } catch (error) {
       res.status(500).json({ error: "Erro interno" });

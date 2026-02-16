@@ -3,6 +3,7 @@ import { Send, Loader2, CheckCircle2, Trophy, Sparkles } from "lucide-react";
 import {
   useConcursos,
   useCargos,
+  useMaterias,
   formatConcursoForChat,
   formatCargoForChat,
   type Concurso,
@@ -57,6 +58,7 @@ interface ChatState {
   concursoLabel: string;
   estado: string;
   cargo: string;
+  cargoId: string;
   nivel: string;
   facilidade: string[];
   dificuldade: string[];
@@ -406,6 +408,7 @@ export function MiniChat() {
     concursoLabel: "",
     estado: "",
     cargo: "",
+    cargoId: "",
     nivel: "",
     facilidade: [],
     dificuldade: [],
@@ -430,6 +433,7 @@ export function MiniChat() {
   // ============================================
   const { concursos: apiConcursos, loading: loadingConcursos } = useConcursos();
   const { cargos: apiCargos, loading: loadingCargos } = useCargos(chatState.concurso || null);
+  const { materias: apiMaterias } = useMaterias(chatState.cargoId || null);
 
   // Concursos: usa API se disponível, senão fallback
   const CONCURSOS = useMemo(() => {
@@ -449,6 +453,17 @@ export function MiniChat() {
 
     return cargosMap;
   }, [apiCargos, chatState.concurso]);
+
+  // Matérias: usa API se disponível, senão fallback hardcoded
+  const MATERIAS_DINAMICAS = useMemo(() => {
+    if (apiMaterias.length > 0) {
+      return apiMaterias.map((m) => ({
+        id: m.codigo || m.id,
+        label: m.nome,
+      }));
+    }
+    return MATERIAS;
+  }, [apiMaterias]);
 
   // useRef para sessionId - garante valor atualizado em callbacks assíncronos
   const sessionIdRef = useRef<string>("");
@@ -965,6 +980,7 @@ export function MiniChat() {
         setChatState((prev) => ({
           ...prev,
           cargo: optionLabel,
+          cargoId: optionId,
           waitingForSelection: false,
         }));
 
@@ -1012,7 +1028,7 @@ export function MiniChat() {
             setTimeout(() => {
               addBotMessage(
                 "Selecione as matérias:",
-                MATERIAS.map((m) => ({ id: m.id, label: m.label })),
+                MATERIAS_DINAMICAS.map((m) => ({ id: m.id, label: m.label })),
                 "multi",
               );
               setChatState((prev) => ({
@@ -1032,7 +1048,7 @@ export function MiniChat() {
             return;
           }
           const labels = selectedMaterias
-            .map((m) => MATERIAS.find((mat) => mat.id === m)?.label)
+            .map((m) => MATERIAS_DINAMICAS.find((mat) => mat.id === m)?.label)
             .join(", ");
           addUserMessage(labels);
 
@@ -1057,7 +1073,7 @@ export function MiniChat() {
               );
               setTimeout(() => {
                 // FILTRAR matérias que já foram selecionadas como facilidade
-                const materiasDisponiveis = MATERIAS.filter(
+                const materiasDisponiveis = MATERIAS_DINAMICAS.filter(
                   (m) => !facilidadesSelecionadas.includes(m.id)
                 );
                 addBotMessage(
@@ -1089,12 +1105,12 @@ export function MiniChat() {
             return;
           }
           const labels = selectedMaterias
-            .map((m) => MATERIAS.find((mat) => mat.id === m)?.label)
+            .map((m) => MATERIAS_DINAMICAS.find((mat) => mat.id === m)?.label)
             .join(", ");
           addUserMessage(labels);
 
           // TAREFA 2.1: Salvar tópicos de dificuldade como último tema estudado
-          const firstDifficulty = MATERIAS.find(
+          const firstDifficulty = MATERIAS_DINAMICAS.find(
             (m) => m.id === selectedMaterias[0],
           );
           if (firstDifficulty) {
@@ -1377,6 +1393,7 @@ export function MiniChat() {
             sessionId: currentSessionId,
             concurso: data.concurso,
             cargo: data.cargo,
+            cargoId: chatState.cargoId,
             nivel: data.nivel,
             facilidades: data.facilidade,
             dificuldades: data.dificuldade,
@@ -1396,10 +1413,10 @@ export function MiniChat() {
 
     // Converter IDs para labels legíveis (usando o ref com valores atualizados)
     const facilidadeLabels = data.facilidade
-      .map((f) => MATERIAS.find((m) => m.id === f)?.label || f)
+      .map((f) => MATERIAS_DINAMICAS.find((m) => m.id === f)?.label || f)
       .join(", ");
     const dificuldadeLabels = data.dificuldade
-      .map((d) => MATERIAS.find((m) => m.id === d)?.label || d)
+      .map((d) => MATERIAS_DINAMICAS.find((m) => m.id === d)?.label || d)
       .join(", ");
     const nivelLabel = NIVEIS.find((n) => n.id === data.nivel)?.label || data.nivel;
     const tempoLabel = TEMPO_PROVA.find((t) => t.id === data.tempoProva)?.label || data.tempoProva;

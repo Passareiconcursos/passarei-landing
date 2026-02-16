@@ -347,7 +347,7 @@ export function formatCargoForChat(cargo: Cargo): {
   }
 
   return {
-    id: cargo.codigo,
+    id: cargo.id,
     label: `${icon} ${cargo.nome}`,
   };
 }
