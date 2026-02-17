@@ -15,6 +15,8 @@ import { registerEssayRoutes } from "./essay-routes";
 import { registerSimuladoRoutes } from "./simulado-routes";
 import { registerConcursosRoutes } from "./concursos-routes";
 import { registerPromoRoutes } from "./promo-routes";
+import { registerSalaAuthRoutes } from "./sala-auth-routes";
+import { registerSalaRoutes } from "./sala-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startTelegramBot } from "./telegram/bot";
 import { startEmailScheduler } from "./email/email-scheduler";
@@ -67,6 +69,8 @@ app.use((req, res, next) => {
   registerSimuladoRoutes(app);
   registerConcursosRoutes(app);
   registerPromoRoutes(app);
+  registerSalaAuthRoutes(app);
+  registerSalaRoutes(app);
   app.use("/api/payment", paymentRoutes);
   app.use("/api/admin/financial", refundRoutes);
 

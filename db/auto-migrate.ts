@@ -31,6 +31,9 @@ export async function runAutoMigrations() {
     // 7. Tabela de redações (essays)
     await migrateEssaysTable();
 
+    // 8. Colunas de auth web (Sala de Aula)
+    await migrateStudentAuthColumns();
+
     console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
   } catch (error) {
     console.error("⚠️ [Auto-Migrate] Erro (não fatal):", error);
@@ -401,5 +404,24 @@ async function migrateReviewColumns() {
       ADD COLUMN IF NOT EXISTS "reviewedAt" TIMESTAMP
     `);
     console.log("  ✅ Colunas de revisão do Question adicionadas");
+  }
+}
+
+async function migrateStudentAuthColumns() {
+  // Adicionar password_hash para login web (Sala de Aula)
+  const pwCol = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.columns
+      WHERE table_name = 'User' AND column_name = 'passwordHash'
+    ) as exists
+  `) as any[];
+
+  if (!pwCol[0]?.exists) {
+    console.log("  🔄 Adicionando colunas de auth web na User...");
+    await db.execute(sql`
+      ALTER TABLE "User"
+      ADD COLUMN IF NOT EXISTS "passwordHash" TEXT
+    `);
+    console.log("  ✅ Coluna passwordHash adicionada na User");
   }
 }

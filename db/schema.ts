@@ -317,7 +317,7 @@ export const users = pgTable("User", {
   phone: text("phone").notNull(),
 
   // Autenticação
-  passwordHash: text("password_hash"),
+  passwordHash: text("passwordHash"),
 
   // Perfil
   examType: examTypeEnum("exam_type").notNull(),
