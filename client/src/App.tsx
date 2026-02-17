@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Analytics } from "@/components/Analytics";
 import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
+import { StudentAuthProvider } from "@/contexts/StudentAuthContext";
 import Landing from "@/pages/landing";
 import Obrigado from "@/pages/obrigado";
 import Termos from "@/pages/termos";
@@ -20,6 +21,9 @@ import EducUsers from "@/pages/educ-users";
 import EducRevenue from "@/pages/educ-revenue";
 import EducSettings from "@/pages/educ-settings";
 import EducBeta from "@/pages/educ-beta";
+import SalaLogin from "@/pages/sala-login";
+import SalaOnboarding from "@/pages/sala-onboarding";
+import SalaAula from "@/pages/sala-aula";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -40,6 +44,10 @@ function Router() {
       <Route path="/educ/beta" component={EducBeta} />
       <Route path="/educ/revenue" component={EducRevenue} />
       <Route path="/educ/settings" component={EducSettings} />
+      <Route path="/sala" component={SalaLogin} />
+      <Route path="/sala/login" component={SalaLogin} />
+      <Route path="/sala/onboarding" component={SalaOnboarding} />
+      <Route path="/sala/aula" component={SalaAula} />
       <Route path="/checkout" component={Checkout} />
       <Route component={NotFound} />
     </Switch>
@@ -51,9 +59,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AdminAuthProvider>
-          <Analytics />
-          <Toaster />
-          <Router />
+          <StudentAuthProvider>
+            <Analytics />
+            <Toaster />
+            <Router />
+          </StudentAuthProvider>
         </AdminAuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
