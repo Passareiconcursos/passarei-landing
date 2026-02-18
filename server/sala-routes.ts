@@ -413,6 +413,39 @@ export function registerSalaRoutes(app: Express) {
         isCorrect,
       );
 
+      // Update SM2 record for this content (upsert)
+      if (req.body.contentId) {
+        try {
+          const { calculateSM2, getQualityFromAnswer } = await import("./services/sm2-engine");
+          const q = getQualityFromAnswer(isCorrect);
+          const existing = await db.execute(sql`
+            SELECT "id","ease_factor","interval","repetitions" FROM "sm2_reviews"
+            WHERE "user_id" = ${student.userId} AND "content_id" = ${req.body.contentId} LIMIT 1
+          `) as any[];
+
+          if (existing.length > 0) {
+            const s = existing[0];
+            const r = calculateSM2(q, s.ease_factor, s.interval, s.repetitions);
+            await db.execute(sql`
+              UPDATE "sm2_reviews" SET
+                "ease_factor"=${r.easeFactor},"interval"=${r.interval},"repetitions"=${r.repetitions},
+                "next_review_date"=${r.nextReviewDate.toISOString()},"last_quality"=${q},
+                "times_correct"="times_correct"+${isCorrect ? 1 : 0},
+                "times_incorrect"="times_incorrect"+${isCorrect ? 0 : 1},
+                "total_reviews"="total_reviews"+1,"last_reviewed_at"=NOW(),"updated_at"=NOW()
+              WHERE "id"=${existing[0].id}
+            `);
+          } else {
+            const r = calculateSM2(q);
+            await db.execute(sql`
+              INSERT INTO "sm2_reviews" ("user_id","content_id","ease_factor","interval","repetitions","next_review_date","last_quality","times_correct","times_incorrect","total_reviews","first_seen_at","last_reviewed_at","created_at","updated_at")
+              VALUES (${student.userId},${req.body.contentId},${r.easeFactor},${r.interval},${r.repetitions},${r.nextReviewDate.toISOString()},${q},${isCorrect ? 1 : 0},${isCorrect ? 0 : 1},1,NOW(),NOW(),NOW(),NOW())
+              ON CONFLICT DO NOTHING
+            `);
+          }
+        } catch (_e) { /* SM2 upsert is non-fatal */ }
+      }
+
       // Generate explanation via AI
       let explanation = null;
       try {
@@ -1152,6 +1185,125 @@ export function registerSalaRoutes(app: Express) {
     } catch (error) {
       console.error("❌ [Sala] Erro ao buscar redação:", error);
       return res.status(500).json({ success: false, error: "Erro ao buscar redação." });
+    }
+  });
+
+  // ============================================
+  // SM2 — REVISÃO ESPAÇADA
+  // ============================================
+
+  // GET /api/sala/sm2/due - Itens para revisar hoje
+  app.get("/api/sala/sm2/due", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const limit = Math.min(Number(req.query.limit) || 10, 20);
+
+      const dueItems = await db.execute(sql`
+        SELECT
+          r."id" as review_id,
+          r."content_id",
+          r."ease_factor",
+          r."interval",
+          r."repetitions",
+          r."next_review_date",
+          r."times_correct",
+          r."times_incorrect",
+          r."total_reviews",
+          c."title",
+          c."body",
+          c."textContent",
+          s."name" as subject_name
+        FROM "sm2_reviews" r
+        JOIN "Content" c ON c."id" = r."content_id"
+        JOIN "Subject" s ON s."id" = c."subjectId"
+        WHERE r."user_id" = ${student.userId}
+          AND r."next_review_date" <= NOW()
+        ORDER BY r."next_review_date" ASC
+        LIMIT ${limit}
+      `) as any[];
+
+      // Also get total count
+      const countResult = await db.execute(sql`
+        SELECT COUNT(*) as total FROM "sm2_reviews"
+        WHERE "user_id" = ${student.userId} AND "next_review_date" <= NOW()
+      `) as any[];
+
+      return res.json({
+        success: true,
+        dueCount: Number(countResult[0]?.total || 0),
+        items: dueItems.map((r: any) => ({
+          reviewId: r.review_id,
+          contentId: r.content_id,
+          title: r.title,
+          body: r.body || r.textContent,
+          subjectName: r.subject_name,
+          easeFactor: r.ease_factor,
+          interval: r.interval,
+          repetitions: r.repetitions,
+          timesCorrect: Number(r.times_correct),
+          timesIncorrect: Number(r.times_incorrect),
+          totalReviews: Number(r.total_reviews),
+        })),
+      });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao buscar revisões:", error);
+      return res.status(500).json({ success: false, error: "Erro ao buscar revisões." });
+    }
+  });
+
+  // POST /api/sala/sm2/review - Registrar resultado de revisão
+  app.post("/api/sala/sm2/review", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const { reviewId, quality } = req.body; // quality 0-5
+
+      if (!reviewId || quality === undefined) {
+        return res.status(400).json({ success: false, error: "reviewId e quality são obrigatórios." });
+      }
+
+      const q = Math.max(0, Math.min(5, Number(quality)));
+
+      // Get current SM2 params
+      const current = await db.execute(sql`
+        SELECT "ease_factor","interval","repetitions","times_correct","times_incorrect","total_reviews"
+        FROM "sm2_reviews"
+        WHERE "id" = ${reviewId} AND "user_id" = ${student.userId}
+        LIMIT 1
+      `) as any[];
+
+      if (current.length === 0) return res.status(404).json({ success: false, error: "Revisão não encontrada." });
+      const c = current[0];
+
+      // Calculate new SM2 params
+      const { calculateSM2 } = await import("./services/sm2-engine");
+      const result = calculateSM2(q, c.ease_factor, c.interval, c.repetitions);
+
+      const isCorrect = q >= 3;
+      await db.execute(sql`
+        UPDATE "sm2_reviews"
+        SET
+          "ease_factor" = ${result.easeFactor},
+          "interval" = ${result.interval},
+          "repetitions" = ${result.repetitions},
+          "next_review_date" = ${result.nextReviewDate.toISOString()},
+          "last_quality" = ${q},
+          "times_correct" = "times_correct" + ${isCorrect ? 1 : 0},
+          "times_incorrect" = "times_incorrect" + ${isCorrect ? 0 : 1},
+          "total_reviews" = "total_reviews" + 1,
+          "last_reviewed_at" = NOW(),
+          "updated_at" = NOW()
+        WHERE "id" = ${reviewId}
+      `);
+
+      return res.json({
+        success: true,
+        nextReviewDate: result.nextReviewDate,
+        nextInterval: result.interval,
+        easeFactor: result.easeFactor,
+      });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao registrar revisão:", error);
+      return res.status(500).json({ success: false, error: "Erro ao registrar revisão." });
     }
   });
 }

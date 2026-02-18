@@ -25,6 +25,7 @@ import {
   ClipboardList,
   PenLine,
   Star,
+  RotateCcw,
 } from "lucide-react";
 
 // ============================================
@@ -120,6 +121,9 @@ export default function SalaAula() {
   const [activeSimulado, setActiveSimulado] = useState<ActiveSimulado | null>(null);
   const [simuladoTimeRemaining, setSimuladoTimeRemaining] = useState<number>(0);
   const [isLoadingSimulado, setIsLoadingSimulado] = useState(false);
+  const [sm2DueCount, setSm2DueCount] = useState(0);
+  const [sm2Items, setSm2Items] = useState<{ reviewId: string; contentId: string; title: string; body: string; subjectName: string; totalReviews: number }[]>([]);
+  const [sm2ActiveIndex, setSm2ActiveIndex] = useState<number | null>(null);
   const [showEssayForm, setShowEssayForm] = useState(false);
   const [essayTheme, setEssayTheme] = useState("");
   const [essayText, setEssayText] = useState("");
@@ -148,6 +152,7 @@ export default function SalaAula() {
     fetchStudyPlan();
     fetchSimulados();
     fetchEssayStatus();
+    fetchSm2Due();
     // Welcome message
     addMessage("system", {
       text: `Olá, ${student?.name?.split(" ")[0]}! Escolha uma matéria ao lado ou clique em "Próximo conteúdo" para começar.`,
@@ -256,6 +261,43 @@ export default function SalaAula() {
       const data = await res.json();
       if (data.success) setEssayStatus({ freeRemaining: data.freeRemaining, credits: data.credits, plan: data.plan });
     } catch { /* silent */ }
+  };
+
+  const fetchSm2Due = async () => {
+    try {
+      const res = await fetch("/api/sala/sm2/due?limit=10", { headers });
+      const data = await res.json();
+      if (data.success) {
+        setSm2DueCount(data.dueCount);
+        setSm2Items(data.items);
+      }
+    } catch { /* silent */ }
+  };
+
+  const startSm2Review = async () => {
+    await fetchSm2Due();
+    setSm2ActiveIndex(0);
+  };
+
+  const submitSm2Review = async (reviewId: string, quality: number) => {
+    try {
+      await fetch("/api/sala/sm2/review", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ reviewId, quality }),
+      });
+      const next = (sm2ActiveIndex ?? 0) + 1;
+      if (next < sm2Items.length) {
+        setSm2ActiveIndex(next);
+      } else {
+        setSm2ActiveIndex(null);
+        setSm2Items([]);
+        await fetchSm2Due();
+        addMessage("system", { text: "Revisão concluída! Todos os itens de hoje foram revisados." });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao registrar revisão" });
+    }
   };
 
   const submitEssay = async () => {
@@ -498,6 +540,7 @@ export default function SalaAula() {
           questionId: currentQuestion.id,
           userAnswer: optionIndex,
           correctIndex: questionCorrectIndex,
+          contentId: currentContent?.id,
           contentTitle: currentContent?.title,
           contentText: currentContent?.body?.slice(0, 500),
         }),
@@ -784,6 +827,21 @@ export default function SalaAula() {
                 </div>
               )}
 
+              {/* SM2 review card */}
+              {sm2ActiveIndex !== null && sm2Items[sm2ActiveIndex] && (
+                <SM2ReviewCard
+                  item={sm2Items[sm2ActiveIndex]}
+                  current={sm2ActiveIndex + 1}
+                  total={sm2Items.length}
+                  onRate={(q) => submitSm2Review(sm2Items[sm2ActiveIndex].reviewId, q)}
+                  onSkip={() => {
+                    const next = sm2ActiveIndex + 1;
+                    if (next < sm2Items.length) setSm2ActiveIndex(next);
+                    else { setSm2ActiveIndex(null); setSm2Items([]); }
+                  }}
+                />
+              )}
+
               {/* Inline essay form */}
               {showEssayForm && !activeSimulado && (
                 <Card className="border-l-4 border-l-violet-500">
@@ -899,6 +957,20 @@ export default function SalaAula() {
                       Próxima questão
                     </Button>
                   )}
+                  {sm2DueCount > 0 && sm2ActiveIndex === null && (
+                    <Button
+                      onClick={startSm2Review}
+                      variant="outline"
+                      size="sm"
+                      className="relative"
+                    >
+                      <RotateCcw className="mr-1 h-3 w-3" />
+                      Revisar
+                      <span className="absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                        {sm2DueCount > 9 ? "9+" : sm2DueCount}
+                      </span>
+                    </Button>
+                  )}
                   <Button
                     onClick={() => { setShowEssayForm(!showEssayForm); }}
                     variant="outline"
@@ -988,6 +1060,78 @@ export default function SalaAula() {
         </aside>
       </div>
     </SalaLayout>
+  );
+}
+
+// ============================================
+// SM2 REVIEW CARD COMPONENT
+// ============================================
+
+function SM2ReviewCard({
+  item,
+  current,
+  total,
+  onRate,
+  onSkip,
+}: {
+  item: { title: string; body: string; subjectName: string; totalReviews: number };
+  current: number;
+  total: number;
+  onRate: (quality: number) => void;
+  onSkip: () => void;
+}) {
+  const [revealed, setRevealed] = useState(false);
+
+  return (
+    <Card className="border-l-4 border-l-orange-500 bg-orange-50/30">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <RotateCcw className="h-4 w-4 text-orange-500" /> Revisão {current}/{total}
+          </CardTitle>
+          <Badge variant="outline" className="text-xs">{item.subjectName}</Badge>
+        </div>
+        <p className="font-semibold">{item.title}</p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {!revealed ? (
+          <Button onClick={() => setRevealed(true)} variant="secondary" size="sm" className="w-full">
+            Mostrar conteúdo
+          </Button>
+        ) : (
+          <>
+            <div className="text-sm text-muted-foreground max-h-48 overflow-y-auto bg-white/70 rounded-lg p-3">
+              {item.body?.split("\n").slice(0, 10).map((line, i) => (
+                <p key={i} className={line.trim() === "" ? "h-2" : ""}>{line}</p>
+              ))}
+            </div>
+            <div>
+              <p className="text-xs font-medium mb-2">Quanto você lembrava?</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {[
+                  { q: 0, label: "Nada", color: "bg-red-100 hover:bg-red-200 text-red-700" },
+                  { q: 1, label: "Pouco", color: "bg-orange-100 hover:bg-orange-200 text-orange-700" },
+                  { q: 3, label: "Com esforço", color: "bg-yellow-100 hover:bg-yellow-200 text-yellow-700" },
+                  { q: 4, label: "Bem", color: "bg-green-100 hover:bg-green-200 text-green-700" },
+                  { q: 5, label: "Facilmente", color: "bg-emerald-100 hover:bg-emerald-200 text-emerald-700" },
+                ].map(({ q, label, color }) => (
+                  <button
+                    key={q}
+                    onClick={() => { setRevealed(false); onRate(q); }}
+                    className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${color}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+        <button onClick={onSkip} className="text-xs text-muted-foreground hover:text-foreground underline">
+          Pular este item
+        </button>
+      </CardContent>
+    </Card>
   );
 }
 
