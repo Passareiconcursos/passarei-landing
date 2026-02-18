@@ -22,6 +22,7 @@ import EducRevenue from "@/pages/educ-revenue";
 import EducSettings from "@/pages/educ-settings";
 import EducBeta from "@/pages/educ-beta";
 import EducSupport from "@/pages/educ-support";
+import EducContent from "@/pages/educ-content";
 import SalaLogin from "@/pages/sala-login";
 import SalaOnboarding from "@/pages/sala-onboarding";
 import SalaAula from "@/pages/sala-aula";
@@ -44,6 +45,7 @@ function Router() {
       <Route path="/educ/users" component={EducUsers} />
       <Route path="/educ/beta" component={EducBeta} />
       <Route path="/educ/revenue" component={EducRevenue} />
+      <Route path="/educ/content" component={EducContent} />
       <Route path="/educ/support" component={EducSupport} />
       <Route path="/educ/settings" component={EducSettings} />
       <Route path="/sala" component={SalaLogin} />
