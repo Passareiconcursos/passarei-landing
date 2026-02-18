@@ -6,6 +6,7 @@ import {
   registerUsersRoutes,
   registerSettingsRoutes,
   registerContentRoutes,
+  registerSupportRoutes,
 } from "./admin";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -37,6 +38,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerUsersRoutes(app);
   registerSettingsRoutes(app);
   registerContentRoutes(app);
+  registerSupportRoutes(app);
 
   // Promo codes routes (GET/POST/PATCH /api/admin/promo-codes) are in promo-routes.ts
 

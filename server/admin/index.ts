@@ -9,3 +9,4 @@ export { registerLeadsRoutes } from "./leads";
 export { registerUsersRoutes } from "./users";
 export { registerSettingsRoutes } from "./settings";
 export { registerContentRoutes } from "./content";
+export { registerSupportRoutes } from "./support";

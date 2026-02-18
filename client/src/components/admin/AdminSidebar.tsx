@@ -1,4 +1,4 @@
-import { LayoutDashboard, UserCheck, DollarSign, Settings, GraduationCap, Ticket } from "lucide-react";
+import { LayoutDashboard, UserCheck, DollarSign, Settings, GraduationCap, Ticket, Bot } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -40,6 +40,11 @@ const menuItems = [
     title: "Financeiro",
     url: "/educ/revenue",
     icon: DollarSign,
+  },
+  {
+    title: "Suporte IA",
+    url: "/educ/support",
+    icon: Bot,
   },
   {
     title: "Configurações",
