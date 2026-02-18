@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   BookOpen,
   Brain,
@@ -22,6 +23,8 @@ import {
   Clock,
   Trophy,
   ClipboardList,
+  PenLine,
+  Star,
 } from "lucide-react";
 
 // ============================================
@@ -89,7 +92,7 @@ interface ActiveSimulado {
 
 interface ChatMessage {
   id: string;
-  type: "content" | "question" | "answer" | "enrichment" | "system" | "simulado-result";
+  type: "content" | "question" | "answer" | "enrichment" | "system" | "simulado-result" | "essay-result";
   data: any;
   timestamp: Date;
 }
@@ -117,6 +120,11 @@ export default function SalaAula() {
   const [activeSimulado, setActiveSimulado] = useState<ActiveSimulado | null>(null);
   const [simuladoTimeRemaining, setSimuladoTimeRemaining] = useState<number>(0);
   const [isLoadingSimulado, setIsLoadingSimulado] = useState(false);
+  const [showEssayForm, setShowEssayForm] = useState(false);
+  const [essayTheme, setEssayTheme] = useState("");
+  const [essayText, setEssayText] = useState("");
+  const [isSubmittingEssay, setIsSubmittingEssay] = useState(false);
+  const [essayStatus, setEssayStatus] = useState<{ freeRemaining: number; credits: number; plan: string } | null>(null);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
   const [answeredIndex, setAnsweredIndex] = useState<number | null>(null);
@@ -139,6 +147,7 @@ export default function SalaAula() {
     fetchStats();
     fetchStudyPlan();
     fetchSimulados();
+    fetchEssayStatus();
     // Welcome message
     addMessage("system", {
       text: `Olá, ${student?.name?.split(" ")[0]}! Escolha uma matéria ao lado ou clique em "Próximo conteúdo" para começar.`,
@@ -239,6 +248,45 @@ export default function SalaAula() {
         setIsVeterano(data.isVeterano);
       }
     } catch { /* silent */ }
+  };
+
+  const fetchEssayStatus = async () => {
+    try {
+      const res = await fetch("/api/sala/essays/status", { headers });
+      const data = await res.json();
+      if (data.success) setEssayStatus({ freeRemaining: data.freeRemaining, credits: data.credits, plan: data.plan });
+    } catch { /* silent */ }
+  };
+
+  const submitEssay = async () => {
+    if (!essayTheme.trim() || !essayText.trim()) return;
+    setIsSubmittingEssay(true);
+    setShowEssayForm(false);
+    addMessage("system", { text: `Enviando redação para correção: "${essayTheme}"...` });
+    try {
+      const res = await fetch("/api/sala/essays/submit", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ theme: essayTheme, text: essayText }),
+      });
+      const data = await res.json();
+      if (data.requiresUpgrade) {
+        addMessage("system", { text: data.error || "Você precisa de um plano superior para enviar redações." });
+        return;
+      }
+      if (!data.success || !data.correction) {
+        addMessage("system", { text: "Não foi possível corrigir a redação agora. Tente novamente." });
+        return;
+      }
+      addMessage("essay-result", { theme: essayTheme, ...data.correction });
+      setEssayTheme("");
+      setEssayText("");
+      fetchEssayStatus();
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao enviar redação" });
+    } finally {
+      setIsSubmittingEssay(false);
+    }
   };
 
   const startSimulado = async (simuladoId: string, title: string, totalQuestions: number, durationMinutes: number) => {
@@ -736,6 +784,62 @@ export default function SalaAula() {
                 </div>
               )}
 
+              {/* Inline essay form */}
+              {showEssayForm && !activeSimulado && (
+                <Card className="border-l-4 border-l-violet-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <PenLine className="h-4 w-4 text-violet-600" /> Redação
+                    </CardTitle>
+                    {essayStatus && (
+                      <p className="text-xs text-muted-foreground">
+                        {essayStatus.freeRemaining > 0
+                          ? `${essayStatus.freeRemaining} redação${essayStatus.freeRemaining > 1 ? "ões" : ""} grátis este mês`
+                          : essayStatus.credits >= 1.99
+                          ? `Saldo: R$ ${essayStatus.credits.toFixed(2)}`
+                          : "Sem créditos disponíveis"}
+                      </p>
+                    )}
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Tema da redação</label>
+                      <Input
+                        placeholder="Ex: Segurança pública e a atuação policial..."
+                        value={essayTheme}
+                        onChange={(e) => setEssayTheme(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Sua redação</label>
+                      <Textarea
+                        placeholder="Escreva sua redação aqui (mínimo 50 palavras)..."
+                        rows={8}
+                        value={essayText}
+                        onChange={(e) => setEssayText(e.target.value)}
+                        className="resize-none"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {essayText.trim() ? essayText.trim().split(/\s+/).length : 0} palavras
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={submitEssay}
+                        disabled={!essayTheme.trim() || essayText.trim().split(/\s+/).length < 50}
+                        size="sm"
+                        className="bg-violet-600 hover:bg-violet-700"
+                      >
+                        Enviar para correção
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setShowEssayForm(false)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <div ref={chatEndRef} />
             </div>
           </ScrollArea>
@@ -795,6 +899,15 @@ export default function SalaAula() {
                       Próxima questão
                     </Button>
                   )}
+                  <Button
+                    onClick={() => { setShowEssayForm(!showEssayForm); }}
+                    variant="outline"
+                    size="sm"
+                    disabled={isSubmittingEssay}
+                  >
+                    {isSubmittingEssay ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <PenLine className="mr-1 h-3 w-3" />}
+                    Redação
+                  </Button>
                   {remaining != null && (
                     <span className="text-xs text-muted-foreground self-center ml-auto">
                       {remaining} questões restantes hoje
@@ -1015,6 +1128,57 @@ function MessageBubble({
           {data.explanation && (
             <p className="text-sm text-muted-foreground">{data.explanation}</p>
           )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (type === "essay-result") {
+    const total = data.scores?.total ?? 0;
+    const pct = Math.round((total / 1000) * 100);
+    const comps = [
+      { label: "Norma culta", score: data.scores?.comp1, feedback: data.feedback?.comp1 },
+      { label: "Compreensão", score: data.scores?.comp2, feedback: data.feedback?.comp2 },
+      { label: "Organização", score: data.scores?.comp3, feedback: data.feedback?.comp3 },
+      { label: "Coesão", score: data.scores?.comp4, feedback: data.feedback?.comp4 },
+      { label: "Intervenção", score: data.scores?.comp5, feedback: data.feedback?.comp5 },
+    ];
+    return (
+      <Card className="border-l-4 border-l-violet-500 bg-violet-50/30">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <PenLine className="h-4 w-4 text-violet-600" /> Resultado: {data.theme}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-4">
+            <div className="text-3xl font-bold text-violet-700">{total}/1000</div>
+            <div>
+              <div className="w-full bg-muted rounded-full h-2 w-32">
+                <div className="h-2 rounded-full bg-violet-500" style={{ width: `${pct}%` }} />
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">{pct}% de aproveitamento</p>
+            </div>
+          </div>
+          {data.feedback?.general && (
+            <p className="text-sm text-muted-foreground bg-white/70 rounded-lg p-3">{data.feedback.general}</p>
+          )}
+          <div className="space-y-2">
+            {comps.map((c, i) => (
+              <div key={i} className="text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">{c.label}</span>
+                  <div className="flex items-center gap-1">
+                    {[0,1,2,3,4].map(s => (
+                      <Star key={s} className={`h-3 w-3 ${(c.score ?? 0) > s * 40 ? "text-violet-500 fill-violet-500" : "text-muted-foreground"}`} />
+                    ))}
+                    <span className="text-xs text-muted-foreground ml-1">{c.score ?? 0}/200</span>
+                  </div>
+                </div>
+                {c.feedback && <p className="text-xs text-muted-foreground mt-0.5">{c.feedback}</p>}
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     );

@@ -8,6 +8,7 @@
 import type { Express } from "express";
 import { db } from "../db";
 import { sql } from "drizzle-orm";
+import Anthropic from "@anthropic-ai/sdk";
 import { requireStudentAuth, getStudentProfile, type StudentJWTPayload } from "./auth-student";
 
 // Services (shared with Telegram bot)
@@ -958,6 +959,199 @@ export function registerSalaRoutes(app: Express) {
     } catch (error) {
       console.error("❌ [Sala] Erro ao buscar histórico de simulados:", error);
       return res.status(500).json({ success: false, error: "Erro ao buscar histórico." });
+    }
+  });
+
+  // ============================================
+  // REDAÇÃO
+  // ============================================
+
+  const PRICE_PER_ESSAY = 1.99;
+  const VETERANO_FREE_ESSAYS = 2;
+
+  async function checkEssayAccessByUserId(userId: string) {
+    const result = await db.execute(sql`
+      SELECT "plan", "credits", "monthlyEssaysUsed", "lastEssayMonth"
+      FROM "User" WHERE id = ${userId} LIMIT 1
+    `) as any[];
+    if (result.length === 0) return { canAccess: false, reason: "no_access", message: "Usuário não encontrado." };
+    const u = result[0];
+    const currentMonth = new Date().toISOString().slice(0, 7);
+
+    let essaysUsed = u.monthlyEssaysUsed || 0;
+    if ((u.lastEssayMonth || "") !== currentMonth) {
+      await db.execute(sql`UPDATE "User" SET "monthlyEssaysUsed"=0,"lastEssayMonth"=${currentMonth} WHERE id=${userId}`);
+      essaysUsed = 0;
+    }
+    if (u.plan === "VETERANO" && essaysUsed < VETERANO_FREE_ESSAYS) {
+      return { canAccess: true, reason: "veterano_free", freeRemaining: VETERANO_FREE_ESSAYS - essaysUsed };
+    }
+    const credits = parseFloat(u.credits) || 0;
+    if (credits >= PRICE_PER_ESSAY) {
+      return { canAccess: true, reason: "paid", credits, price: PRICE_PER_ESSAY };
+    }
+    return {
+      canAccess: false, reason: "no_credits", credits, price: PRICE_PER_ESSAY,
+      message: u.plan === "FREE"
+        ? `Redações disponíveis para planos CALOURO e VETERANO. O plano VETERANO inclui 2 redações grátis/mês.`
+        : `Saldo insuficiente. Adicione créditos para corrigir redações (R$ ${PRICE_PER_ESSAY.toFixed(2)}/redação).`,
+    };
+  }
+
+  async function correctEssayWithAI(theme: string, text: string, examType: string = "concurso policial") {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 2000,
+      messages: [{ role: "user", content: `Você é um corretor especialista em redações para ${examType}.\n\nTEMA: ${theme}\n\nTEXTO:\n${text}\n\nCorrija com os 5 critérios (0-200 pts cada, múltiplos de 40):\n1. Domínio da norma culta\n2. Compreensão da proposta\n3. Seleção e organização de argumentos\n4. Coesão textual\n5. Proposta de intervenção\n\nRetorne APENAS JSON:\n{"scores":{"comp1":0,"comp2":0,"comp3":0,"comp4":0,"comp5":0},"feedback":{"general":"...","comp1":"...","comp2":"...","comp3":"...","comp4":"...","comp5":"..."}}` }],
+    });
+    const text2 = response.content[0].type === "text" ? response.content[0].text : "";
+    const match = text2.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("JSON inválido na resposta da IA");
+    const r = JSON.parse(match[0]);
+    const total = r.scores.comp1 + r.scores.comp2 + r.scores.comp3 + r.scores.comp4 + r.scores.comp5;
+    return { scores: { ...r.scores, total }, feedback: r.feedback };
+  }
+
+  // GET /api/sala/essays/status - Status de redações do aluno
+  app.get("/api/sala/essays/status", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const result = await db.execute(sql`
+        SELECT "plan","credits","monthlyEssaysUsed","lastEssayMonth","totalEssaysSubmitted"
+        FROM "User" WHERE id = ${student.userId} LIMIT 1
+      `) as any[];
+      if (result.length === 0) return res.status(404).json({ success: false, error: "Usuário não encontrado." });
+      const u = result[0];
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const essaysUsed = (u.lastEssayMonth || "") === currentMonth ? (u.monthlyEssaysUsed || 0) : 0;
+      const freeLimit = u.plan === "VETERANO" ? VETERANO_FREE_ESSAYS : 0;
+      return res.json({
+        success: true,
+        plan: u.plan,
+        used: essaysUsed,
+        freeLimit,
+        freeRemaining: Math.max(0, freeLimit - essaysUsed),
+        credits: parseFloat(u.credits) || 0,
+        pricePerEssay: PRICE_PER_ESSAY,
+      });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao buscar status de redações:", error);
+      return res.status(500).json({ success: false, error: "Erro ao buscar status." });
+    }
+  });
+
+  // POST /api/sala/essays/submit - Enviar redação para correção
+  app.post("/api/sala/essays/submit", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const { theme, text } = req.body;
+      if (!theme || !text) return res.status(400).json({ success: false, error: "Tema e texto são obrigatórios." });
+      if (text.trim().split(/\s+/).length < 50) {
+        return res.status(400).json({ success: false, error: "Redação muito curta (mínimo 50 palavras)." });
+      }
+
+      const access = await checkEssayAccessByUserId(student.userId);
+      if (!access.canAccess) {
+        return res.status(403).json({ success: false, requiresUpgrade: true, error: access.message });
+      }
+
+      const userResult = await db.execute(sql`
+        SELECT "examType" FROM "User" WHERE id = ${student.userId} LIMIT 1
+      `) as any[];
+      const examType = userResult[0]?.examType || "concurso policial";
+      const wordCount = text.trim().split(/\s+/).length;
+
+      const essayResult = await db.execute(sql`
+        INSERT INTO "essays" ("user_id","theme","text","word_count","status","was_free","amount_paid","submitted_at","created_at","updated_at")
+        VALUES (${student.userId},${theme},${text},${wordCount},'CORRECTING',${access.reason === "veterano_free"},${access.reason === "paid" ? PRICE_PER_ESSAY : 0},NOW(),NOW(),NOW())
+        RETURNING "id"
+      `) as any[];
+      const essayId = essayResult[0].id;
+
+      // Consume access
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      if (access.reason === "veterano_free") {
+        await db.execute(sql`UPDATE "User" SET "monthlyEssaysUsed"=COALESCE("monthlyEssaysUsed",0)+1,"lastEssayMonth"=${currentMonth},"totalEssaysSubmitted"=COALESCE("totalEssaysSubmitted",0)+1,"updatedAt"=NOW() WHERE id=${student.userId}`);
+      } else {
+        await db.execute(sql`UPDATE "User" SET "credits"=COALESCE("credits",0)-${PRICE_PER_ESSAY},"monthlyEssaysUsed"=COALESCE("monthlyEssaysUsed",0)+1,"lastEssayMonth"=${currentMonth},"totalEssaysSubmitted"=COALESCE("totalEssaysSubmitted",0)+1,"updatedAt"=NOW() WHERE id=${student.userId}`);
+      }
+
+      // AI correction (synchronous)
+      let correction = null;
+      let status = "CORRECTED";
+      try {
+        correction = await correctEssayWithAI(theme, text, examType);
+        await db.execute(sql`
+          UPDATE "essays" SET
+            "status"='CORRECTED',
+            "score_1"=${correction.scores.comp1},"score_2"=${correction.scores.comp2},
+            "score_3"=${correction.scores.comp3},"score_4"=${correction.scores.comp4},
+            "score_5"=${correction.scores.comp5},"total_score"=${correction.scores.total},
+            "feedback"=${correction.feedback.general},
+            "feedback_comp_1"=${correction.feedback.comp1},"feedback_comp_2"=${correction.feedback.comp2},
+            "feedback_comp_3"=${correction.feedback.comp3},"feedback_comp_4"=${correction.feedback.comp4},
+            "feedback_comp_5"=${correction.feedback.comp5},
+            "corrected_at"=NOW(),"updated_at"=NOW()
+          WHERE "id"=${essayId}
+        `);
+      } catch (_e) {
+        status = "ERROR";
+        await db.execute(sql`UPDATE "essays" SET "status"='ERROR',"updated_at"=NOW() WHERE "id"=${essayId}`);
+      }
+
+      return res.json({ success: true, essayId, status, correction });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao submeter redação:", error);
+      return res.status(500).json({ success: false, error: "Erro ao processar redação." });
+    }
+  });
+
+  // GET /api/sala/essays - Listar redações do aluno
+  app.get("/api/sala/essays", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const essays = await db.execute(sql`
+        SELECT "id","theme","word_count","status","total_score","was_free","submitted_at","corrected_at"
+        FROM "essays" WHERE "user_id" = ${student.userId}
+        ORDER BY "submitted_at" DESC LIMIT 20
+      `) as any[];
+      return res.json({
+        success: true,
+        essays: essays.map((e: any) => ({
+          id: e.id, theme: e.theme, wordCount: e.word_count, status: e.status,
+          totalScore: e.total_score, wasFree: e.was_free,
+          submittedAt: e.submitted_at, correctedAt: e.corrected_at,
+        })),
+      });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao listar redações:", error);
+      return res.status(500).json({ success: false, error: "Erro ao listar redações." });
+    }
+  });
+
+  // GET /api/sala/essays/:essayId - Detalhes de uma redação
+  app.get("/api/sala/essays/:essayId", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const { essayId } = req.params;
+      const result = await db.execute(sql`
+        SELECT * FROM "essays" WHERE "id"=${essayId} AND "user_id"=${student.userId} LIMIT 1
+      `) as any[];
+      if (result.length === 0) return res.status(404).json({ success: false, error: "Redação não encontrada." });
+      const e = result[0];
+      return res.json({
+        success: true,
+        essay: {
+          id: e.id, theme: e.theme, text: e.text, wordCount: e.word_count, status: e.status,
+          scores: { comp1: e.score_1, comp2: e.score_2, comp3: e.score_3, comp4: e.score_4, comp5: e.score_5, total: e.total_score },
+          feedback: { general: e.feedback, comp1: e.feedback_comp_1, comp2: e.feedback_comp_2, comp3: e.feedback_comp_3, comp4: e.feedback_comp_4, comp5: e.feedback_comp_5 },
+          wasFree: e.was_free, submittedAt: e.submitted_at, correctedAt: e.corrected_at,
+        },
+      });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao buscar redação:", error);
+      return res.status(500).json({ success: false, error: "Erro ao buscar redação." });
     }
   });
 }
