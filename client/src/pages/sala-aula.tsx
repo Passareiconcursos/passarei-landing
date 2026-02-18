@@ -19,6 +19,9 @@ import {
   Sparkles,
   Menu,
   X,
+  Clock,
+  Trophy,
+  ClipboardList,
 } from "lucide-react";
 
 // ============================================
@@ -58,9 +61,35 @@ interface SubjectStat {
   percentage: number;
 }
 
+interface SimuladoItem {
+  id: string;
+  title: string;
+  totalQuestions: number;
+  durationMinutes: number;
+  passingScore: number;
+  month: string;
+  userSimuladoId: string | null;
+  userStatus: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "EXPIRED";
+  userScore: number | null;
+  userPassed: boolean | null;
+  currentQuestion: number;
+  startedAt: string | null;
+}
+
+interface ActiveSimulado {
+  userSimuladoId: string;
+  title: string;
+  totalQuestions: number;
+  durationMinutes: number;
+  startedAt: Date;
+  currentQuestion: number;
+  correctAnswers: number;
+  wrongAnswers: number;
+}
+
 interface ChatMessage {
   id: string;
-  type: "content" | "question" | "answer" | "enrichment" | "system";
+  type: "content" | "question" | "answer" | "enrichment" | "system" | "simulado-result";
   data: any;
   timestamp: Date;
 }
@@ -74,7 +103,7 @@ export default function SalaAula() {
   const { toast } = useToast();
 
   // State
-  const [studyMode, setStudyMode] = useState<"plano" | "livre">("plano");
+  const [studyMode, setStudyMode] = useState<"plano" | "livre" | "simulado">("plano");
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -83,6 +112,11 @@ export default function SalaAula() {
   const [questionCorrectIndex, setQuestionCorrectIndex] = useState<number | null>(null);
   const [stats, setStats] = useState<{ totalQuestionsAnswered: number; bySubject: SubjectStat[] } | null>(null);
   const [studyPlan, setStudyPlan] = useState<{ subjectId: string; subjectName: string; totalContent: number; studiedContent: number; percentage: number; isDifficulty: boolean }[]>([]);
+  const [simulados, setSimulados] = useState<SimuladoItem[]>([]);
+  const [isVeterano, setIsVeterano] = useState(false);
+  const [activeSimulado, setActiveSimulado] = useState<ActiveSimulado | null>(null);
+  const [simuladoTimeRemaining, setSimuladoTimeRemaining] = useState<number>(0);
+  const [isLoadingSimulado, setIsLoadingSimulado] = useState(false);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
   const [answeredIndex, setAnsweredIndex] = useState<number | null>(null);
@@ -104,6 +138,7 @@ export default function SalaAula() {
     fetchSubjects();
     fetchStats();
     fetchStudyPlan();
+    fetchSimulados();
     // Welcome message
     addMessage("system", {
       text: `Olá, ${student?.name?.split(" ")[0]}! Escolha uma matéria ao lado ou clique em "Próximo conteúdo" para começar.`,
@@ -113,6 +148,23 @@ export default function SalaAula() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Timer for active simulado
+  useEffect(() => {
+    if (!activeSimulado) return;
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - activeSimulado.startedAt.getTime()) / 60000;
+      const remaining = Math.max(0, activeSimulado.durationMinutes - elapsed);
+      setSimuladoTimeRemaining(Math.round(remaining));
+      if (remaining <= 0) {
+        clearInterval(interval);
+        addMessage("system", { text: "Tempo esgotado! O simulado foi encerrado automaticamente." });
+        setActiveSimulado(null);
+        fetchSimulados();
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [activeSimulado]);
 
   // ============================================
   // API CALLS
@@ -175,6 +227,139 @@ export default function SalaAula() {
       toast({ variant: "destructive", title: "Erro ao carregar conteúdo" });
     } finally {
       setIsLoadingContent(false);
+    }
+  };
+
+  const fetchSimulados = async () => {
+    try {
+      const res = await fetch("/api/sala/simulados", { headers });
+      const data = await res.json();
+      if (data.success) {
+        setSimulados(data.simulados);
+        setIsVeterano(data.isVeterano);
+      }
+    } catch { /* silent */ }
+  };
+
+  const startSimulado = async (simuladoId: string, title: string, totalQuestions: number, durationMinutes: number) => {
+    setIsLoadingSimulado(true);
+    try {
+      const res = await fetch("/api/sala/simulados/start", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ simuladoId }),
+      });
+      const data = await res.json();
+      if (data.requiresUpgrade) {
+        addMessage("system", { text: data.error });
+        return;
+      }
+      if (!data.success) {
+        addMessage("system", { text: data.error || "Não foi possível iniciar o simulado." });
+        return;
+      }
+      const newActive: ActiveSimulado = {
+        userSimuladoId: data.userSimuladoId,
+        title,
+        totalQuestions,
+        durationMinutes,
+        startedAt: new Date(data.startedAt),
+        currentQuestion: data.currentQuestion,
+        correctAnswers: data.correctAnswers,
+        wrongAnswers: data.wrongAnswers,
+      };
+      setActiveSimulado(newActive);
+      const elapsed = (Date.now() - newActive.startedAt.getTime()) / 60000;
+      setSimuladoTimeRemaining(Math.round(Math.max(0, durationMinutes - elapsed)));
+      addMessage("system", {
+        text: data.resumed
+          ? `Retomando "${title}" — questão ${data.currentQuestion + 1}/${totalQuestions}`
+          : `Simulado "${title}" iniciado! ${totalQuestions} questões em ${durationMinutes} minutos. Boa sorte!`,
+      });
+      await fetchSimuladoQuestion(data.userSimuladoId);
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao iniciar simulado" });
+    } finally {
+      setIsLoadingSimulado(false);
+    }
+  };
+
+  const fetchSimuladoQuestion = async (userSimuladoId: string) => {
+    setIsLoadingQuestion(true);
+    try {
+      const res = await fetch(`/api/sala/simulados/question/${userSimuladoId}`, { headers });
+      const data = await res.json();
+      if (data.expired) {
+        addMessage("system", { text: "Tempo esgotado! O simulado foi encerrado." });
+        setActiveSimulado(null);
+        fetchSimulados();
+        return;
+      }
+      if (data.finished || !data.success) {
+        addMessage("system", { text: "Simulado concluído! Veja o resultado no histórico." });
+        setActiveSimulado(null);
+        fetchSimulados();
+        return;
+      }
+      if (data.skipped) return;
+      if (data.question) {
+        setCurrentQuestion(data.question);
+        setQuestionCorrectIndex(null);
+        setAnsweredIndex(null);
+        addMessage("question", data.question);
+        if (data.timeRemaining != null) setSimuladoTimeRemaining(data.timeRemaining);
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao buscar questão do simulado" });
+    } finally {
+      setIsLoadingQuestion(false);
+    }
+  };
+
+  const submitSimuladoAnswer = async (optionIndex: number) => {
+    if (!activeSimulado || !currentQuestion || answeredIndex !== null) return;
+    setAnsweredIndex(optionIndex);
+    try {
+      const res = await fetch("/api/sala/simulados/answer", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          userSimuladoId: activeSimulado.userSimuladoId,
+          questionId: currentQuestion.id,
+          simuladoQuestionId: (currentQuestion as any).simuladoQuestionId,
+          answer: optionIndex,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) return;
+
+      setQuestionCorrectIndex(data.correctAnswer ?? -1);
+      addMessage("answer", {
+        isCorrect: data.correct,
+        correctAnswer: data.correctAnswer ?? -1,
+        userAnswer: optionIndex,
+      });
+
+      // Update active simulado progress
+      setActiveSimulado((prev) =>
+        prev
+          ? {
+              ...prev,
+              currentQuestion: data.currentQuestion ?? prev.currentQuestion + 1,
+              correctAnswers: data.correctAnswers ?? prev.correctAnswers + (data.correct ? 1 : 0),
+              wrongAnswers: data.wrongAnswers ?? prev.wrongAnswers + (data.correct ? 0 : 1),
+            }
+          : null
+      );
+
+      if (data.finished && data.result) {
+        const r = data.result;
+        addMessage("simulado-result", r);
+        setActiveSimulado(null);
+        fetchSimulados();
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao responder questão do simulado" });
     }
   };
 
@@ -250,6 +435,11 @@ export default function SalaAula() {
 
   const submitAnswer = async (optionIndex: number) => {
     if (!currentQuestion || answeredIndex !== null) return;
+    // Route to simulado answer submission when a simulado is active
+    if (activeSimulado) {
+      await submitSimuladoAnswer(optionIndex);
+      return;
+    }
     setAnsweredIndex(optionIndex);
 
     try {
@@ -338,30 +528,92 @@ export default function SalaAula() {
             <div className="flex rounded-lg bg-muted p-1">
               <button
                 onClick={() => setStudyMode("plano")}
-                className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors ${
                   studyMode === "plano"
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Plano de Aula
+                Plano
               </button>
               <button
                 onClick={() => setStudyMode("livre")}
-                className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors ${
                   studyMode === "livre"
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Estudo Livre
+                Livre
+              </button>
+              <button
+                onClick={() => { setStudyMode("simulado"); fetchSimulados(); }}
+                className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors ${
+                  studyMode === "simulado"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Simulados
               </button>
             </div>
           </div>
 
-          <ScrollArea className="h-[calc(100%-3rem)]">
+          <ScrollArea className="h-[calc(100%-3.25rem)]">
             <div className="p-2 space-y-1">
-              {studyMode === "livre" ? (
+              {studyMode === "simulado" ? (
+                <>
+                  {!isVeterano && (
+                    <div className="px-3 py-3 rounded-lg bg-amber-50 border border-amber-200 mx-1 my-2">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Trophy className="h-3.5 w-3.5 text-amber-600" />
+                        <span className="text-xs font-semibold text-amber-800">Plano VETERANO</span>
+                      </div>
+                      <p className="text-[11px] text-amber-700">Simulados mensais são exclusivos do plano VETERANO.</p>
+                    </div>
+                  )}
+                  <p className="px-3 py-1 text-xs text-muted-foreground">Simulados do mês</p>
+                  <Separator className="my-1" />
+                  {simulados.length === 0 ? (
+                    <p className="px-3 py-4 text-xs text-muted-foreground text-center">Carregando...</p>
+                  ) : (
+                    simulados.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => {
+                          if (!isVeterano) {
+                            addMessage("system", { text: "Simulados são exclusivos do plano VETERANO. Faça upgrade para acessar!" });
+                            return;
+                          }
+                          if (s.userStatus === "COMPLETED") {
+                            addMessage("system", { text: `Você já completou "${s.title}" com ${s.userScore}% de aproveitamento.` });
+                            return;
+                          }
+                          setShowMobileSidebar(false);
+                          startSimulado(s.id, s.title, s.totalQuestions, s.durationMinutes);
+                        }}
+                        className="w-full text-left px-3 py-2.5 rounded-md text-sm transition-colors hover:bg-muted"
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="truncate font-medium text-xs">{s.title}</span>
+                          {s.userStatus === "COMPLETED" ? (
+                            <Badge variant={s.userPassed ? "default" : "secondary"} className="text-[10px] px-1 py-0 shrink-0">
+                              {s.userScore}%
+                            </Badge>
+                          ) : s.userStatus === "IN_PROGRESS" ? (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">em andamento</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">novo</Badge>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {s.totalQuestions} questões · {s.durationMinutes} min
+                        </p>
+                      </button>
+                    ))
+                  )}
+                </>
+              ) : studyMode === "livre" ? (
                 <>
                   {/* Estudo Livre: smart + subject list */}
                   <button
@@ -452,17 +704,34 @@ export default function SalaAula() {
 
         {/* CENTER: Chat Panel */}
         <div className="flex-1 flex flex-col min-w-0">
+          {/* Active simulado banner */}
+          {activeSimulado && (
+            <div className="flex items-center justify-between px-4 py-2 bg-blue-50 border-b border-blue-200 text-sm">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-blue-600" />
+                <span className="font-medium text-blue-800 truncate">{activeSimulado.title}</span>
+                <Badge variant="outline" className="text-blue-700 border-blue-300 text-xs">
+                  {activeSimulado.currentQuestion}/{activeSimulado.totalQuestions}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1 text-blue-700 shrink-0">
+                <Clock className="h-3.5 w-3.5" />
+                <span className="text-xs font-medium">{simuladoTimeRemaining}min</span>
+              </div>
+            </div>
+          )}
+
           <ScrollArea className="flex-1 p-4">
             <div className="max-w-2xl mx-auto space-y-4">
               {messages.map((msg) => (
                 <MessageBubble key={msg.id} message={msg} onAnswer={submitAnswer} answeredIndex={answeredIndex} correctIndex={questionCorrectIndex} />
               ))}
 
-              {(isLoadingContent || isLoadingQuestion) && (
+              {(isLoadingContent || isLoadingQuestion || isLoadingSimulado) && (
                 <div className="flex items-center gap-2 text-muted-foreground py-4">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="text-sm">
-                    {isLoadingContent ? "Buscando conteúdo..." : "Buscando questão..."}
+                    {isLoadingContent ? "Buscando conteúdo..." : isLoadingSimulado ? "Iniciando simulado..." : "Buscando questão..."}
                   </span>
                 </div>
               )}
@@ -474,39 +743,64 @@ export default function SalaAula() {
           {/* Action bar */}
           <div className="border-t p-3 bg-background">
             <div className="max-w-2xl mx-auto flex gap-2 flex-wrap">
-              <Button
-                onClick={handleNextContent}
-                disabled={isLoadingContent}
-                size="sm"
-              >
-                {isLoadingContent ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <ChevronRight className="mr-1 h-3 w-3" />}
-                Próximo conteúdo
-              </Button>
-              {currentContent && answeredIndex === null && !currentQuestion && (
-                <Button
-                  onClick={fetchQuestion}
-                  disabled={isLoadingQuestion}
-                  variant="secondary"
-                  size="sm"
-                >
-                  {isLoadingQuestion ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Brain className="mr-1 h-3 w-3" />}
-                  Responder questão
-                </Button>
-              )}
-              {answeredIndex !== null && (
-                <Button
-                  onClick={fetchQuestion}
-                  disabled={isLoadingQuestion}
-                  variant="secondary"
-                  size="sm"
-                >
-                  Próxima questão
-                </Button>
-              )}
-              {remaining != null && (
-                <span className="text-xs text-muted-foreground self-center ml-auto">
-                  {remaining} questões restantes hoje
-                </span>
+              {/* Simulado mode: next question after answering */}
+              {activeSimulado ? (
+                <>
+                  {answeredIndex !== null && !isLoadingQuestion && (
+                    <Button
+                      onClick={() => {
+                        setCurrentQuestion(null);
+                        setAnsweredIndex(null);
+                        setQuestionCorrectIndex(null);
+                        fetchSimuladoQuestion(activeSimulado.userSimuladoId);
+                      }}
+                      size="sm"
+                    >
+                      <ChevronRight className="mr-1 h-3 w-3" />
+                      Próxima questão
+                    </Button>
+                  )}
+                  <span className="text-xs text-muted-foreground self-center ml-auto">
+                    {activeSimulado.correctAnswers} certas · {activeSimulado.wrongAnswers} erradas
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={handleNextContent}
+                    disabled={isLoadingContent}
+                    size="sm"
+                  >
+                    {isLoadingContent ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <ChevronRight className="mr-1 h-3 w-3" />}
+                    Próximo conteúdo
+                  </Button>
+                  {currentContent && answeredIndex === null && !currentQuestion && (
+                    <Button
+                      onClick={fetchQuestion}
+                      disabled={isLoadingQuestion}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      {isLoadingQuestion ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Brain className="mr-1 h-3 w-3" />}
+                      Responder questão
+                    </Button>
+                  )}
+                  {answeredIndex !== null && !activeSimulado && (
+                    <Button
+                      onClick={fetchQuestion}
+                      disabled={isLoadingQuestion}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      Próxima questão
+                    </Button>
+                  )}
+                  {remaining != null && (
+                    <span className="text-xs text-muted-foreground self-center ml-auto">
+                      {remaining} questões restantes hoje
+                    </span>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -721,6 +1015,42 @@ function MessageBubble({
           {data.explanation && (
             <p className="text-sm text-muted-foreground">{data.explanation}</p>
           )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (type === "simulado-result") {
+    const passed = data.passed;
+    return (
+      <Card className={`border-2 ${passed ? "border-green-500 bg-green-50/50" : "border-orange-400 bg-orange-50/50"}`}>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Trophy className={`h-5 w-5 ${passed ? "text-green-600" : "text-orange-500"}`} />
+            {passed ? "Simulado aprovado!" : "Simulado concluído"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="text-4xl font-bold text-center py-2">
+            {data.score}%
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-center text-sm">
+            <div className="bg-white/70 rounded-lg p-2">
+              <div className="font-bold text-green-600">{data.correctAnswers}</div>
+              <div className="text-xs text-muted-foreground">certas</div>
+            </div>
+            <div className="bg-white/70 rounded-lg p-2">
+              <div className="font-bold text-red-500">{data.wrongAnswers}</div>
+              <div className="text-xs text-muted-foreground">erradas</div>
+            </div>
+            <div className="bg-white/70 rounded-lg p-2">
+              <div className="font-bold">{data.timeSpent}min</div>
+              <div className="text-xs text-muted-foreground">tempo</div>
+            </div>
+          </div>
+          <p className="text-sm text-center text-muted-foreground">
+            {passed ? "Parabéns! Você atingiu a nota mínima de aprovação." : `Continue estudando! A nota mínima é ${data.passingScore ?? 60}%.`}
+          </p>
         </CardContent>
       </Card>
     );

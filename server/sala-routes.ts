@@ -243,9 +243,7 @@ export function registerSalaRoutes(app: Express) {
   app.get("/api/sala/content/next", requireStudentAuth, async (req, res) => {
     try {
       const student = (req as any).student as StudentJWTPayload;
-      const { subjectId } = req.query;
-
-      // Build session state for smart content selection
+      // subjectId reserved for future subject-scoped smart selection
       const progress = await getStudyProgress(student.userId, "userId");
 
       const sessionState: LearningSessionState = {
@@ -569,6 +567,397 @@ export function registerSalaRoutes(app: Express) {
     } catch (error) {
       console.error("❌ [Sala] Erro ao atualizar perfil:", error);
       return res.status(500).json({ success: false, error: "Erro ao atualizar perfil." });
+    }
+  });
+
+  // ============================================
+  // SIMULADOS
+  // ============================================
+
+  const SIMULADO_CONFIG = { QUESTIONS_PER_SIMULADO: 50, DURATION_MINUTES: 120, PASSING_SCORE: 60 };
+  const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+  async function ensureMonthlySimuladoSala(examType: string): Promise<string | null> {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    try {
+      const existing = await db.execute(sql`
+        SELECT "id" FROM "simulados"
+        WHERE "month" = ${currentMonth} AND "exam_type" = ${examType} AND "is_active" = true
+        LIMIT 1
+      `) as any[];
+      if (existing.length > 0) return existing[0].id;
+
+      const now = new Date();
+      const title = `Simulado ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+      const desc = `Simulado mensal para ${examType}. ${SIMULADO_CONFIG.QUESTIONS_PER_SIMULADO} questões em ${SIMULADO_CONFIG.DURATION_MINUTES} minutos.`;
+      const from = new Date(now.getFullYear(), now.getMonth(), 1);
+      const until = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+      const created = await db.execute(sql`
+        INSERT INTO "simulados" ("title","description","exam_type","total_questions","duration_minutes","passing_score","month","available_from","available_until","is_active")
+        VALUES (${title},${desc},${examType},${SIMULADO_CONFIG.QUESTIONS_PER_SIMULADO},${SIMULADO_CONFIG.DURATION_MINUTES},${SIMULADO_CONFIG.PASSING_SCORE},${currentMonth},${from.toISOString()},${until.toISOString()},true)
+        RETURNING "id"
+      `) as any[];
+      const simId = created[0].id;
+
+      // Attach questions from Content
+      let contents = await db.execute(sql`
+        SELECT "id" FROM "Content" WHERE "isActive" = true AND "examType" = ${examType} ORDER BY RANDOM() LIMIT ${SIMULADO_CONFIG.QUESTIONS_PER_SIMULADO}
+      `) as any[];
+      if (contents.length < SIMULADO_CONFIG.QUESTIONS_PER_SIMULADO) {
+        contents = await db.execute(sql`
+          SELECT "id" FROM "Content" WHERE "isActive" = true ORDER BY RANDOM() LIMIT ${SIMULADO_CONFIG.QUESTIONS_PER_SIMULADO}
+        `) as any[];
+      }
+      for (let i = 0; i < contents.length; i++) {
+        await db.execute(sql`
+          INSERT INTO "simulado_questions" ("simulado_id","content_id","question_order") VALUES (${simId},${contents[i].id},${i + 1})
+        `);
+      }
+      return simId;
+    } catch (e) {
+      console.error("❌ [Sala] Erro ao criar simulado mensal:", e);
+      return null;
+    }
+  }
+
+  // GET /api/sala/simulados - Listar simulados do mês (todos os planos podem ver)
+  app.get("/api/sala/simulados", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const userResult = await db.execute(sql`
+        SELECT "examType", "plan" FROM "User" WHERE id = ${student.userId} LIMIT 1
+      `) as any[];
+      const examType = userResult[0]?.examType || "POLICIA_FEDERAL";
+      const plan = userResult[0]?.plan || "FREE";
+
+      await ensureMonthlySimuladoSala(examType);
+
+      const simulados = await db.execute(sql`
+        SELECT
+          s."id", s."title", s."description", s."total_questions",
+          s."duration_minutes", s."passing_score", s."month", s."available_until",
+          us."id" as user_simulado_id, us."status" as user_status,
+          us."score" as user_score, us."passed" as user_passed,
+          us."current_question", us."correct_answers", us."wrong_answers",
+          us."started_at"
+        FROM "simulados" s
+        LEFT JOIN "user_simulados" us ON s."id" = us."simulado_id" AND us."user_id" = ${student.userId}
+        WHERE s."is_active" = true AND s."exam_type" = ${examType} AND s."available_until" >= NOW()
+        ORDER BY s."available_from" DESC
+        LIMIT 5
+      `) as any[];
+
+      return res.json({
+        success: true,
+        plan,
+        isVeterano: plan === "VETERANO",
+        simulados: simulados.map((s: any) => ({
+          id: s.id,
+          title: s.title,
+          description: s.description,
+          totalQuestions: Number(s.total_questions),
+          durationMinutes: Number(s.duration_minutes),
+          passingScore: Number(s.passing_score),
+          month: s.month,
+          availableUntil: s.available_until,
+          userSimuladoId: s.user_simulado_id || null,
+          userStatus: s.user_status || "NOT_STARTED",
+          userScore: s.user_score != null ? Number(s.user_score) : null,
+          userPassed: s.user_passed,
+          currentQuestion: Number(s.current_question || 0),
+          startedAt: s.started_at || null,
+        })),
+      });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao listar simulados:", error);
+      return res.status(500).json({ success: false, error: "Erro ao listar simulados." });
+    }
+  });
+
+  // POST /api/sala/simulados/start - Iniciar ou retomar simulado
+  app.post("/api/sala/simulados/start", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const { simuladoId } = req.body;
+      if (!simuladoId) return res.status(400).json({ success: false, error: "simuladoId é obrigatório." });
+
+      // Only VETERANO
+      const userResult = await db.execute(sql`
+        SELECT "plan" FROM "User" WHERE id = ${student.userId} LIMIT 1
+      `) as any[];
+      if (userResult[0]?.plan !== "VETERANO") {
+        return res.status(403).json({
+          success: false,
+          requiresUpgrade: true,
+          error: "Simulados são exclusivos do plano VETERANO. Faça upgrade para acessar!",
+        });
+      }
+
+      // Check existing attempt
+      const existing = await db.execute(sql`
+        SELECT "id", "status", "current_question", "started_at", "correct_answers", "wrong_answers"
+        FROM "user_simulados"
+        WHERE "user_id" = ${student.userId} AND "simulado_id" = ${simuladoId}
+        LIMIT 1
+      `) as any[];
+
+      if (existing.length > 0) {
+        const a = existing[0];
+        if (a.status === "COMPLETED" || a.status === "EXPIRED") {
+          return res.json({
+            success: false,
+            alreadyFinished: true,
+            status: a.status,
+            error: a.status === "COMPLETED" ? "Você já completou este simulado." : "Este simulado expirou.",
+          });
+        }
+        // Resume IN_PROGRESS
+        return res.json({
+          success: true,
+          userSimuladoId: a.id,
+          currentQuestion: Number(a.current_question),
+          correctAnswers: Number(a.correct_answers || 0),
+          wrongAnswers: Number(a.wrong_answers || 0),
+          startedAt: a.started_at,
+          resumed: true,
+        });
+      }
+
+      // Create new attempt
+      const result = await db.execute(sql`
+        INSERT INTO "user_simulados" ("user_id","simulado_id","status","current_question","started_at")
+        VALUES (${student.userId},${simuladoId},'IN_PROGRESS',0,NOW())
+        RETURNING "id", "started_at"
+      `) as any[];
+
+      return res.json({
+        success: true,
+        userSimuladoId: result[0].id,
+        currentQuestion: 0,
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        startedAt: result[0].started_at,
+        resumed: false,
+      });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao iniciar simulado:", error);
+      return res.status(500).json({ success: false, error: "Erro ao iniciar simulado." });
+    }
+  });
+
+  // GET /api/sala/simulados/question/:userSimuladoId - Buscar questão atual
+  app.get("/api/sala/simulados/question/:userSimuladoId", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const { userSimuladoId } = req.params;
+
+      const attemptResult = await db.execute(sql`
+        SELECT us."id", us."current_question", us."status", us."started_at",
+               s."total_questions", s."duration_minutes"
+        FROM "user_simulados" us
+        JOIN "simulados" s ON us."simulado_id" = s."id"
+        WHERE us."id" = ${userSimuladoId} AND us."user_id" = ${student.userId}
+        LIMIT 1
+      `) as any[];
+
+      if (attemptResult.length === 0) return res.status(404).json({ success: false, error: "Tentativa não encontrada." });
+      const attempt = attemptResult[0];
+
+      if (attempt.status !== "IN_PROGRESS") {
+        return res.json({ success: false, finished: true, expired: attempt.status === "EXPIRED" });
+      }
+
+      // Time check
+      const elapsed = (Date.now() - new Date(attempt.started_at).getTime()) / 60000;
+      const timeRemaining = Math.max(0, Number(attempt.duration_minutes) - elapsed);
+      if (timeRemaining <= 0) {
+        await db.execute(sql`UPDATE "user_simulados" SET "status"='EXPIRED',"finished_at"=NOW() WHERE "id"=${userSimuladoId}`);
+        return res.json({ success: false, expired: true, message: "Tempo esgotado!" });
+      }
+
+      const questionNumber = Number(attempt.current_question) + 1;
+      if (questionNumber > Number(attempt.total_questions)) {
+        return res.json({ success: false, finished: true, message: "Todas as questões foram respondidas." });
+      }
+
+      // Get simulado_question at this position, then get an actual Question for that content
+      const sqResult = await db.execute(sql`
+        SELECT sq."id" as sq_id, sq."content_id", c."title", c."body", c."textContent"
+        FROM "simulado_questions" sq
+        JOIN "user_simulados" us ON us."simulado_id" = sq."simulado_id"
+        JOIN "Content" c ON c."id" = sq."content_id"
+        WHERE us."id" = ${userSimuladoId} AND sq."question_order" = ${questionNumber}
+        LIMIT 1
+      `) as any[];
+
+      if (sqResult.length === 0) return res.status(404).json({ success: false, error: "Questão não encontrada." });
+      const sq = sqResult[0];
+
+      // Get a real question for this content
+      const question = await getQuestionForContent(
+        sq.content_id,
+        null as any,
+        null,
+        [],
+        { title: sq.title, text: (sq.body || sq.textContent || "").slice(0, 500), examType: "POLICIA_FEDERAL" },
+      );
+
+      if (!question) {
+        // Skip this question — advance and try next
+        await db.execute(sql`UPDATE "user_simulados" SET "current_question"="current_question"+1 WHERE "id"=${userSimuladoId}`);
+        return res.json({
+          success: true,
+          question: null,
+          simuladoQuestionId: sq.sq_id,
+          skipped: true,
+          questionNumber,
+          totalQuestions: Number(attempt.total_questions),
+          timeRemaining: Math.round(timeRemaining),
+        });
+      }
+
+      return res.json({
+        success: true,
+        simuladoQuestionId: sq.sq_id,
+        question: {
+          id: question.id,
+          simuladoQuestionId: sq.sq_id,
+          text: question.pergunta || question.text,
+          options: question.opcoes || question.options,
+          number: questionNumber,
+          totalQuestions: Number(attempt.total_questions),
+        },
+        timeRemaining: Math.round(timeRemaining),
+      });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao buscar questão do simulado:", error);
+      return res.status(500).json({ success: false, error: "Erro ao buscar questão." });
+    }
+  });
+
+  // POST /api/sala/simulados/answer - Responder questão do simulado
+  app.post("/api/sala/simulados/answer", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const { userSimuladoId, questionId, simuladoQuestionId, answer } = req.body;
+      if (!userSimuladoId || answer === undefined) {
+        return res.status(400).json({ success: false, error: "Dados incompletos." });
+      }
+
+      // Verify ownership
+      const ownerCheck = await db.execute(sql`
+        SELECT "id" FROM "user_simulados" WHERE "id" = ${userSimuladoId} AND "user_id" = ${student.userId} LIMIT 1
+      `) as any[];
+      if (ownerCheck.length === 0) return res.status(403).json({ success: false, error: "Acesso negado." });
+
+      // Get correct answer from Question table
+      let correctAnswer = -1;
+      if (questionId && !questionId.startsWith("ai_generated_") && !questionId.startsWith("fallback_")) {
+        const qResult = await db.execute(sql`
+          SELECT "correctOption" FROM "Question" WHERE id = ${questionId} LIMIT 1
+        `) as any[];
+        correctAnswer = qResult[0]?.correctOption ?? -1;
+      }
+      const isCorrect = correctAnswer >= 0 && Number(answer) === Number(correctAnswer);
+
+      // Record answer
+      if (simuladoQuestionId) {
+        try {
+          await db.execute(sql`
+            INSERT INTO "simulado_answers" ("user_simulado_id","question_id","selected_answer","correct")
+            VALUES (${userSimuladoId},${simuladoQuestionId},${answer},${isCorrect})
+          `);
+        } catch (_e) { /* non-fatal */ }
+      }
+
+      // Update progress
+      await db.execute(sql`
+        UPDATE "user_simulados"
+        SET
+          "current_question" = "current_question" + 1,
+          "correct_answers" = "correct_answers" + ${isCorrect ? 1 : 0},
+          "wrong_answers" = "wrong_answers" + ${isCorrect ? 0 : 1},
+          "updated_at" = NOW()
+        WHERE "id" = ${userSimuladoId}
+      `);
+
+      // Check if last question
+      const attemptResult = await db.execute(sql`
+        SELECT us."current_question", us."correct_answers", us."wrong_answers", us."started_at",
+               s."total_questions", s."passing_score"
+        FROM "user_simulados" us JOIN "simulados" s ON us."simulado_id" = s."id"
+        WHERE us."id" = ${userSimuladoId}
+      `) as any[];
+      const a = attemptResult[0];
+      const isLast = Number(a.current_question) >= Number(a.total_questions);
+
+      if (isLast) {
+        const total = Number(a.correct_answers) + Number(a.wrong_answers);
+        const score = total > 0 ? Math.round((Number(a.correct_answers) / total) * 100) : 0;
+        const passed = score >= Number(a.passing_score);
+        const timeSpent = Math.round((Date.now() - new Date(a.started_at).getTime()) / 60000);
+        await db.execute(sql`
+          UPDATE "user_simulados"
+          SET "status"='COMPLETED',"score"=${score},"passed"=${passed},"time_spent_minutes"=${timeSpent},"finished_at"=NOW()
+          WHERE "id"=${userSimuladoId}
+        `);
+        return res.json({
+          success: true,
+          correct: isCorrect,
+          correctAnswer,
+          finished: true,
+          result: {
+            score, passed, correctAnswers: Number(a.correct_answers), wrongAnswers: Number(a.wrong_answers),
+            totalQuestions: total, timeSpent,
+          },
+        });
+      }
+
+      return res.json({
+        success: true,
+        correct: isCorrect,
+        correctAnswer,
+        finished: false,
+        currentQuestion: Number(a.current_question),
+        correctAnswers: Number(a.correct_answers),
+        wrongAnswers: Number(a.wrong_answers),
+      });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao responder questão do simulado:", error);
+      return res.status(500).json({ success: false, error: "Erro ao processar resposta." });
+    }
+  });
+
+  // GET /api/sala/simulados/history - Histórico de simulados do aluno
+  app.get("/api/sala/simulados/history", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const history = await db.execute(sql`
+        SELECT us."id", us."status", us."score", us."passed", us."correct_answers",
+               us."wrong_answers", us."time_spent_minutes", us."finished_at",
+               s."title", s."month", s."total_questions"
+        FROM "user_simulados" us
+        JOIN "simulados" s ON us."simulado_id" = s."id"
+        WHERE us."user_id" = ${student.userId}
+        ORDER BY us."started_at" DESC LIMIT 12
+      `) as any[];
+      return res.json({
+        success: true,
+        history: history.map((h: any) => ({
+          id: h.id, title: h.title, month: h.month, status: h.status,
+          score: h.score != null ? Number(h.score) : null,
+          passed: h.passed,
+          correctAnswers: Number(h.correct_answers || 0),
+          wrongAnswers: Number(h.wrong_answers || 0),
+          totalQuestions: Number(h.total_questions),
+          timeSpent: h.time_spent_minutes,
+          finishedAt: h.finished_at,
+        })),
+      });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao buscar histórico de simulados:", error);
+      return res.status(500).json({ success: false, error: "Erro ao buscar histórico." });
     }
   });
 }
