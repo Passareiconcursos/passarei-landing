@@ -10,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -20,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Loader2, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { GraduationCap, Loader2, ChevronRight, ChevronLeft, Check, Send } from "lucide-react";
 
 // Concursos disponíveis
 const EXAM_TYPES = [
@@ -321,6 +320,18 @@ export default function SalaOnboarding() {
           </div>
         </CardContent>
       </Card>
+
+      <p className="text-sm text-muted-foreground text-center mt-4">
+        Prefere estudar pelo celular?{" "}
+        <a
+          href="https://t.me/PassareiBot"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-blue-600 hover:underline font-medium"
+        >
+          <Send className="h-3.5 w-3.5" /> Acesse o bot no Telegram
+        </a>
+      </p>
     </div>
   );
 }

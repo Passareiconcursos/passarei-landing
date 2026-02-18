@@ -1,4 +1,4 @@
-import { CheckCircle, ArrowRight, Smartphone } from "lucide-react";
+import { CheckCircle, ArrowRight, Smartphone, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
@@ -72,10 +72,24 @@ export default function Obrigado() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <a
+            href="https://t.me/PassareiBot"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button
+              size="lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white hover:scale-105 transition-all w-full sm:w-auto"
+            >
+              <Send className="mr-2 w-5 h-5" />
+              Acessar o Bot no Telegram
+            </Button>
+          </a>
           <Button
             onClick={() => setLocation("/")}
             size="lg"
-            className="bg-green-500 hover:bg-green-600 text-white hover:scale-105 transition-all"
+            variant="outline"
+            className="hover:scale-105 transition-all"
             data-testid="button-voltar-inicio"
           >
             Voltar para Home
