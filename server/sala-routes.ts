@@ -413,6 +413,26 @@ export function registerSalaRoutes(app: Express) {
         isCorrect,
       );
 
+      // Update streak (once per day, on first answer)
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        const streakRow = await db.execute(sql`
+          SELECT streak_days, best_streak, last_streak_date FROM "User" WHERE id = ${student.userId} LIMIT 1
+        `) as any[];
+        if (streakRow.length > 0) {
+          const s = streakRow[0];
+          if (s.last_streak_date !== today) {
+            const newStreak = s.last_streak_date === yesterday ? (Number(s.streak_days) + 1) : 1;
+            const newBest = Math.max(Number(s.best_streak) || 0, newStreak);
+            await db.execute(sql`
+              UPDATE "User" SET streak_days=${newStreak}, best_streak=${newBest}, last_streak_date=${today}, "updatedAt"=NOW()
+              WHERE id=${student.userId}
+            `);
+          }
+        }
+      } catch (_e) { /* streak update is non-fatal */ }
+
       // Update SM2 record for this content (upsert)
       if (req.body.contentId) {
         try {
@@ -1304,6 +1324,87 @@ export function registerSalaRoutes(app: Express) {
     } catch (error) {
       console.error("❌ [Sala] Erro ao registrar revisão:", error);
       return res.status(500).json({ success: false, error: "Erro ao registrar revisão." });
+    }
+  });
+
+  // ============================================
+  // GAMIFICAÇÃO — STREAK + RANKING
+  // ============================================
+
+  // GET /api/sala/gamification - Dados de gamificação do aluno
+  app.get("/api/sala/gamification", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+
+      const userResult = await db.execute(sql`
+        SELECT
+          "totalQuestionsAnswered", "totalEssaysSubmitted",
+          streak_days, best_streak, last_streak_date,
+          name
+        FROM "User"
+        WHERE id = ${student.userId}
+        LIMIT 1
+      `) as any[];
+
+      if (userResult.length === 0) return res.status(404).json({ success: false });
+      const u = userResult[0];
+
+      // XP: questões * 10 + redações * 50
+      const xp = (Number(u.totalQuestionsAnswered) || 0) * 10 + (Number(u.totalEssaysSubmitted) || 0) * 50;
+      const level = Math.floor(xp / 1000) + 1;
+      const xpInCurrentLevel = xp - (level - 1) * 1000;
+      const xpForNextLevel = 1000; // each level = 1000 XP
+
+      // Streak validity: lost if last_streak_date is not today or yesterday
+      const today = new Date().toISOString().slice(0, 10);
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const streakActive = u.last_streak_date === today || u.last_streak_date === yesterday;
+      const streakDays = streakActive ? (Number(u.streak_days) || 0) : 0;
+
+      // Top 10 by XP
+      const topUsers = await db.execute(sql`
+        SELECT
+          name,
+          ("totalQuestionsAnswered" * 10 + COALESCE("totalEssaysSubmitted", 0) * 50) as xp,
+          COALESCE(streak_days, 0) as streak_days,
+          last_streak_date
+        FROM "User"
+        WHERE "totalQuestionsAnswered" > 0
+        ORDER BY xp DESC
+        LIMIT 10
+      `) as any[];
+
+      // User's rank among all users
+      const rankResult = await db.execute(sql`
+        SELECT COUNT(*) + 1 as rank
+        FROM "User"
+        WHERE ("totalQuestionsAnswered" * 10 + COALESCE("totalEssaysSubmitted", 0) * 50) > ${xp}
+          AND "totalQuestionsAnswered" > 0
+      `) as any[];
+
+      return res.json({
+        success: true,
+        streak: streakDays,
+        bestStreak: Number(u.best_streak) || 0,
+        xp,
+        level,
+        xpInCurrentLevel,
+        xpForNextLevel,
+        rank: Number(rankResult[0]?.rank) || 1,
+        topUsers: topUsers.map((t: any) => {
+          const tXp = Number(t.xp);
+          const tStreakActive = t.last_streak_date === today || t.last_streak_date === yesterday;
+          return {
+            name: t.name ? (t.name.split(" ")[0] || "Aluno") : "Aluno",
+            xp: tXp,
+            level: Math.floor(tXp / 1000) + 1,
+            streak: tStreakActive ? Number(t.streak_days) : 0,
+          };
+        }),
+      });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao buscar gamificação:", error);
+      return res.status(500).json({ success: false, error: "Erro ao buscar gamificação." });
     }
   });
 }

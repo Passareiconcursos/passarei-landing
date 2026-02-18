@@ -34,6 +34,9 @@ export async function runAutoMigrations() {
     // 8. Colunas de auth web (Sala de Aula)
     await migrateStudentAuthColumns();
 
+    // 9. Colunas de gamificação (streak, ranking)
+    await migrateGamificationColumns();
+
     console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
   } catch (error) {
     console.error("⚠️ [Auto-Migrate] Erro (não fatal):", error);
@@ -423,5 +426,25 @@ async function migrateStudentAuthColumns() {
       ADD COLUMN IF NOT EXISTS "passwordHash" TEXT
     `);
     console.log("  ✅ Coluna passwordHash adicionada na User");
+  }
+}
+
+async function migrateGamificationColumns() {
+  const col = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.columns
+      WHERE table_name = 'User' AND column_name = 'streak_days'
+    ) as exists
+  `) as any[];
+
+  if (!col[0]?.exists) {
+    console.log("  🔄 Adicionando colunas de gamificação na User...");
+    await db.execute(sql`
+      ALTER TABLE "User"
+      ADD COLUMN IF NOT EXISTS streak_days INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS best_streak INTEGER NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS last_streak_date VARCHAR(10)
+    `);
+    console.log("  ✅ Colunas streak_days, best_streak, last_streak_date adicionadas");
   }
 }

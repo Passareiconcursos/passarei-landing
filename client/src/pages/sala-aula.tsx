@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   BookOpen,
   Brain,
@@ -26,6 +27,9 @@ import {
   PenLine,
   Star,
   RotateCcw,
+  Flame,
+  Zap,
+  Medal,
 } from "lucide-react";
 
 // ============================================
@@ -98,6 +102,17 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+interface GamificationData {
+  streak: number;
+  bestStreak: number;
+  xp: number;
+  level: number;
+  xpInCurrentLevel: number;
+  xpForNextLevel: number;
+  rank: number;
+  topUsers: { name: string; xp: number; level: number; streak: number }[];
+}
+
 // ============================================
 // COMPONENT
 // ============================================
@@ -129,6 +144,7 @@ export default function SalaAula() {
   const [essayText, setEssayText] = useState("");
   const [isSubmittingEssay, setIsSubmittingEssay] = useState(false);
   const [essayStatus, setEssayStatus] = useState<{ freeRemaining: number; credits: number; plan: string } | null>(null);
+  const [gamification, setGamification] = useState<GamificationData | null>(null);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
   const [answeredIndex, setAnsweredIndex] = useState<number | null>(null);
@@ -153,6 +169,7 @@ export default function SalaAula() {
     fetchSimulados();
     fetchEssayStatus();
     fetchSm2Due();
+    fetchGamification();
     // Welcome message
     addMessage("system", {
       text: `Olá, ${student?.name?.split(" ")[0]}! Escolha uma matéria ao lado ou clique em "Próximo conteúdo" para começar.`,
@@ -271,6 +288,14 @@ export default function SalaAula() {
         setSm2DueCount(data.dueCount);
         setSm2Items(data.items);
       }
+    } catch { /* silent */ }
+  };
+
+  const fetchGamification = async () => {
+    try {
+      const res = await fetch("/api/sala/gamification", { headers });
+      const data = await res.json();
+      if (data.success) setGamification(data);
     } catch { /* silent */ }
   };
 
@@ -555,7 +580,8 @@ export default function SalaAula() {
           userAnswer: optionIndex,
           explanation: data.explanation,
         });
-        fetchStats(); // Refresh stats
+        fetchStats();
+        fetchGamification(); // Refresh XP + streak
       }
     } catch {
       toast({ variant: "destructive", title: "Erro ao enviar resposta" });
@@ -1038,6 +1064,78 @@ export default function SalaAula() {
                     </div>
                   ))}
                 </div>
+              )}
+
+              {/* Gamification: Streak + XP + Rank */}
+              {gamification && (
+                <>
+                  {/* Streak */}
+                  <Card className={gamification.streak > 0 ? "border-orange-200 bg-orange-50/50" : ""}>
+                    <CardContent className="pt-4 pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Flame className={`h-5 w-5 ${gamification.streak > 0 ? "text-orange-500" : "text-muted-foreground"}`} />
+                          <span className="text-2xl font-bold">{gamification.streak}</span>
+                          <span className="text-sm text-muted-foreground">
+                            dia{gamification.streak !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                        {gamification.bestStreak > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            melhor: {gamification.bestStreak}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">sequência de estudos</p>
+                    </CardContent>
+                  </Card>
+
+                  {/* XP + Level */}
+                  <Card>
+                    <CardContent className="pt-4 pb-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <Zap className="h-4 w-4 text-yellow-500" />
+                          <span className="font-semibold text-sm">Nível {gamification.level}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{gamification.xp} XP</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full bg-yellow-400 transition-all"
+                          style={{ width: `${Math.min((gamification.xpInCurrentLevel / gamification.xpForNextLevel) * 100, 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {gamification.xpForNextLevel - gamification.xpInCurrentLevel} XP para nível {gamification.level + 1}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Ranking */}
+                  <div>
+                    <h3 className="text-sm font-medium flex items-center gap-1.5 mb-2">
+                      <Medal className="h-4 w-4 text-yellow-600" /> Ranking
+                      {gamification.rank <= 10 && (
+                        <Badge variant="outline" className="text-xs ml-auto">#{gamification.rank}</Badge>
+                      )}
+                    </h3>
+                    <div className="space-y-1">
+                      {gamification.topUsers.slice(0, 5).map((u, i) => (
+                        <div
+                          key={i}
+                          className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm ${
+                            u.name === (student?.name?.split(" ")[0]) ? "bg-primary/10 font-medium" : ""
+                          }`}
+                        >
+                          <span className="text-xs text-muted-foreground w-4 shrink-0">#{i + 1}</span>
+                          <span className="truncate flex-1">{u.name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">{u.xp} XP</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
 
               {/* Plan info */}
