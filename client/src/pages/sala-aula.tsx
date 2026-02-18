@@ -74,6 +74,7 @@ export default function SalaAula() {
   const { toast } = useToast();
 
   // State
+  const [studyMode, setStudyMode] = useState<"plano" | "livre">("plano");
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -81,6 +82,7 @@ export default function SalaAula() {
   const [currentQuestion, setCurrentQuestion] = useState<QuestionItem | null>(null);
   const [questionCorrectIndex, setQuestionCorrectIndex] = useState<number | null>(null);
   const [stats, setStats] = useState<{ totalQuestionsAnswered: number; bySubject: SubjectStat[] } | null>(null);
+  const [studyPlan, setStudyPlan] = useState<{ subjectId: string; subjectName: string; totalContent: number; studiedContent: number; percentage: number; isDifficulty: boolean }[]>([]);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
   const [answeredIndex, setAnsweredIndex] = useState<number | null>(null);
@@ -101,6 +103,7 @@ export default function SalaAula() {
   useEffect(() => {
     fetchSubjects();
     fetchStats();
+    fetchStudyPlan();
     // Welcome message
     addMessage("system", {
       text: `Olá, ${student?.name?.split(" ")[0]}! Escolha uma matéria ao lado ou clique em "Próximo conteúdo" para começar.`,
@@ -138,6 +141,41 @@ export default function SalaAula() {
         }
       }
     } catch { /* silent */ }
+  };
+
+  const fetchStudyPlan = async () => {
+    try {
+      const res = await fetch("/api/sala/study-plan", { headers });
+      const data = await res.json();
+      if (data.success) setStudyPlan(data.plan);
+    } catch { /* silent */ }
+  };
+
+  const fetchSequentialContent = async (subjectId: string) => {
+    setIsLoadingContent(true);
+    setCurrentQuestion(null);
+    setAnsweredIndex(null);
+    setQuestionCorrectIndex(null);
+
+    try {
+      const res = await fetch(`/api/sala/content/sequential?subjectId=${subjectId}`, { headers });
+      const data = await res.json();
+
+      if (data.success && data.content) {
+        setCurrentContent(data.content);
+        addMessage("content", data.content);
+        if (data.content.enrichment) {
+          addMessage("enrichment", data.content.enrichment);
+        }
+        fetchStudyPlan(); // refresh progress
+      } else {
+        addMessage("system", { text: data.message || "Nenhum conteúdo disponível." });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao carregar conteúdo" });
+    } finally {
+      setIsLoadingContent(false);
+    }
   };
 
   const fetchNextContent = async (subjectId?: string | null) => {
@@ -257,7 +295,19 @@ export default function SalaAula() {
   const handleSubjectClick = (subjectId: string) => {
     setSelectedSubject(subjectId);
     setShowMobileSidebar(false);
-    fetchNextContent(subjectId);
+    if (studyMode === "plano") {
+      fetchSequentialContent(subjectId);
+    } else {
+      fetchNextContent(subjectId);
+    }
+  };
+
+  const handleNextContent = () => {
+    if (studyMode === "plano" && selectedSubject) {
+      fetchSequentialContent(selectedSubject);
+    } else {
+      fetchNextContent(selectedSubject);
+    }
   };
 
   // ============================================
@@ -283,50 +333,119 @@ export default function SalaAula() {
             showMobileSidebar ? "translate-x-0" : "-translate-x-full"
           } md:translate-x-0 fixed md:relative z-40 w-64 h-full border-r bg-background transition-transform duration-200`}
         >
-          <div className="p-4 border-b">
-            <h2 className="font-semibold flex items-center gap-2">
-              <BookOpen className="h-4 w-4" /> Matérias
-            </h2>
-          </div>
-          <ScrollArea className="h-[calc(100%-3.5rem)]">
-            <div className="p-2 space-y-1">
-              {/* All subjects (smart) */}
+          {/* Mode toggle */}
+          <div className="p-2 border-b">
+            <div className="flex rounded-lg bg-muted p-1">
               <button
-                onClick={() => { setSelectedSubject(null); setShowMobileSidebar(false); fetchNextContent(null); }}
-                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                  selectedSubject === null
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "hover:bg-muted"
+                onClick={() => setStudyMode("plano")}
+                className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                  studyMode === "plano"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <Brain className="h-4 w-4" />
-                  Estudo inteligente
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5">Seleção adaptativa</p>
+                Plano de Aula
               </button>
+              <button
+                onClick={() => setStudyMode("livre")}
+                className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                  studyMode === "livre"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Estudo Livre
+              </button>
+            </div>
+          </div>
 
-              <Separator className="my-2" />
+          <ScrollArea className="h-[calc(100%-3rem)]">
+            <div className="p-2 space-y-1">
+              {studyMode === "livre" ? (
+                <>
+                  {/* Estudo Livre: smart + subject list */}
+                  <button
+                    onClick={() => { setSelectedSubject(null); setShowMobileSidebar(false); fetchNextContent(null); }}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                      selectedSubject === null
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-4 w-4" />
+                      Estudo inteligente
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">Seleção adaptativa</p>
+                  </button>
 
-              {subjects.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => handleSubjectClick(s.id)}
-                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                    selectedSubject === s.id
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "hover:bg-muted"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{s.name}</span>
-                    {s.isDifficulty && (
-                      <Badge variant="destructive" className="text-[10px] px-1 py-0">foco</Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">{s.contentCount} conteúdos</p>
-                </button>
-              ))}
+                  <Separator className="my-2" />
+
+                  {subjects.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => handleSubjectClick(s.id)}
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                        selectedSubject === s.id
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{s.name}</span>
+                        {s.isDifficulty && (
+                          <Badge variant="destructive" className="text-[10px] px-1 py-0">foco</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{s.contentCount} conteúdos</p>
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {/* Plano de Aula: sequential progress */}
+                  <p className="px-3 py-1 text-xs text-muted-foreground">
+                    Estude na ordem recomendada. Matérias de foco aparecem primeiro.
+                  </p>
+
+                  <Separator className="my-2" />
+
+                  {[...studyPlan]
+                    .sort((a, b) => (a.isDifficulty === b.isDifficulty ? 0 : a.isDifficulty ? -1 : 1))
+                    .map((s) => (
+                    <button
+                      key={s.subjectId}
+                      onClick={() => { setSelectedSubject(s.subjectId); setShowMobileSidebar(false); fetchSequentialContent(s.subjectId); }}
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                        selectedSubject === s.subjectId
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="truncate">{s.subjectName}</span>
+                        {s.isDifficulty && (
+                          <Badge variant="destructive" className="text-[10px] px-1 py-0">foco</Badge>
+                        )}
+                      </div>
+                      {/* Progress bar */}
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex-1 bg-muted rounded-full h-1.5">
+                          <div
+                            className={`h-1.5 rounded-full transition-all ${
+                              s.percentage === 100 ? "bg-green-500" : "bg-primary"
+                            }`}
+                            style={{ width: `${Math.max(s.percentage, 2)}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                          {s.studiedContent}/{s.totalContent}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
             </div>
           </ScrollArea>
         </aside>
@@ -356,7 +475,7 @@ export default function SalaAula() {
           <div className="border-t p-3 bg-background">
             <div className="max-w-2xl mx-auto flex gap-2 flex-wrap">
               <Button
-                onClick={() => fetchNextContent(selectedSubject)}
+                onClick={handleNextContent}
                 disabled={isLoadingContent}
                 size="sm"
               >

@@ -108,7 +108,135 @@ export function registerSalaRoutes(app: Express) {
   });
 
   // ============================================
-  // CONTEÚDO / STUDY
+  // PLANO DE AULA
+  // ============================================
+
+  // GET /api/sala/study-plan - Retorna progresso do plano sequencial
+  app.get("/api/sala/study-plan", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const progress = await getStudyProgress(student.userId, "userId");
+      const usedIds = progress.lastStudyContentIds || [];
+
+      // Get subjects with content count
+      const subjectsResult = await db.execute(sql`
+        SELECT
+          s.id, s.name,
+          COUNT(c.id) as total_content
+        FROM "Subject" s
+        JOIN "Content" c ON c."subjectId" = s.id
+          AND c."isActive" = true
+          AND (c."reviewStatus" IS NULL OR c."reviewStatus" != 'REJEITADO')
+        GROUP BY s.id, s.name
+        HAVING COUNT(c.id) > 0
+        ORDER BY s.name
+      `) as any[];
+
+      // Count studied per subject using usedIds
+      const plan = await Promise.all(subjectsResult.map(async (s: any) => {
+        let studiedCount = 0;
+        if (usedIds.length > 0) {
+          const studied = await db.execute(sql`
+            SELECT COUNT(*) as count FROM "Content"
+            WHERE "subjectId" = ${s.id}
+              AND id IN (${sql.join(usedIds.map((id: string) => sql`${id}`), sql`, `)})
+          `) as any[];
+          studiedCount = Number(studied[0]?.count || 0);
+        }
+
+        const total = Number(s.total_content);
+        return {
+          subjectId: s.id,
+          subjectName: s.name,
+          totalContent: total,
+          studiedContent: studiedCount,
+          percentage: total > 0 ? Math.round((studiedCount / total) * 100) : 0,
+          isDifficulty: progress.dificuldades?.includes(s.name) || false,
+        };
+      }));
+
+      return res.json({ success: true, plan });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao buscar plano de aula:", error);
+      return res.status(500).json({ success: false, error: "Erro ao buscar plano de aula." });
+    }
+  });
+
+  // GET /api/sala/content/sequential - Próximo conteúdo sequencial (plano de aula)
+  app.get("/api/sala/content/sequential", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const { subjectId } = req.query;
+
+      if (!subjectId) {
+        return res.status(400).json({ success: false, error: "subjectId é obrigatório." });
+      }
+
+      const progress = await getStudyProgress(student.userId, "userId");
+      const usedIds = progress.lastStudyContentIds || [];
+
+      // Get next unseen content for this subject, ordered by creation
+      const usedClause = usedIds.length > 0
+        ? sql`AND c.id NOT IN (${sql.join(usedIds.map((id: string) => sql`${id}`), sql`, `)})`
+        : sql``;
+
+      const result = await db.execute(sql`
+        SELECT c.*, s.name as "subjectName"
+        FROM "Content" c
+        JOIN "Subject" s ON c."subjectId" = s.id
+        WHERE c."subjectId" = ${subjectId}
+          AND c."isActive" = true
+          AND (c."reviewStatus" IS NULL OR c."reviewStatus" != 'REJEITADO')
+          ${usedClause}
+        ORDER BY c."createdAt" ASC
+        LIMIT 1
+      `) as any[];
+
+      if (result.length === 0) {
+        return res.json({
+          success: true,
+          content: null,
+          message: "Você completou todo o conteúdo desta matéria!",
+        });
+      }
+
+      const c = result[0];
+      const parsed = parseTextContent(c.body || c.textContent || "");
+
+      // AI enrichment
+      let enrichment = null;
+      try {
+        enrichment = await generateEnhancedContent(
+          c.title,
+          c.body || c.textContent || "",
+          progress.examType || "POLICIA_FEDERAL",
+        );
+      } catch (_e) { /* optional */ }
+
+      // Save progress
+      await saveStudyProgress(student.userId, [...usedIds, c.id], "userId");
+
+      return res.json({
+        success: true,
+        content: {
+          id: c.id,
+          title: c.title,
+          body: c.body || c.textContent,
+          subjectId: c.subjectId,
+          subjectName: c.subjectName,
+          topicId: c.topicId,
+          parsed,
+          enrichment,
+        },
+      });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao buscar conteúdo sequencial:", error);
+      return res.status(500).json({ success: false, error: "Erro ao buscar conteúdo." });
+    }
+  });
+
+  // ============================================
+  // CONTEÚDO / STUDY (Estudo Livre)
   // ============================================
 
   // GET /api/sala/content/next - Próximo conteúdo adaptativo (SM2 → dificuldade → facilidade)

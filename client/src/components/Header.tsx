@@ -72,7 +72,13 @@ export function Header() {
               ))}
             </nav>
 
-            <div className="hidden md:flex">
+            <div className="hidden md:flex items-center gap-3">
+              <a
+                href="/sala"
+                className="text-gray-700 hover:text-[#18cb96] transition-colors font-medium"
+              >
+                Login
+              </a>
               <Button
                 onClick={scrollToCTA}
                 className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-3 rounded-lg font-semibold text-base hover:scale-105 transition-all shadow-md hover:shadow-lg"
@@ -113,6 +119,12 @@ export function Header() {
                 </button>
               ))}
               <div className="border-t border-gray-200 my-2"></div>
+              <a
+                href="/sala"
+                className="text-gray-700 hover:text-[#18cb96] transition-colors font-medium text-center py-2"
+              >
+                Login — Sala de Aula
+              </a>
               <Button
                 onClick={scrollToCTA}
                 className="bg-[#18cb96] hover:bg-[#14b584] text-white w-full py-3 rounded-lg font-semibold"

@@ -48,7 +48,7 @@ export default function SalaLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
-  const { login, register, isAuthenticated, student } = useStudentAuth();
+  const { login, register: registerStudent, isAuthenticated, student } = useStudentAuth();
   const [, setLocation] = useLocation();
 
   // Redirect if already authenticated
@@ -89,7 +89,7 @@ export default function SalaLogin() {
   const onRegister = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
-      const result = await register({
+      const result = await registerStudent({
         email: data.email,
         password: data.password,
         name: data.name,
@@ -155,7 +155,7 @@ export default function SalaLogin() {
             </div>
 
             {mode === "login" ? (
-              <Form {...loginForm}>
+              <Form key="login-form" {...loginForm}>
                 <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
                   <FormField
                     control={loginForm.control}
@@ -214,7 +214,7 @@ export default function SalaLogin() {
                 </form>
               </Form>
             ) : (
-              <Form {...registerForm}>
+              <Form key="register-form" {...registerForm}>
                 <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
                   <FormField
                     control={registerForm.control}
