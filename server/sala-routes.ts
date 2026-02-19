@@ -388,19 +388,29 @@ export function registerSalaRoutes(app: Express) {
       let questionText = "";
 
       if (questionId.startsWith("ai_generated_") || questionId.startsWith("fallback_")) {
-        // AI-generated question — answer was stored in client
+        // AI-generated question (non-persisted fallback) — answer stored in client
         correctAnswer = correctIndex;
       } else {
-        // DB question
-        const qResult = await db.execute(sql`
-          SELECT "correctOption", "text" FROM "Question" WHERE id = ${questionId} LIMIT 1
+        // Try "Question" (Prisma legacy) first
+        const prismaQ = await db.execute(sql`
+          SELECT "correctOption", "statement" FROM "Question" WHERE id = ${questionId} LIMIT 1
         `) as any[];
 
-        if (qResult.length === 0) {
-          return res.status(404).json({ success: false, error: "Questão não encontrada." });
+        if (prismaQ.length > 0) {
+          correctAnswer = prismaQ[0].correctOption;
+          questionText = prismaQ[0].statement ?? "";
+        } else {
+          // Try questions (Drizzle) — correctAnswer is a letter (A/B/C/D)
+          const drizzleQ = await db.execute(sql`
+            SELECT correct_answer, question_text FROM questions WHERE id = ${questionId} LIMIT 1
+          `) as any[];
+
+          if (drizzleQ.length === 0) {
+            return res.status(404).json({ success: false, error: "Questão não encontrada." });
+          }
+          correctAnswer = ["A", "B", "C", "D", "E"].indexOf(drizzleQ[0].correct_answer);
+          questionText = drizzleQ[0].question_text ?? "";
         }
-        correctAnswer = qResult[0].correctOption;
-        questionText = qResult[0].text;
       }
 
       const isCorrect = Number(userAnswer) === Number(correctAnswer);

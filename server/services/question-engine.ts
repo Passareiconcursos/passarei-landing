@@ -13,7 +13,7 @@
 
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
-import { generateQuestion } from "./ai-engine";
+import { generateQuestionHaiku } from "./ai-engine";
 
 // ============================================
 // INTERFACES
@@ -79,8 +79,29 @@ export async function getQuestionForSubject(
 }
 
 // ============================================
+// HELPERS — mapear questão da tabela Drizzle `questions`
+// ============================================
+
+function mapDrizzleQuestion(q: any): any {
+  const options = [q.option_a, q.option_b, q.option_c, q.option_d];
+  if (q.option_e) options.push(q.option_e);
+  return {
+    id: q.id,
+    pergunta: q.question_text,
+    opcoes: options,
+    correctOption: ["A", "B", "C", "D", "E"].indexOf(q.correct_answer),
+    explanation: q.explanation,
+    _source: "drizzle",
+  };
+}
+
+// ============================================
 // BUSCAR QUESTÃO VINCULADA AO CONTEÚDO
-// Prioridade: contentId > topicId > subjectId > IA contextual
+// Prioridade:
+//   Tier 1: questions (Drizzle) por content_id  ← busca direta, tabela correta
+//   Tier 2: questions (Drizzle) por subject/examType via JOIN
+//   Tier 3: "Question" (Prisma) por topicId / subjectId  ← banco legado
+//   Tier 4: AI Haiku on-the-fly + persistência obrigatória
 // ============================================
 
 export async function getQuestionForContent(
@@ -91,78 +112,118 @@ export async function getQuestionForContent(
   contentForAI?: { title: string; text: string; examType: string },
 ): Promise<any | null> {
   try {
-    const usedClause = usedQuestionIds.length > 0
-      ? sql`AND q."id" NOT IN (${sql.join(usedQuestionIds.map((id) => sql`${id}`), sql`, `)})`
-      : sql``;
-
-    const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
-
-    // 1. Tentar por contentId (vínculo direto — mais preciso)
-    const byContent = await db.execute(sql`
-      SELECT q.* FROM "Question" q
-      WHERE q."contentId" = ${contentId}
-        AND q."isActive" = true
-        ${usedClause}
-        ${reviewClause}
-      ORDER BY q."timesUsed" ASC, RANDOM()
+    // ── Tier 1: Drizzle `questions` por content_id (match exato) ──────────
+    const t1 = await db.execute(sql`
+      SELECT * FROM questions
+      WHERE content_id = ${contentId}
+      ORDER BY RANDOM()
       LIMIT 1
     `) as any[];
 
-    if (byContent.length > 0) {
-      await db.execute(sql`
-        UPDATE "Question" SET "timesUsed" = "timesUsed" + 1
-        WHERE "id" = ${byContent[0].id}
-      `);
-      console.log(`✅ [Question] Encontrada por contentId: ${byContent[0].id}`);
-      return byContent[0];
+    if (t1.length > 0) {
+      console.log(`✅ [Question T1] Drizzle por content_id: ${t1[0].id}`);
+      return mapDrizzleQuestion(t1[0]);
     }
 
-    // 2. Tentar por topicId
+    // ── Tier 2: Drizzle `questions` por subject/examType do conteúdo ──────
+    const t2 = await db.execute(sql`
+      SELECT q.* FROM questions q
+      JOIN content c ON c.id = q.content_id
+      WHERE c.subject = (SELECT subject FROM content WHERE id = ${contentId} LIMIT 1)
+        AND c.exam_type = (SELECT exam_type FROM content WHERE id = ${contentId} LIMIT 1)
+        AND q.content_id != ${contentId}
+      ORDER BY RANDOM()
+      LIMIT 1
+    `) as any[];
+
+    if (t2.length > 0) {
+      console.log(`✅ [Question T2] Drizzle por subject/examType: ${t2[0].id}`);
+      return mapDrizzleQuestion(t2[0]);
+    }
+
+    // ── Tier 3: "Question" (Prisma) por topicId / subjectId ───────────────
+    const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
+
     if (topicId) {
-      const byTopic = await db.execute(sql`
+      const t3a = await db.execute(sql`
         SELECT q.* FROM "Question" q
         WHERE q."topicId" = ${topicId}
           AND q."isActive" = true
-          ${usedClause}
           ${reviewClause}
         ORDER BY q."timesUsed" ASC, RANDOM()
         LIMIT 1
       `) as any[];
 
-      if (byTopic.length > 0) {
-        await db.execute(sql`
-          UPDATE "Question" SET "timesUsed" = "timesUsed" + 1
-          WHERE "id" = ${byTopic[0].id}
-        `);
-        console.log(`✅ [Question] Encontrada por topicId: ${byTopic[0].id}`);
-        return byTopic[0];
+      if (t3a.length > 0) {
+        await db.execute(sql`UPDATE "Question" SET "timesUsed" = "timesUsed" + 1 WHERE "id" = ${t3a[0].id}`);
+        console.log(`✅ [Question T3a] Prisma por topicId: ${t3a[0].id}`);
+        return t3a[0];
       }
     }
 
-    // 3. Tentar por subjectId
     const bySubject = await getQuestionForSubject(subjectId, usedQuestionIds);
-    if (bySubject) return bySubject;
+    if (bySubject) {
+      console.log(`✅ [Question T3b] Prisma por subjectId: ${bySubject.id}`);
+      return bySubject;
+    }
 
-    // 4. Gerar com IA contextual (usando o conteúdo estudado como contexto)
-    if (contentForAI) {
-      console.log(`🤖 [Question] Gerando questão via IA para: ${contentForAI.title}`);
-      const aiQuestion = await generateQuestion(
-        contentForAI.title,
-        contentForAI.text,
-        contentForAI.examType,
+    // ── Tier 4: AI Haiku on-the-fly + persistência obrigatória ────────────
+    // Buscar conteúdo do banco para ter title/body/examType reais
+    const contentRow = await db.execute(sql`
+      SELECT title, body, exam_type FROM content WHERE id = ${contentId} LIMIT 1
+    `) as any[];
+
+    const aiCtx = contentRow.length > 0
+      ? { title: contentRow[0].title, text: contentRow[0].body, examType: contentRow[0].exam_type }
+      : contentForAI;  // fallback: usar o que foi passado pelo caller
+
+    if (aiCtx) {
+      console.warn(`⚠️ [AI-Q] Nenhuma questão no banco para contentId: ${contentId} — gerando via Haiku`);
+
+      const aiQuestion = await generateQuestionHaiku(
+        aiCtx.title,
+        aiCtx.text,
+        aiCtx.examType,
       );
 
       if (aiQuestion) {
+        const correctLetter = ["A", "B", "C", "D", "E"][aiQuestion.correta] ?? "A";
+        const opcoes = aiQuestion.opcoes;
+
+        try {
+          const inserted = await db.execute(sql`
+            INSERT INTO questions (
+              content_id, question_text,
+              option_a, option_b, option_c, option_d,
+              correct_answer, explanation,
+              difficulty, generated_by_ai,
+              created_at, updated_at
+            ) VALUES (
+              ${contentId}, ${aiQuestion.pergunta},
+              ${opcoes[0] ?? ""}, ${opcoes[1] ?? ""}, ${opcoes[2] ?? ""}, ${opcoes[3] ?? ""},
+              ${correctLetter}, ${aiQuestion.explicacao},
+              'MEDIO', true,
+              NOW(), NOW()
+            )
+            RETURNING id, question_text, option_a, option_b, option_c, option_d, correct_answer, explanation
+          `) as any[];
+
+          if (inserted.length > 0) {
+            console.log(`💾 [AI-Q] Questão persistida no banco: ${inserted[0].id}`);
+            return mapDrizzleQuestion(inserted[0]);
+          }
+        } catch (persistErr) {
+          console.error("❌ [AI-Q] Falha ao persistir questão gerada:", persistErr);
+        }
+
+        // Se a persistência falhou, retornar sem ID permanente
         return {
           id: `ai_generated_${Date.now()}`,
-          statement: aiQuestion.pergunta,
-          alternatives: aiQuestion.opcoes,
-          correctAnswer: aiQuestion.opcoes[aiQuestion.correta],
-          correctIndex: aiQuestion.correta,
+          pergunta: aiQuestion.pergunta,
+          opcoes,
+          correctOption: aiQuestion.correta,
           explanation: aiQuestion.explicacao,
-          isAIGenerated: true,
-          subjectId,
-          topicId,
+          _source: "ai_fallback",
         };
       }
     }

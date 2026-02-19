@@ -116,13 +116,27 @@ const STATUS_LABELS: Record<string, string> = {
   ARCHIVED: "Arquivado",
 };
 
-const emptyForm = {
+interface ContentForm {
+  title: string;
+  subject: string;
+  examType: string;
+  sphere: string;
+  state: string;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  body: string;
+  definition: string;
+  keyPoints: string;
+  example: string;
+  tip: string;
+}
+
+const emptyForm: ContentForm = {
   title: "",
   subject: "DIREITO_PENAL",
   examType: "PF",
   sphere: "FEDERAL",
   state: "",
-  status: "DRAFT" as const,
+  status: "DRAFT",
   body: "",
   definition: "",
   keyPoints: "",
@@ -415,7 +429,7 @@ export default function EducContent() {
                       </TableCell>
                       <TableCell>
                         {item.generatedByAI && (
-                          <Bot className="h-3.5 w-3.5 text-violet-500" title="Gerado por IA" />
+                          <Bot className="h-3.5 w-3.5 text-violet-500" aria-label="Gerado por IA" />
                         )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">

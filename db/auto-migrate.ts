@@ -37,6 +37,9 @@ export async function runAutoMigrations() {
     // 9. Colunas de gamificação (streak, ranking)
     await migrateGamificationColumns();
 
+    // 10. Tornar questions.created_by nullable (geração automática de IA)
+    await migrateQuestionsCreatedByNullable();
+
     console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
   } catch (error) {
     console.error("⚠️ [Auto-Migrate] Erro (não fatal):", error);
@@ -426,6 +429,22 @@ async function migrateStudentAuthColumns() {
       ADD COLUMN IF NOT EXISTS "passwordHash" TEXT
     `);
     console.log("  ✅ Coluna passwordHash adicionada na User");
+  }
+}
+
+async function migrateQuestionsCreatedByNullable() {
+  const col = await db.execute(sql`
+    SELECT is_nullable FROM information_schema.columns
+    WHERE table_name = 'questions' AND column_name = 'created_by'
+    LIMIT 1
+  `) as any[];
+
+  if (col[0]?.is_nullable === "NO") {
+    console.log("  🔄 Tornando questions.created_by nullable...");
+    await db.execute(sql`
+      ALTER TABLE questions ALTER COLUMN created_by DROP NOT NULL
+    `);
+    console.log("  ✅ questions.created_by agora é nullable (suporte a geração por IA)");
   }
 }
 

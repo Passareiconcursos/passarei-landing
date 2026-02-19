@@ -260,3 +260,63 @@ IMPORTANTE: Retorne APENAS o JSON, sem markdown ou texto adicional.`,
     return null;
   }
 }
+
+// ============================================
+// GERAR QUESTÃO VIA HAIKU (fallback econômico)
+// ============================================
+
+export async function generateQuestionHaiku(
+  title: string,
+  bodyText: string,
+  examType: string,
+): Promise<GeneratedQuestion | null> {
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 600,
+      messages: [
+        {
+          role: "user",
+          content: `Você é um professor especialista em concursos policiais (${examType}).
+
+TEMA: ${title}
+CONTEÚDO ESTUDADO: ${bodyText}
+
+Elabore UMA questão de múltipla escolha DIRETAMENTE sobre o conteúdo acima.
+A questão DEVE testar o conhecimento específico do texto apresentado.
+
+Responda em JSON válido:
+{
+  "pergunta": "Enunciado da questão",
+  "opcoes": ["A) ...", "B) ...", "C) ...", "D) ..."],
+  "correta": 0,
+  "explicacao": "Explicação breve de por que a alternativa correta está certa"
+}
+
+IMPORTANTE: Retorne APENAS o JSON, sem markdown ou texto adicional.`,
+        },
+      ],
+    });
+
+    const text =
+      response.content[0].type === "text" ? response.content[0].text : "";
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.warn("⚠️ [AI Engine Haiku] Resposta não contém JSON válido");
+      return null;
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]) as GeneratedQuestion;
+
+    if (!parsed.pergunta || !Array.isArray(parsed.opcoes) || parsed.opcoes.length < 2) {
+      console.warn("⚠️ [AI Engine Haiku] Questão com estrutura inválida");
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error("❌ [AI Engine Haiku] Erro ao gerar questão:", error);
+    return null;
+  }
+}
