@@ -37,7 +37,10 @@ export async function runAutoMigrations() {
     // 9. Colunas de gamificação (streak, ranking)
     await migrateGamificationColumns();
 
-    // 10. Tornar questions.created_by nullable (geração automática de IA)
+    // 10. Criar tabelas de educação (questions, sm2_reviews, simulados, ...)
+    await migrateEducationTables();
+
+    // 11. Tornar questions.created_by nullable (geração automática de IA)
     await migrateQuestionsCreatedByNullable();
 
     console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
@@ -392,24 +395,24 @@ async function migrateReviewColumns() {
     console.log("  ✅ Colunas de revisão do Content adicionadas");
   }
 
-  // Adicionar colunas de revisão ao Question
+  // Adicionar colunas de revisão ao question (tabela Prisma, stored lowercase no PG)
   const questionCol = await db.execute(sql`
     SELECT EXISTS (
       SELECT FROM information_schema.columns
-      WHERE table_name = 'Question' AND column_name = 'reviewStatus'
+      WHERE table_name = 'question' AND column_name = 'reviewStatus'
     ) as exists
   `) as any[];
 
   if (!questionCol[0]?.exists) {
-    console.log("  🔄 Adicionando colunas de revisão ao Question...");
+    console.log("  🔄 Adicionando colunas de revisão ao question...");
     await db.execute(sql`
-      ALTER TABLE "Question"
+      ALTER TABLE question
       ADD COLUMN IF NOT EXISTS "reviewStatus" VARCHAR(20) DEFAULT 'PENDENTE',
       ADD COLUMN IF NOT EXISTS "reviewScore" INTEGER,
       ADD COLUMN IF NOT EXISTS "reviewNotes" TEXT,
       ADD COLUMN IF NOT EXISTS "reviewedAt" TIMESTAMP
     `);
-    console.log("  ✅ Colunas de revisão do Question adicionadas");
+    console.log("  ✅ Colunas de revisão do question adicionadas");
   }
 }
 
@@ -429,6 +432,152 @@ async function migrateStudentAuthColumns() {
       ADD COLUMN IF NOT EXISTS "passwordHash" TEXT
     `);
     console.log("  ✅ Coluna passwordHash adicionada na User");
+  }
+}
+
+async function migrateEducationTables() {
+  // ── questions (plural, Drizzle) ───────────────────────────────────────
+  const qExists = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables
+      WHERE table_name = 'questions'
+    ) as exists
+  `) as any[];
+
+  if (!qExists[0]?.exists) {
+    console.log("  🔄 Criando tabela questions...");
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS questions (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        content_id VARCHAR(255) NOT NULL,
+        question_text TEXT NOT NULL,
+        option_a TEXT NOT NULL,
+        option_b TEXT NOT NULL,
+        option_c TEXT NOT NULL,
+        option_d TEXT NOT NULL,
+        option_e TEXT,
+        correct_answer VARCHAR(1) NOT NULL,
+        explanation TEXT,
+        difficulty VARCHAR(20),
+        generated_by_ai BOOLEAN NOT NULL DEFAULT false,
+        created_by VARCHAR,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_questions_content_id ON questions(content_id)`);
+    console.log("  ✅ Tabela questions criada");
+  } else {
+    console.log("  ✅ [Migration] Tabela questions verificada/existente");
+  }
+
+  // ── sm2_reviews ───────────────────────────────────────────────────────
+  const sm2Exists = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables
+      WHERE table_name = 'sm2_reviews'
+    ) as exists
+  `) as any[];
+
+  if (!sm2Exists[0]?.exists) {
+    console.log("  🔄 Criando tabela sm2_reviews...");
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS sm2_reviews (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+        content_id VARCHAR(255) NOT NULL,
+        ease_factor REAL NOT NULL DEFAULT 2.5,
+        interval INTEGER NOT NULL DEFAULT 1,
+        repetitions INTEGER NOT NULL DEFAULT 0,
+        next_review_date TIMESTAMP NOT NULL,
+        last_quality INTEGER,
+        times_correct INTEGER NOT NULL DEFAULT 0,
+        times_incorrect INTEGER NOT NULL DEFAULT 0,
+        total_reviews INTEGER NOT NULL DEFAULT 0,
+        first_seen_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        last_reviewed_at TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_sm2_user_content ON sm2_reviews(user_id, content_id)`);
+    console.log("  ✅ Tabela sm2_reviews criada");
+  } else {
+    console.log("  ✅ [Migration] Tabela sm2_reviews verificada/existente");
+  }
+
+  // ── simulados + tabelas relacionadas ──────────────────────────────────
+  const simExists = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables
+      WHERE table_name = 'simulados'
+    ) as exists
+  `) as any[];
+
+  if (!simExists[0]?.exists) {
+    console.log("  🔄 Criando tabelas de simulados...");
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS simulados (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title TEXT NOT NULL,
+        description TEXT,
+        exam_type TEXT NOT NULL,
+        total_questions INTEGER NOT NULL DEFAULT 50,
+        duration_minutes INTEGER NOT NULL DEFAULT 120,
+        passing_score INTEGER NOT NULL DEFAULT 60,
+        month VARCHAR(7) NOT NULL,
+        available_from TIMESTAMP NOT NULL,
+        available_until TIMESTAMP NOT NULL,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS simulado_questions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        simulado_id UUID NOT NULL REFERENCES simulados(id) ON DELETE CASCADE,
+        content_id VARCHAR(255) NOT NULL,
+        question_order INTEGER NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS user_simulados (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+        simulado_id UUID NOT NULL REFERENCES simulados(id) ON DELETE CASCADE,
+        status TEXT NOT NULL DEFAULT 'IN_PROGRESS',
+        current_question INTEGER NOT NULL DEFAULT 0,
+        correct_answers INTEGER NOT NULL DEFAULT 0,
+        wrong_answers INTEGER NOT NULL DEFAULT 0,
+        score INTEGER,
+        passed BOOLEAN,
+        time_spent_minutes INTEGER,
+        started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        finished_at TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS simulado_answers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_simulado_id UUID NOT NULL REFERENCES user_simulados(id) ON DELETE CASCADE,
+        question_id UUID NOT NULL REFERENCES simulado_questions(id) ON DELETE CASCADE,
+        selected_answer INTEGER NOT NULL,
+        correct BOOLEAN NOT NULL,
+        answered_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    console.log("  ✅ Tabelas simulados, simulado_questions, user_simulados, simulado_answers criadas");
+  } else {
+    console.log("  ✅ [Migration] Tabelas de simulados verificadas/existentes");
   }
 }
 

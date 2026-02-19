@@ -48,7 +48,7 @@ export async function getQuestionForSubject(
     const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
 
     const result = await db.execute(sql`
-      SELECT q.* FROM "Question" q
+      SELECT q.* FROM question q
       WHERE q."subjectId" = ${subjectId}
         AND q."isActive" = true
         ${usedClause}
@@ -60,7 +60,7 @@ export async function getQuestionForSubject(
 
     if (result.length > 0) {
       await db.execute(sql`
-        UPDATE "Question" SET "timesUsed" = "timesUsed" + 1
+        UPDATE question SET "timesUsed" = "timesUsed" + 1
         WHERE "id" = ${result[0].id}
       `);
       return result[0];
@@ -146,7 +146,7 @@ export async function getQuestionForContent(
 
     if (topicId) {
       const t3a = await db.execute(sql`
-        SELECT q.* FROM "Question" q
+        SELECT q.* FROM question q
         WHERE q."topicId" = ${topicId}
           AND q."isActive" = true
           ${reviewClause}
@@ -155,7 +155,7 @@ export async function getQuestionForContent(
       `) as any[];
 
       if (t3a.length > 0) {
-        await db.execute(sql`UPDATE "Question" SET "timesUsed" = "timesUsed" + 1 WHERE "id" = ${t3a[0].id}`);
+        await db.execute(sql`UPDATE question SET "timesUsed" = "timesUsed" + 1 WHERE "id" = ${t3a[0].id}`);
         console.log(`✅ [Question T3a] Prisma por topicId: ${t3a[0].id}`);
         return t3a[0];
       }
