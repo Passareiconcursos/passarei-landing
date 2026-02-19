@@ -9,44 +9,28 @@ import { sql } from "drizzle-orm";
 export async function runAutoMigrations() {
   console.log("🔄 [Auto-Migrate] Verificando banco de dados...");
 
-  try {
-    // 1. Verificar tabela leads
-    await migrateLeadsTable();
+  // Cada passo tem try/catch individual: falha em um não bloqueia os demais
+  const run = async (name: string, fn: () => Promise<void>) => {
+    try {
+      await fn();
+    } catch (err: any) {
+      console.error(`⚠️ [Auto-Migrate] Passo "${name}" falhou (não fatal):`, err?.message ?? err);
+    }
+  };
 
-    // 2. Verificar coluna last_active_at na User
-    await migrateUserColumns();
+  await run("leads",             migrateLeadsTable);
+  await run("userColumns",       migrateUserColumns);
+  await run("betaTester",        migrateBetaTester);
+  await run("promoCodes",        migratePromoCodes);
+  await run("defaultPromoCodes", createDefaultPromoCodes);
+  await run("reviewColumns",     migrateReviewColumns);
+  await run("essays",            migrateEssaysTable);
+  await run("studentAuth",       migrateStudentAuthColumns);
+  await run("gamification",      migrateGamificationColumns);
+  await run("educationTables",   migrateEducationTables);
+  await run("questionsNullable", migrateQuestionsCreatedByNullable);
 
-    // 3. Configurar beta tester
-    await migrateBetaTester();
-
-    // 4. Garantir tabelas de promo codes
-    await migratePromoCodes();
-
-    // 5. Criar códigos promo iniciais
-    await createDefaultPromoCodes();
-
-    // 6. Colunas de revisão (Professor Revisor - Fase D)
-    await migrateReviewColumns();
-
-    // 7. Tabela de redações (essays)
-    await migrateEssaysTable();
-
-    // 8. Colunas de auth web (Sala de Aula)
-    await migrateStudentAuthColumns();
-
-    // 9. Colunas de gamificação (streak, ranking)
-    await migrateGamificationColumns();
-
-    // 10. Criar tabelas de educação (questions, sm2_reviews, simulados, ...)
-    await migrateEducationTables();
-
-    // 11. Tornar questions.created_by nullable (geração automática de IA)
-    await migrateQuestionsCreatedByNullable();
-
-    console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
-  } catch (error) {
-    console.error("⚠️ [Auto-Migrate] Erro (não fatal):", error);
-  }
+  console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
 
 async function migrateLeadsTable() {
@@ -395,24 +379,30 @@ async function migrateReviewColumns() {
     console.log("  ✅ Colunas de revisão do Content adicionadas");
   }
 
-  // Adicionar colunas de revisão ao question (tabela Prisma, stored lowercase no PG)
-  const questionCol = await db.execute(sql`
-    SELECT EXISTS (
-      SELECT FROM information_schema.columns
-      WHERE table_name = 'question' AND column_name = 'reviewStatus'
-    ) as exists
-  `) as any[];
+  // Adicionar colunas de revisão ao Question (Prisma legacy)
+  // A tabela pode existir como "Question" (quoted PascalCase) dependendo da versão do Prisma
+  try {
+    const questionCol = await db.execute(sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns
+        WHERE table_name IN ('Question', 'question') AND column_name = 'reviewStatus'
+      ) as exists
+    `) as any[];
 
-  if (!questionCol[0]?.exists) {
-    console.log("  🔄 Adicionando colunas de revisão ao question...");
-    await db.execute(sql`
-      ALTER TABLE question
-      ADD COLUMN IF NOT EXISTS "reviewStatus" VARCHAR(20) DEFAULT 'PENDENTE',
-      ADD COLUMN IF NOT EXISTS "reviewScore" INTEGER,
-      ADD COLUMN IF NOT EXISTS "reviewNotes" TEXT,
-      ADD COLUMN IF NOT EXISTS "reviewedAt" TIMESTAMP
-    `);
-    console.log("  ✅ Colunas de revisão do question adicionadas");
+    if (!questionCol[0]?.exists) {
+      console.log("  🔄 Adicionando colunas de revisão ao Question...");
+      // Tentar PascalCase (mais comum no Prisma com quotes)
+      await db.execute(sql`
+        ALTER TABLE "Question"
+        ADD COLUMN IF NOT EXISTS "reviewStatus" VARCHAR(20) DEFAULT 'PENDENTE',
+        ADD COLUMN IF NOT EXISTS "reviewScore" INTEGER,
+        ADD COLUMN IF NOT EXISTS "reviewNotes" TEXT,
+        ADD COLUMN IF NOT EXISTS "reviewedAt" TIMESTAMP
+      `);
+      console.log("  ✅ Colunas de revisão do Question adicionadas");
+    }
+  } catch (qErr: any) {
+    console.warn("  ⚠️ Colunas de revisão do Question: tabela não encontrada ou já migrada:", qErr?.message?.split("\n")[0]);
   }
 }
 

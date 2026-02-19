@@ -67,102 +67,95 @@ export interface SessionReport {
 export async function getSmartContent(
   session: LearningSessionState,
 ): Promise<ContentResult | null> {
-  try {
-    let result;
+  const usedIdsClause = session.usedContentIds.length > 0
+    ? sql`AND c."id" NOT IN (${sql.join(session.usedContentIds.map((id) => sql`${id}`), sql`, `)})`
+    : sql``;
 
-    // 1. SM2: Priorizar revisões pendentes (Veterano)
-    const dueReviews = await getSM2DueReviews(session.userId, session.examType);
-    const availableDueReviews = dueReviews.filter(
-      (id) => !session.usedContentIds.includes(id),
-    );
-
-    if (availableDueReviews.length > 0) {
-      result = await db.execute(sql`
-        SELECT * FROM "Content"
-        WHERE "id" = ${availableDueReviews[0]}
-          AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-        LIMIT 1
-      `);
-
-      if (result.length > 0) {
-        console.log(`✅ [Learning] SM2 revisão: ${result[0].title}`);
-        return result[0] as ContentResult;
+  // Cada sub-query tem try/catch individual para não abortar a função inteira
+  const tryQuery = async (label: string, query: () => Promise<any[]>): Promise<ContentResult | null> => {
+    try {
+      const rows = await query();
+      if (rows.length > 0) {
+        console.log(`✅ [Learning] ${label}: ${rows[0].title ?? rows[0].id}`);
+        return rows[0] as ContentResult;
       }
+    } catch (e: any) {
+      console.warn(`⚠️ [Learning] ${label} falhou: ${e?.message?.split("\n")[0]}`);
     }
-
-    // 2. Estudo adaptativo: 70% dificuldade, 30% facilidade
-    const shouldPrioritizeDifficulty = Math.random() < 0.7;
-    const usedIdsClause = session.usedContentIds.length > 0
-      ? sql`AND c."id" NOT IN (${sql.join(session.usedContentIds.map((id) => sql`${id}`), sql`, `)})`
-      : sql``;
-    const reviewClause = sql`AND (c."reviewStatus" IS NULL OR c."reviewStatus" != 'REJEITADO')`;
-
-    // 2a. Matérias de DIFICULDADE (70%)
-    if (shouldPrioritizeDifficulty && session.difficulties.length > 0) {
-      result = await db.execute(sql`
-        SELECT c.* FROM "Content" c
-        JOIN "Subject" s ON c."subjectId" = s.id
-        WHERE s."displayName" IN (${sql.join(session.difficulties.map((d) => sql`${d}`), sql`, `)})
-          AND c."isActive" = true
-          ${usedIdsClause}
-          ${reviewClause}
-        ORDER BY RANDOM()
-        LIMIT 1
-      `);
-
-      if (result.length > 0) return result[0] as ContentResult;
-    }
-
-    // 2b. Matérias de FACILIDADE (30% ou fallback)
-    if (session.facilities.length > 0) {
-      result = await db.execute(sql`
-        SELECT c.* FROM "Content" c
-        JOIN "Subject" s ON c."subjectId" = s.id
-        WHERE s."displayName" IN (${sql.join(session.facilities.map((f) => sql`${f}`), sql`, `)})
-          AND c."isActive" = true
-          ${usedIdsClause}
-          ${reviewClause}
-        ORDER BY RANDOM()
-        LIMIT 1
-      `);
-
-      if (result.length > 0) return result[0] as ContentResult;
-    }
-
-    // 2c. Qualquer conteúdo não usado
-    if (session.usedContentIds.length > 0) {
-      result = await db.execute(sql`
-        SELECT * FROM "Content"
-        WHERE "isActive" = true
-          AND "id" NOT IN (${sql.join(session.usedContentIds.map((id) => sql`${id}`), sql`, `)})
-          AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-        ORDER BY RANDOM()
-        LIMIT 1
-      `);
-    } else {
-      result = await db.execute(sql`
-        SELECT * FROM "Content"
-        WHERE "isActive" = true
-          AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-        ORDER BY RANDOM()
-        LIMIT 1
-      `);
-    }
-
-    if (result.length > 0) return result[0] as ContentResult;
-
-    // Último fallback
-    const fallback = await db.execute(sql`
-      SELECT * FROM "Content"
-      WHERE ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-      ORDER BY RANDOM() LIMIT 1
-    `);
-
-    return fallback.length > 0 ? (fallback[0] as ContentResult) : null;
-  } catch (error) {
-    console.error(`❌ [Learning] Erro ao buscar conteúdo:`, error);
     return null;
+  };
+
+  // 1. SM2: Priorizar revisões pendentes (Veterano)
+  const dueReviews = await getSM2DueReviews(session.userId, session.examType);
+  const availableDueReviews = dueReviews.filter((id) => !session.usedContentIds.includes(id));
+
+  if (availableDueReviews.length > 0) {
+    const sm2Result = await tryQuery("SM2 revisão", () => db.execute(sql`
+      SELECT * FROM "Content"
+      WHERE "id" = ${availableDueReviews[0]}
+        AND "isActive" = true
+      LIMIT 1
+    `));
+    if (sm2Result) return sm2Result;
   }
+
+  // 2. Estudo adaptativo: 70% dificuldade, 30% facilidade
+  const shouldPrioritizeDifficulty = Math.random() < 0.7;
+
+  // 2a. Matérias de DIFICULDADE (70%) — usa s.name (coluna real do Subject)
+  if (shouldPrioritizeDifficulty && session.difficulties.length > 0) {
+    const r = await tryQuery("Dificuldade", () => db.execute(sql`
+      SELECT c.* FROM "Content" c
+      JOIN "Subject" s ON c."subjectId" = s.id
+      WHERE s.name IN (${sql.join(session.difficulties.map((d) => sql`${d}`), sql`, `)})
+        AND c."isActive" = true
+        ${usedIdsClause}
+      ORDER BY RANDOM()
+      LIMIT 1
+    `));
+    if (r) return r;
+  }
+
+  // 2b. Matérias de FACILIDADE (30% ou fallback) — usa s.name
+  if (session.facilities.length > 0) {
+    const r = await tryQuery("Facilidade", () => db.execute(sql`
+      SELECT c.* FROM "Content" c
+      JOIN "Subject" s ON c."subjectId" = s.id
+      WHERE s.name IN (${sql.join(session.facilities.map((f) => sql`${f}`), sql`, `)})
+        AND c."isActive" = true
+        ${usedIdsClause}
+      ORDER BY RANDOM()
+      LIMIT 1
+    `));
+    if (r) return r;
+  }
+
+  // 2c. Qualquer conteúdo não usado (sem filtro reviewStatus — pode não existir)
+  if (session.usedContentIds.length > 0) {
+    const r = await tryQuery("Geral (não usado)", () => db.execute(sql`
+      SELECT * FROM "Content"
+      WHERE "isActive" = true
+        AND "id" NOT IN (${sql.join(session.usedContentIds.map((id) => sql`${id}`), sql`, `)})
+      ORDER BY RANDOM()
+      LIMIT 1
+    `));
+    if (r) return r;
+  }
+
+  // 2d. Qualquer conteúdo ativo
+  const r = await tryQuery("Geral (ativo)", () => db.execute(sql`
+    SELECT * FROM "Content"
+    WHERE "isActive" = true
+    ORDER BY RANDOM()
+    LIMIT 1
+  `));
+  if (r) return r;
+
+  // Último fallback sem filtro
+  const fb = await tryQuery("Fallback total", () => db.execute(sql`
+    SELECT * FROM "Content" ORDER BY RANDOM() LIMIT 1
+  `));
+  return fb;
 }
 
 // ============================================

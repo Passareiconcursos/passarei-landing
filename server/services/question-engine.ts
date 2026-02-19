@@ -28,7 +28,7 @@ export interface MnemonicResult {
 }
 
 // ============================================
-// BUSCAR QUESTÃO POR SUBJECT
+// BUSCAR QUESTÃO POR SUBJECT (Prisma legacy)
 // ============================================
 
 export async function getQuestionForSubject(
@@ -48,7 +48,7 @@ export async function getQuestionForSubject(
     const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
 
     const result = await db.execute(sql`
-      SELECT q.* FROM question q
+      SELECT q.* FROM "Question" q
       WHERE q."subjectId" = ${subjectId}
         AND q."isActive" = true
         ${usedClause}
@@ -60,7 +60,7 @@ export async function getQuestionForSubject(
 
     if (result.length > 0) {
       await db.execute(sql`
-        UPDATE question SET "timesUsed" = "timesUsed" + 1
+        UPDATE "Question" SET "timesUsed" = "timesUsed" + 1
         WHERE "id" = ${result[0].id}
       `);
       return result[0];
@@ -98,10 +98,11 @@ function mapDrizzleQuestion(q: any): any {
 // ============================================
 // BUSCAR QUESTÃO VINCULADA AO CONTEÚDO
 // Prioridade:
-//   Tier 1: questions (Drizzle) por content_id  ← busca direta, tabela correta
+//   Tier 1: questions (Drizzle) por content_id  ← busca direta
 //   Tier 2: questions (Drizzle) por subject/examType via JOIN
 //   Tier 3: "Question" (Prisma) por topicId / subjectId  ← banco legado
 //   Tier 4: AI Haiku on-the-fly + persistência obrigatória
+// Cada tier tem try/catch individual — falha de um não bloqueia o próximo
 // ============================================
 
 export async function getQuestionForContent(
@@ -111,8 +112,9 @@ export async function getQuestionForContent(
   usedQuestionIds: string[] = [],
   contentForAI?: { title: string; text: string; examType: string },
 ): Promise<any | null> {
+
+  // ── Tier 1: Drizzle `questions` por content_id ─────────────────────────
   try {
-    // ── Tier 1: Drizzle `questions` por content_id (match exato) ──────────
     const t1 = await db.execute(sql`
       SELECT * FROM questions
       WHERE content_id = ${contentId}
@@ -124,8 +126,12 @@ export async function getQuestionForContent(
       console.log(`✅ [Question T1] Drizzle por content_id: ${t1[0].id}`);
       return mapDrizzleQuestion(t1[0]);
     }
+  } catch (e: any) {
+    console.warn(`⚠️ [Question T1] Falhou: ${e?.message?.split("\n")[0]}`);
+  }
 
-    // ── Tier 2: Drizzle `questions` por subject/examType do conteúdo ──────
+  // ── Tier 2: Drizzle `questions` por subject/examType do conteúdo ───────
+  try {
     const t2 = await db.execute(sql`
       SELECT q.* FROM questions q
       JOIN content c ON c.id = q.content_id
@@ -140,13 +146,17 @@ export async function getQuestionForContent(
       console.log(`✅ [Question T2] Drizzle por subject/examType: ${t2[0].id}`);
       return mapDrizzleQuestion(t2[0]);
     }
+  } catch (e: any) {
+    console.warn(`⚠️ [Question T2] Falhou: ${e?.message?.split("\n")[0]}`);
+  }
 
-    // ── Tier 3: "Question" (Prisma) por topicId / subjectId ───────────────
+  // ── Tier 3: "Question" (Prisma legacy) por topicId / subjectId ─────────
+  try {
     const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
 
     if (topicId) {
       const t3a = await db.execute(sql`
-        SELECT q.* FROM question q
+        SELECT q.* FROM "Question" q
         WHERE q."topicId" = ${topicId}
           AND q."isActive" = true
           ${reviewClause}
@@ -155,7 +165,7 @@ export async function getQuestionForContent(
       `) as any[];
 
       if (t3a.length > 0) {
-        await db.execute(sql`UPDATE question SET "timesUsed" = "timesUsed" + 1 WHERE "id" = ${t3a[0].id}`);
+        await db.execute(sql`UPDATE "Question" SET "timesUsed" = "timesUsed" + 1 WHERE "id" = ${t3a[0].id}`);
         console.log(`✅ [Question T3a] Prisma por topicId: ${t3a[0].id}`);
         return t3a[0];
       }
@@ -166,16 +176,22 @@ export async function getQuestionForContent(
       console.log(`✅ [Question T3b] Prisma por subjectId: ${bySubject.id}`);
       return bySubject;
     }
+  } catch (e: any) {
+    console.warn(`⚠️ [Question T3] Falhou (tabela legada): ${e?.message?.split("\n")[0]}`);
+  }
 
-    // ── Tier 4: AI Haiku on-the-fly + persistência obrigatória ────────────
+  // ── Tier 4: AI Haiku on-the-fly + persistência obrigatória ────────────
+  try {
     // Buscar conteúdo do banco para ter title/body/examType reais
-    const contentRow = await db.execute(sql`
-      SELECT title, body, exam_type FROM content WHERE id = ${contentId} LIMIT 1
-    `) as any[];
-
-    const aiCtx = contentRow.length > 0
-      ? { title: contentRow[0].title, text: contentRow[0].body, examType: contentRow[0].exam_type }
-      : contentForAI;  // fallback: usar o que foi passado pelo caller
+    let aiCtx = contentForAI;
+    try {
+      const contentRow = await db.execute(sql`
+        SELECT title, body, exam_type FROM content WHERE id = ${contentId} LIMIT 1
+      `) as any[];
+      if (contentRow.length > 0) {
+        aiCtx = { title: contentRow[0].title, text: contentRow[0].body, examType: contentRow[0].exam_type };
+      }
+    } catch (_e) { /* content lookup optional */ }
 
     if (aiCtx) {
       console.warn(`⚠️ [AI-Q] Nenhuma questão no banco para contentId: ${contentId} — gerando via Haiku`);
@@ -216,7 +232,7 @@ export async function getQuestionForContent(
           console.error("❌ [AI-Q] Falha ao persistir questão gerada:", persistErr);
         }
 
-        // Se a persistência falhou, retornar sem ID permanente
+        // Persistência falhou — retornar sem ID permanente (non-fatal)
         return {
           id: `ai_generated_${Date.now()}`,
           pergunta: aiQuestion.pergunta,
@@ -227,12 +243,11 @@ export async function getQuestionForContent(
         };
       }
     }
-
-    return null;
-  } catch (error) {
-    console.error("❌ [Question] Erro ao buscar por conteúdo:", error);
-    return null;
+  } catch (e: any) {
+    console.error(`❌ [Question T4] AI Haiku falhou: ${e?.message?.split("\n")[0]}`);
   }
+
+  return null;
 }
 
 // ============================================

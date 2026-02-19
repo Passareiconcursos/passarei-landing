@@ -391,9 +391,9 @@ export function registerSalaRoutes(app: Express) {
         // AI-generated question (non-persisted fallback) — answer stored in client
         correctAnswer = correctIndex;
       } else {
-        // Try question (Prisma legacy, stored lowercase in PG) first
+        // Try "Question" (Prisma legacy) first
         const prismaQ = await db.execute(sql`
-          SELECT "correctOption", "statement" FROM question WHERE id = ${questionId} LIMIT 1
+          SELECT "correctOption", "statement" FROM "Question" WHERE id = ${questionId} LIMIT 1
         `) as any[];
 
         if (prismaQ.length > 0) {
@@ -559,7 +559,7 @@ export function registerSalaRoutes(app: Express) {
           COUNT(qa.id) as total_questions,
           COUNT(CASE WHEN qa."isCorrect" = true THEN 1 END) as correct
         FROM "QuestionAttempt" qa
-        JOIN question q ON qa."questionId" = q.id
+        JOIN "Question" q ON qa."questionId" = q.id
         JOIN "Content" c ON q."contentId" = c.id
         JOIN "Subject" s ON c."subjectId" = s.id
         WHERE qa."userId" = ${student.userId}
@@ -915,11 +915,11 @@ export function registerSalaRoutes(app: Express) {
       `) as any[];
       if (ownerCheck.length === 0) return res.status(403).json({ success: false, error: "Acesso negado." });
 
-      // Get correct answer from question table (Prisma legacy, lowercase)
+      // Get correct answer from "Question" table (Prisma legacy)
       let correctAnswer = -1;
       if (questionId && !questionId.startsWith("ai_generated_") && !questionId.startsWith("fallback_")) {
         const qResult = await db.execute(sql`
-          SELECT "correctOption" FROM question WHERE id = ${questionId} LIMIT 1
+          SELECT "correctOption" FROM "Question" WHERE id = ${questionId} LIMIT 1
         `) as any[];
         correctAnswer = qResult[0]?.correctOption ?? -1;
       }
