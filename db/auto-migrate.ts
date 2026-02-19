@@ -426,15 +426,21 @@ async function migrateStudentAuthColumns() {
 }
 
 async function migrateEducationTables() {
-  // ── questions (plural, Drizzle) ───────────────────────────────────────
-  const qExists = await db.execute(sql`
-    SELECT EXISTS (
-      SELECT FROM information_schema.tables
-      WHERE table_name = 'questions'
-    ) as exists
-  `) as any[];
+  // Helper local: tenta criar uma tabela; loga mas não lança
+  const createTable = async (label: string, fn: () => Promise<void>) => {
+    try {
+      await fn();
+    } catch (err: any) {
+      console.warn(`  ⚠️ Criação de ${label} falhou (não fatal): ${err?.message?.split("\n")[0]}`);
+    }
+  };
 
-  if (!qExists[0]?.exists) {
+  // ── questions ──────────────────────────────────────────────────────────
+  await createTable("questions", async () => {
+    const r = await db.execute(sql`
+      SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'questions') as exists
+    `) as any[];
+    if (r[0]?.exists) { console.log("  ✅ [Migration] Tabela questions verificada/existente"); return; }
     console.log("  🔄 Criando tabela questions...");
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS questions (
@@ -457,29 +463,24 @@ async function migrateEducationTables() {
     `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_questions_content_id ON questions(content_id)`);
     console.log("  ✅ Tabela questions criada");
-  } else {
-    console.log("  ✅ [Migration] Tabela questions verificada/existente");
-  }
+  });
 
-  // ── sm2_reviews ───────────────────────────────────────────────────────
-  const sm2Exists = await db.execute(sql`
-    SELECT EXISTS (
-      SELECT FROM information_schema.tables
-      WHERE table_name = 'sm2_reviews'
-    ) as exists
-  `) as any[];
-
-  if (!sm2Exists[0]?.exists) {
+  // ── sm2_reviews (sem FK — user_id pode ser TEXT ou UUID dependendo do Prisma) ──
+  await createTable("sm2_reviews", async () => {
+    const r = await db.execute(sql`
+      SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'sm2_reviews') as exists
+    `) as any[];
+    if (r[0]?.exists) { console.log("  ✅ [Migration] Tabela sm2_reviews verificada/existente"); return; }
     console.log("  🔄 Criando tabela sm2_reviews...");
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS sm2_reviews (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL,
         content_id VARCHAR(255) NOT NULL,
         ease_factor REAL NOT NULL DEFAULT 2.5,
         interval INTEGER NOT NULL DEFAULT 1,
         repetitions INTEGER NOT NULL DEFAULT 0,
-        next_review_date TIMESTAMP NOT NULL,
+        next_review_date TIMESTAMP NOT NULL DEFAULT NOW(),
         last_quality INTEGER,
         times_correct INTEGER NOT NULL DEFAULT 0,
         times_incorrect INTEGER NOT NULL DEFAULT 0,
@@ -492,21 +493,15 @@ async function migrateEducationTables() {
     `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_sm2_user_content ON sm2_reviews(user_id, content_id)`);
     console.log("  ✅ Tabela sm2_reviews criada");
-  } else {
-    console.log("  ✅ [Migration] Tabela sm2_reviews verificada/existente");
-  }
+  });
 
-  // ── simulados + tabelas relacionadas ──────────────────────────────────
-  const simExists = await db.execute(sql`
-    SELECT EXISTS (
-      SELECT FROM information_schema.tables
-      WHERE table_name = 'simulados'
-    ) as exists
-  `) as any[];
-
-  if (!simExists[0]?.exists) {
+  // ── simulados ──────────────────────────────────────────────────────────
+  await createTable("simulados", async () => {
+    const r = await db.execute(sql`
+      SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'simulados') as exists
+    `) as any[];
+    if (r[0]?.exists) { console.log("  ✅ [Migration] Tabelas simulados verificadas/existentes"); return; }
     console.log("  🔄 Criando tabelas de simulados...");
-
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS simulados (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -524,7 +519,6 @@ async function migrateEducationTables() {
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
-
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS simulado_questions (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -534,11 +528,10 @@ async function migrateEducationTables() {
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
-
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS user_simulados (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL,
         simulado_id UUID NOT NULL REFERENCES simulados(id) ON DELETE CASCADE,
         status TEXT NOT NULL DEFAULT 'IN_PROGRESS',
         current_question INTEGER NOT NULL DEFAULT 0,
@@ -553,7 +546,6 @@ async function migrateEducationTables() {
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
-
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS simulado_answers (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -564,11 +556,8 @@ async function migrateEducationTables() {
         answered_at TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
-
     console.log("  ✅ Tabelas simulados, simulado_questions, user_simulados, simulado_answers criadas");
-  } else {
-    console.log("  ✅ [Migration] Tabelas de simulados verificadas/existentes");
-  }
+  });
 }
 
 async function migrateQuestionsCreatedByNullable() {
