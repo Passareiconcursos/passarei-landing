@@ -618,33 +618,477 @@ async function migrateConcursosTables() {
     )
   `);
 
-  // 4. Pre-seed: 5 concursos principais com editais reais conhecidos
-  await db.execute(sql`
-    INSERT INTO concursos (nome, sigla, esfera, exam_type, banca, cargo_padrao, lista_materias_json, created_at, updated_at)
-    VALUES
-      ('Polícia Federal', 'PF', 'FEDERAL', 'PF', 'CEBRASPE', 'Agente de Polícia Federal',
-       '[{"name":"Língua Portuguesa","weight":1,"questions":15,"topics":[]},{"name":"Direito Constitucional","weight":2,"questions":25,"topics":[]},{"name":"Direito Administrativo","weight":1,"questions":15,"topics":[]},{"name":"Direito Penal","weight":2,"questions":20,"topics":[]},{"name":"Direito Processual Penal","weight":2,"questions":20,"topics":[]},{"name":"Legislação Especial","weight":1,"questions":10,"topics":[]},{"name":"Informática","weight":1,"questions":10,"topics":[]}]'::jsonb,
-       NOW(), NOW()),
-      ('Polícia Rodoviária Federal', 'PRF', 'FEDERAL', 'PRF', 'CEBRASPE', 'Policial Rodoviário Federal',
-       '[{"name":"Língua Portuguesa","weight":1,"questions":15,"topics":[]},{"name":"Raciocínio Lógico e Matemático","weight":1,"questions":15,"topics":[]},{"name":"Direito Constitucional","weight":1,"questions":15,"topics":[]},{"name":"Legislação de Trânsito","weight":2,"questions":20,"topics":[]},{"name":"Informática","weight":1,"questions":10,"topics":[]}]'::jsonb,
-       NOW(), NOW()),
-      ('Polícia Penal Federal', 'PPF', 'FEDERAL', 'PP_FEDERAL', 'CEBRASPE', 'Agente de Polícia Penal Federal',
-       '[{"name":"Língua Portuguesa","weight":1,"questions":15,"topics":[]},{"name":"Direito Constitucional","weight":2,"questions":20,"topics":[]},{"name":"Direito Penal","weight":2,"questions":20,"topics":[]},{"name":"Direito Processual Penal","weight":2,"questions":20,"topics":[]},{"name":"Direito Administrativo","weight":1,"questions":15,"topics":[]}]'::jsonb,
-       NOW(), NOW()),
-      ('Polícia Militar de São Paulo', 'PM_SP', 'ESTADUAL', 'PM', 'VUNESP', 'Soldado PM',
-       '[{"name":"Língua Portuguesa","weight":1,"questions":15,"topics":[]},{"name":"Matemática","weight":1,"questions":10,"topics":[]},{"name":"Raciocínio Lógico e Matemático","weight":1,"questions":10,"topics":[]},{"name":"Direito Constitucional","weight":1,"questions":10,"topics":[]},{"name":"Legislação Específica PM","weight":2,"questions":15,"topics":[]}]'::jsonb,
-       NOW(), NOW()),
-      ('Polícia Civil de São Paulo', 'PC_SP', 'ESTADUAL', 'PC', 'VUNESP', 'Investigador de Polícia',
-       '[{"name":"Língua Portuguesa","weight":1,"questions":15,"topics":[]},{"name":"Direito Penal","weight":2,"questions":15,"topics":[]},{"name":"Direito Processual Penal","weight":2,"questions":15,"topics":[]},{"name":"Direito Constitucional","weight":1,"questions":10,"topics":[]},{"name":"Direito Administrativo","weight":1,"questions":10,"topics":[]}]'::jsonb,
-       NOW(), NOW())
-    ON CONFLICT (sigla) DO UPDATE SET
-      banca = EXCLUDED.banca,
-      cargo_padrao = EXCLUDED.cargo_padrao,
-      lista_materias_json = EXCLUDED.lista_materias_json,
-      updated_at = NOW()
-  `);
+  // 4. Pre-seed completo: todos os concursos do PDF "EDITAIS CONCURSOS"
+  // Dados baseados nos últimos editais reais (CEBRASPE/VUNESP/FCC patterns)
+  const concursosData: Array<{
+    nome: string; sigla: string; esfera: string; exam_type: string;
+    banca: string; cargo_padrao: string; estado: string | null;
+    materias: Array<{ name: string; weight: number; questions: number; topics: string[] }>;
+  }> = [
+    // ── POLÍCIA FEDERAL (CEBRASPE) ──────────────────────────────────────────
+    { nome: "Polícia Federal", sigla: "PF", esfera: "FEDERAL", exam_type: "PF",
+      banca: "CEBRASPE", cargo_padrao: "Agente de Polícia Federal", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Inglês", weight: 1, questions: 5, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Constitucional", weight: 2, questions: 10, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Penal", weight: 2, questions: 10, topics: [] },
+        { name: "Direito Processual Penal", weight: 2, questions: 10, topics: [] },
+        { name: "Criminalística", weight: 1, questions: 10, topics: [] },
+        { name: "Legislação Especial", weight: 1, questions: 5, topics: [] },
+        { name: "Informática", weight: 1, questions: 5, topics: [] },
+      ] },
+    { nome: "Polícia Federal - Escrivão", sigla: "PF_ESC", esfera: "FEDERAL", exam_type: "PF",
+      banca: "CEBRASPE", cargo_padrao: "Escrivão de Polícia Federal", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 2, questions: 20, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Constitucional", weight: 2, questions: 10, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Penal", weight: 2, questions: 10, topics: [] },
+        { name: "Direito Processual Penal", weight: 2, questions: 10, topics: [] },
+        { name: "Criminalística", weight: 1, questions: 10, topics: [] },
+        { name: "Informática", weight: 1, questions: 10, topics: [] },
+      ] },
+    { nome: "Polícia Federal - Papiloscopista", sigla: "PF_PAPILO", esfera: "FEDERAL", exam_type: "PF",
+      banca: "CEBRASPE", cargo_padrao: "Papiloscopista Federal", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 5, topics: [] },
+        { name: "Direito Penal", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Processual Penal", weight: 1, questions: 10, topics: [] },
+        { name: "Papiloscopia", weight: 3, questions: 25, topics: [] },
+        { name: "Criminalística", weight: 2, questions: 15, topics: [] },
+      ] },
+    { nome: "Polícia Federal - Delegado", sigla: "PF_DEL", esfera: "FEDERAL", exam_type: "PF",
+      banca: "CEBRASPE", cargo_padrao: "Delegado de Polícia Federal", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 5, topics: [] },
+        { name: "Direito Constitucional", weight: 2, questions: 15, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Penal", weight: 3, questions: 25, topics: [] },
+        { name: "Direito Processual Penal", weight: 3, questions: 25, topics: [] },
+        { name: "Direito Civil", weight: 1, questions: 10, topics: [] },
+        { name: "Medicina Legal", weight: 1, questions: 5, topics: [] },
+        { name: "Criminalística", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── POLÍCIA RODOVIÁRIA FEDERAL (CEBRASPE) ────────────────────────────────
+    { nome: "Polícia Rodoviária Federal", sigla: "PRF", esfera: "FEDERAL", exam_type: "PRF",
+      banca: "CEBRASPE", cargo_padrao: "Policial Rodoviário Federal", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
+        { name: "Matemática", weight: 1, questions: 5, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Legislação de Trânsito", weight: 3, questions: 20, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 5, topics: [] },
+        { name: "Informática", weight: 1, questions: 5, topics: [] },
+        { name: "Atualidades", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── POLÍCIA PENAL FEDERAL / DEPEN (CEBRASPE) ────────────────────────────
+    { nome: "Polícia Penal Federal", sigla: "PPF", esfera: "FEDERAL", exam_type: "PP_FEDERAL",
+      banca: "CEBRASPE", cargo_padrao: "Agente de Polícia Penal Federal", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Constitucional", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Penal", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Processual Penal", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 15, topics: [] },
+        { name: "Legislação de Execução Penal", weight: 2, questions: 10, topics: [] },
+      ] },
+    // ── POLÍCIA FERROVIÁRIA FEDERAL (estimado — sem edital recente) ──────────
+    { nome: "Polícia Ferroviária Federal", sigla: "PFF", esfera: "FEDERAL", exam_type: "PF_FERROVIARIA",
+      banca: "CEBRASPE", cargo_padrao: "Agente Ferroviário", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Penal", weight: 1, questions: 10, topics: [] },
+        { name: "Legislação Ferroviária", weight: 2, questions: 15, topics: [] },
+        { name: "Informática", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── POLÍCIA LEGISLATIVA FEDERAL / CÂMARA (CEBRASPE) ─────────────────────
+    { nome: "Polícia Legislativa Federal", sigla: "PLF", esfera: "FEDERAL", exam_type: "PL_FEDERAL",
+      banca: "CEBRASPE", cargo_padrao: "Policial Legislativo Federal", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Constitucional", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Administrativo", weight: 2, questions: 15, topics: [] },
+        { name: "Legislação da Câmara dos Deputados", weight: 2, questions: 15, topics: [] },
+        { name: "Informática", weight: 1, questions: 5, topics: [] },
+        { name: "Atualidades", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── POLÍCIA JUDICIAL CNJ (FCC/CEBRASPE) ──────────────────────────────────
+    { nome: "Polícia Judicial CNJ", sigla: "PJ_CNJ", esfera: "FEDERAL", exam_type: "PJ_CNJ",
+      banca: "FCC", cargo_padrao: "Analista Judiciário - Área Policial", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Constitucional", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Administrativo", weight: 2, questions: 15, topics: [] },
+        { name: "Legislação Específica CNJ", weight: 2, questions: 15, topics: [] },
+        { name: "Informática", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── ABIN (CEBRASPE) ───────────────────────────────────────────────────────
+    { nome: "Agência Brasileira de Inteligência", sigla: "ABIN", esfera: "FEDERAL", exam_type: "ABIN",
+      banca: "CEBRASPE", cargo_padrao: "Oficial de Inteligência", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Inglês", weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Atividade de Inteligência", weight: 3, questions: 20, topics: [] },
+        { name: "Relações Internacionais", weight: 1, questions: 10, topics: [] },
+        { name: "Atualidades", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── ANAC (CEBRASPE) ───────────────────────────────────────────────────────
+    { nome: "Agência Nacional de Aviação Civil", sigla: "ANAC", esfera: "FEDERAL", exam_type: "ANAC",
+      banca: "CEBRASPE", cargo_padrao: "Especialista em Regulação de Aviação Civil", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Inglês", weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Administração Pública", weight: 1, questions: 10, topics: [] },
+        { name: "Legislação Aeronáutica", weight: 3, questions: 20, topics: [] },
+      ] },
+    // ── CPNU (CEBRASPE) ───────────────────────────────────────────────────────
+    { nome: "Concurso Público Nacional Unificado", sigla: "CPNU", esfera: "FEDERAL", exam_type: "CPNU",
+      banca: "CEBRASPE", cargo_padrao: "Analista de Políticas Públicas", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 2, questions: 20, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Constitucional", weight: 2, questions: 15, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Política e Gestão Pública", weight: 1, questions: 15, topics: [] },
+        { name: "Atualidades", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── EXÉRCITO ──────────────────────────────────────────────────────────────
+    { nome: "Exército Brasileiro - ESPCEX", sigla: "ESPCEX", esfera: "FEDERAL", exam_type: "EXERCITO",
+      banca: "VUNESP", cargo_padrao: "Cadete do Exército (ESPCEX)", estado: null,
+      materias: [
+        { name: "Matemática", weight: 3, questions: 40, topics: [] },
+        { name: "Física", weight: 2, questions: 20, topics: [] },
+        { name: "Química", weight: 1, questions: 10, topics: [] },
+        { name: "Biologia", weight: 1, questions: 10, topics: [] },
+        { name: "Língua Portuguesa", weight: 1, questions: 10, topics: [] },
+        { name: "História", weight: 1, questions: 5, topics: [] },
+        { name: "Geografia", weight: 1, questions: 5, topics: [] },
+      ] },
+    { nome: "Instituto Militar de Engenharia", sigla: "IME", esfera: "FEDERAL", exam_type: "EXERCITO",
+      banca: "IME", cargo_padrao: "Cadete de Engenharia (IME)", estado: null,
+      materias: [
+        { name: "Matemática", weight: 3, questions: 50, topics: [] },
+        { name: "Física", weight: 2, questions: 30, topics: [] },
+        { name: "Química", weight: 1, questions: 20, topics: [] },
+        { name: "Língua Portuguesa", weight: 1, questions: 10, topics: [] },
+        { name: "Inglês", weight: 1, questions: 10, topics: [] },
+      ] },
+    { nome: "Escola de Sargentos das Armas", sigla: "ESA", esfera: "FEDERAL", exam_type: "EXERCITO",
+      banca: "ESPCEX", cargo_padrao: "Sargento do Exército", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 20, topics: [] },
+        { name: "Matemática", weight: 2, questions: 20, topics: [] },
+        { name: "Física", weight: 1, questions: 10, topics: [] },
+        { name: "História do Brasil", weight: 1, questions: 10, topics: [] },
+        { name: "Atualidades", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── MARINHA ───────────────────────────────────────────────────────────────
+    { nome: "Colégio Naval - Marinha do Brasil", sigla: "CN", esfera: "FEDERAL", exam_type: "MARINHA",
+      banca: "CN", cargo_padrao: "Aspirante a Guarda-Marinha", estado: null,
+      materias: [
+        { name: "Matemática", weight: 3, questions: 35, topics: [] },
+        { name: "Física", weight: 2, questions: 15, topics: [] },
+        { name: "Química", weight: 1, questions: 10, topics: [] },
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Inglês", weight: 1, questions: 10, topics: [] },
+        { name: "Ciências Naturais", weight: 1, questions: 10, topics: [] },
+        { name: "História", weight: 1, questions: 5, topics: [] },
+      ] },
+    { nome: "Escola Naval - Marinha do Brasil", sigla: "EN", esfera: "FEDERAL", exam_type: "MARINHA",
+      banca: "EN", cargo_padrao: "Guarda-Marinha", estado: null,
+      materias: [
+        { name: "Matemática", weight: 3, questions: 40, topics: [] },
+        { name: "Física", weight: 2, questions: 20, topics: [] },
+        { name: "Química", weight: 1, questions: 10, topics: [] },
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Inglês", weight: 1, questions: 15, topics: [] },
+      ] },
+    { nome: "Fuzileiros Navais - Marinha do Brasil", sigla: "FUZNAVAIS", esfera: "FEDERAL", exam_type: "MARINHA",
+      banca: "CESGRANRIO", cargo_padrao: "Recruta Fuzileiro Naval", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 2, questions: 20, topics: [] },
+        { name: "Matemática", weight: 2, questions: 20, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Conhecimentos Gerais", weight: 1, questions: 15, topics: [] },
+        { name: "Inglês", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── FORÇA AÉREA ───────────────────────────────────────────────────────────
+    { nome: "Instituto Tecnológico de Aeronáutica", sigla: "ITA", esfera: "FEDERAL", exam_type: "FAB",
+      banca: "ITA", cargo_padrao: "Cadete do ITA", estado: null,
+      materias: [
+        { name: "Matemática", weight: 3, questions: 60, topics: [] },
+        { name: "Física", weight: 3, questions: 40, topics: [] },
+        { name: "Química", weight: 2, questions: 20, topics: [] },
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Inglês", weight: 1, questions: 15, topics: [] },
+      ] },
+    { nome: "Escola Preparatória de Cadetes do Ar", sigla: "EPCAR", esfera: "FEDERAL", exam_type: "FAB",
+      banca: "EPCAR", cargo_padrao: "Cadete do Ar", estado: null,
+      materias: [
+        { name: "Matemática", weight: 3, questions: 30, topics: [] },
+        { name: "Física", weight: 2, questions: 20, topics: [] },
+        { name: "Química", weight: 1, questions: 10, topics: [] },
+        { name: "Biologia", weight: 1, questions: 10, topics: [] },
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Inglês", weight: 1, questions: 10, topics: [] },
+      ] },
+    { nome: "Escola de Especialistas da Aeronáutica - Sargentos", sigla: "EAGS", esfera: "FEDERAL", exam_type: "FAB",
+      banca: "EAGS", cargo_padrao: "Sargento da Aeronáutica", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 20, topics: [] },
+        { name: "Matemática", weight: 2, questions: 20, topics: [] },
+        { name: "Física", weight: 1, questions: 10, topics: [] },
+        { name: "Inglês", weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+      ] },
+    // ── POLÍCIA MILITAR ───────────────────────────────────────────────────────
+    { nome: "Polícia Militar - Oficial (CFO)", sigla: "PM_CFO", esfera: "ESTADUAL", exam_type: "PM",
+      banca: "VUNESP", cargo_padrao: "Oficial (Cadete PM)", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 20, topics: [] },
+        { name: "Matemática", weight: 1, questions: 15, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Constitucional", weight: 2, questions: 15, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Legislação Militar PM", weight: 2, questions: 15, topics: [] },
+      ] },
+    { nome: "Polícia Militar - Soldado", sigla: "PM_SD", esfera: "ESTADUAL", exam_type: "PM",
+      banca: "VUNESP", cargo_padrao: "Soldado PM", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Matemática", weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Legislação Específica PM", weight: 2, questions: 15, topics: [] },
+        { name: "Informática", weight: 1, questions: 5, topics: [] },
+      ] },
+    { nome: "Polícia Militar de São Paulo - Soldado", sigla: "PM_SP", esfera: "ESTADUAL", exam_type: "PM",
+      banca: "VUNESP", cargo_padrao: "Soldado PM SP", estado: "SP",
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Matemática", weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Legislação Específica PM", weight: 2, questions: 15, topics: [] },
+        { name: "Informática", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── CORPO DE BOMBEIROS MILITAR ────────────────────────────────────────────
+    { nome: "Corpo de Bombeiros Militar - Oficial (CFO)", sigla: "CBM_CFO", esfera: "ESTADUAL", exam_type: "CBM",
+      banca: "VUNESP", cargo_padrao: "Oficial CBM", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Matemática", weight: 1, questions: 15, topics: [] },
+        { name: "Física", weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Legislação Bombeiros", weight: 2, questions: 15, topics: [] },
+        { name: "Química", weight: 1, questions: 5, topics: [] },
+      ] },
+    { nome: "Corpo de Bombeiros Militar - Soldado", sigla: "CBM_SD", esfera: "ESTADUAL", exam_type: "CBM",
+      banca: "VUNESP", cargo_padrao: "Soldado CBM", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Matemática", weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Legislação Específica CBM", weight: 2, questions: 15, topics: [] },
+        { name: "Noções de Primeiros Socorros", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── POLÍCIA CIVIL ─────────────────────────────────────────────────────────
+    { nome: "Polícia Civil - Agente", sigla: "PC_AGT", esfera: "ESTADUAL", exam_type: "PC",
+      banca: "VUNESP", cargo_padrao: "Agente de Polícia Civil", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Penal", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Processual Penal", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Informática", weight: 1, questions: 5, topics: [] },
+      ] },
+    { nome: "Polícia Civil - Perito Criminal", sigla: "PC_PERITO", esfera: "ESTADUAL", exam_type: "PC",
+      banca: "VUNESP", cargo_padrao: "Perito Criminal", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 10, topics: [] },
+        { name: "Ciências Forenses", weight: 3, questions: 30, topics: [] },
+        { name: "Química", weight: 2, questions: 15, topics: [] },
+        { name: "Biologia", weight: 2, questions: 10, topics: [] },
+        { name: "Física", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Processual Penal", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Penal", weight: 1, questions: 5, topics: [] },
+      ] },
+    { nome: "Polícia Civil - Papiloscopista", sigla: "PC_PAPILO", esfera: "ESTADUAL", exam_type: "PC",
+      banca: "VUNESP", cargo_padrao: "Papiloscopista", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Papiloscopia", weight: 3, questions: 25, topics: [] },
+        { name: "Direito Penal", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Processual Penal", weight: 1, questions: 15, topics: [] },
+        { name: "Criminalística", weight: 2, questions: 10, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+      ] },
+    { nome: "Polícia Civil - Investigador", sigla: "PC_INV", esfera: "ESTADUAL", exam_type: "PC",
+      banca: "VUNESP", cargo_padrao: "Investigador de Polícia", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Penal", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Processual Penal", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Criminologia", weight: 1, questions: 5, topics: [] },
+      ] },
+    { nome: "Polícia Civil SP - Investigador", sigla: "PC_SP", esfera: "ESTADUAL", exam_type: "PC",
+      banca: "VUNESP", cargo_padrao: "Investigador de Polícia SP", estado: "SP",
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Penal", weight: 2, questions: 15, topics: [] },
+        { name: "Direito Processual Penal", weight: 2, questions: 15, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+      ] },
+    { nome: "Polícia Civil - Escrivão", sigla: "PC_ESC", esfera: "ESTADUAL", exam_type: "PC",
+      banca: "VUNESP", cargo_padrao: "Escrivão de Polícia Civil", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Penal", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Processual Penal", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Informática", weight: 1, questions: 5, topics: [] },
+      ] },
+    { nome: "Polícia Civil - Delegado", sigla: "PC_DEL", esfera: "ESTADUAL", exam_type: "PC",
+      banca: "CEBRASPE", cargo_padrao: "Delegado de Polícia", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 5, topics: [] },
+        { name: "Direito Constitucional", weight: 2, questions: 15, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Penal", weight: 3, questions: 25, topics: [] },
+        { name: "Direito Processual Penal", weight: 3, questions: 25, topics: [] },
+        { name: "Direito Civil", weight: 1, questions: 10, topics: [] },
+        { name: "Medicina Legal", weight: 1, questions: 5, topics: [] },
+        { name: "Criminalística", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── POLÍCIA PENAL ESTADUAL ────────────────────────────────────────────────
+    { nome: "Polícia Penal Estadual - Agente Penitenciário", sigla: "PPE", esfera: "ESTADUAL", exam_type: "PP_ESTADUAL",
+      banca: "CEBRASPE", cargo_padrao: "Agente Penitenciário", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Penal", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Processual Penal", weight: 1, questions: 15, topics: [] },
+        { name: "Legislação de Execução Penal", weight: 3, questions: 20, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Psicologia para Penitenciária", weight: 1, questions: 5, topics: [] },
+      ] },
+    { nome: "Polícia Penal Estadual - Técnico Superior", sigla: "PPE_TEC", esfera: "ESTADUAL", exam_type: "PP_ESTADUAL",
+      banca: "CEBRASPE", cargo_padrao: "Técnico Superior Penitenciário", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Penal", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Processual Penal", weight: 1, questions: 15, topics: [] },
+        { name: "Legislação de Execução Penal", weight: 3, questions: 20, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Gestão Penitenciária", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── POLÍCIA CIENTÍFICA ESTADUAL ───────────────────────────────────────────
+    { nome: "Polícia Científica Estadual - Perito", sigla: "PC_CIENT", esfera: "ESTADUAL", exam_type: "PC_CIENTIFICA",
+      banca: "VUNESP", cargo_padrao: "Perito Criminal Estadual", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 10, topics: [] },
+        { name: "Ciências Forenses", weight: 3, questions: 30, topics: [] },
+        { name: "Química", weight: 2, questions: 15, topics: [] },
+        { name: "Biologia", weight: 2, questions: 15, topics: [] },
+        { name: "Física", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Processual Penal", weight: 1, questions: 10, topics: [] },
+      ] },
+    // ── POLÍCIA LEGISLATIVA ESTADUAL ──────────────────────────────────────────
+    { nome: "Polícia Legislativa Estadual", sigla: "PLE", esfera: "ESTADUAL", exam_type: "PL_ESTADUAL",
+      banca: "FCC", cargo_padrao: "Agente de Polícia Legislativa", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Constitucional", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Administrativo", weight: 2, questions: 15, topics: [] },
+        { name: "Regimento Interno", weight: 2, questions: 15, topics: [] },
+        { name: "Legislação Estadual", weight: 1, questions: 10, topics: [] },
+        { name: "Informática", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── GUARDA PORTUÁRIA ──────────────────────────────────────────────────────
+    { nome: "Guarda Portuária", sigla: "GP", esfera: "ESTADUAL", exam_type: "GP",
+      banca: "CEBRASPE", cargo_padrao: "Guarda Portuário", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Matemática", weight: 1, questions: 5, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
+        { name: "Legislação Portuária", weight: 3, questions: 15, topics: [] },
+        { name: "Informática", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── GUARDA MUNICIPAL ──────────────────────────────────────────────────────
+    { nome: "Guarda Municipal", sigla: "GM", esfera: "MUNICIPAL", exam_type: "GM",
+      banca: "VUNESP", cargo_padrao: "Guarda Municipal", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
+        { name: "Matemática", weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Legislação Municipal", weight: 2, questions: 10, topics: [] },
+        { name: "Estatuto das Guardas Municipais", weight: 2, questions: 10, topics: [] },
+        { name: "Informática", weight: 1, questions: 5, topics: [] },
+      ] },
+    // ── MIN. DA DEFESA ────────────────────────────────────────────────────────
+    { nome: "Ministério da Defesa", sigla: "MIN_DEF", esfera: "FEDERAL", exam_type: "MIN_DEFESA",
+      banca: "NOVA CONCURSOS", cargo_padrao: "Técnico em Assuntos Educacionais", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 2, questions: 20, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Administrativo", weight: 1, questions: 15, topics: [] },
+        { name: "Atualidades e Defesa Nacional", weight: 1, questions: 10, topics: [] },
+        { name: "Informática", weight: 1, questions: 5, topics: [] },
+      ] },
+  ];
 
-  console.log("  ✅ Tabelas concursos + edital_vinculos OK (5 concursos pré-seeded)");
+  let seeded = 0;
+  for (const c of concursosData) {
+    await db.execute(sql`
+      INSERT INTO concursos (nome, sigla, esfera, exam_type, banca, cargo_padrao, estado, lista_materias_json, created_at, updated_at)
+      VALUES (
+        ${c.nome}, ${c.sigla}, ${c.esfera}, ${c.exam_type},
+        ${c.banca}, ${c.cargo_padrao}, ${c.estado ?? null},
+        ${JSON.stringify(c.materias)}::jsonb,
+        NOW(), NOW()
+      )
+      ON CONFLICT (sigla) DO UPDATE SET
+        banca = EXCLUDED.banca,
+        cargo_padrao = EXCLUDED.cargo_padrao,
+        lista_materias_json = EXCLUDED.lista_materias_json,
+        updated_at = NOW()
+    `);
+    seeded++;
+  }
+
+  console.log(`  ✅ Tabelas concursos + edital_vinculos OK (${seeded} concursos pré-seeded do PDF)`);
+  console.log("     Incluídos: PF/PRF/PPF/PFF/PLF/CNJ, ABIN/ANAC/CPNU, Exército/Marinha/FAB, PM/PC/CBM, PP Estadual, Guardas");
 }
 
 async function migrateUserConcursoColumn() {
