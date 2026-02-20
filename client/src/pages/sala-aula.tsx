@@ -1150,52 +1150,120 @@ export default function SalaAula() {
                     </Card>
                   </motion.div>
 
-                  {/* Card 2 — Reforço SM2 (bloqueado até 15 questões) */}
+                  {/* Card 2 — Reforço SM2 */}
                   {(() => {
                     const total = stats?.totalQuestionsAnswered ?? 0;
                     const locked = total < 15;
                     return (
-                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-                        <Card className={cn(
-                          "transition-all h-full",
-                          locked ? "opacity-50 grayscale cursor-not-allowed" : "cursor-pointer hover:shadow-md hover:border-orange-300 active:scale-95"
-                        )} onClick={locked ? undefined : () => { setShowDashboard(false); setStudyMode("livre"); startSm2Review(); }}>
-                          <CardContent className="p-4 flex flex-col gap-2">
-                            <RotateCcw className="h-7 w-7 text-orange-500" />
-                            <p className="text-sm font-semibold leading-tight">Reforço SM2</p>
-                            {locked ? (
-                              <>
-                                <Progress value={Math.round(total / 15 * 100)} className="h-1" />
-                                <p className="text-[11px] text-muted-foreground">{total}/15 para desbloquear</p>
-                              </>
-                            ) : (
-                              <p className="text-[11px] text-muted-foreground">{sm2DueCount} itens para revisar</p>
-                            )}
-                          </CardContent>
-                        </Card>
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="h-full">
+                        {locked ? (
+                          /* ── BLOQUEADO ── */
+                          <Card className="h-full cursor-not-allowed border-2 bg-emerald-900/10 border-emerald-900/20">
+                            <CardContent className="p-4 flex flex-col gap-2">
+                              <RotateCcw className="h-7 w-7 text-emerald-800/25" />
+                              <div>
+                                <Badge variant="outline" className="text-[8px] font-bold tracking-widest uppercase text-emerald-800/50 border-emerald-800/25 px-1.5 py-0 mb-1.5">
+                                  MAPA EM CONSTRUÇÃO
+                                </Badge>
+                                <p className="text-sm font-semibold leading-tight text-foreground/50">Reforço SM2</p>
+                              </div>
+                              <div className="space-y-1.5 mt-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-medium tabular-nums text-emerald-900/40">{total}/15 questões</span>
+                                  <span className="text-[10px] text-emerald-900/30">{Math.round(total / 15 * 100)}%</span>
+                                </div>
+                                <Progress value={Math.round(total / 15 * 100)} className="h-1 bg-emerald-900/10 [&>div]:bg-emerald-700/40" />
+                                <p className="text-[9px] text-muted-foreground/60 leading-snug">Atinja sua cota de estudos para desbloquear</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          /* ── LIBERADO — brilho verde ── */
+                          <motion.div
+                            className="rounded-lg h-full"
+                            animate={{ boxShadow: ["0 0 0 0 rgba(34,197,94,0)", "0 0 0 7px rgba(34,197,94,0.22)", "0 0 0 0 rgba(34,197,94,0)"] }}
+                            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                          >
+                            <Card className="h-full cursor-pointer border-2 border-green-300/60 hover:border-green-400 hover:shadow-md transition-all active:scale-95"
+                              onClick={() => { setShowDashboard(false); setStudyMode("livre"); startSm2Review(); }}>
+                              <CardContent className="p-4 flex flex-col gap-2">
+                                <RotateCcw className="h-7 w-7 text-green-600" />
+                                <div>
+                                  <Badge className="text-[8px] font-bold tracking-widest uppercase bg-green-500 hover:bg-green-500 px-1.5 py-0 mb-1.5">
+                                    REFORÇO CRÍTICO
+                                  </Badge>
+                                  <p className="text-sm font-semibold leading-tight">Reforço SM2</p>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground">{sm2DueCount} itens para revisar</p>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        )}
                       </motion.div>
                     );
                   })()}
 
                   {/* Card 3 — Simulados */}
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                    <Card className="cursor-pointer hover:shadow-md hover:border-violet-300 transition-all active:scale-95 h-full"
-                      onClick={() => { setShowDashboard(false); setStudyMode("simulado"); fetchSimulados(); }}>
-                      <CardContent className="p-4 flex flex-col gap-2">
-                        <Trophy className="h-7 w-7 text-violet-500" />
-                        <p className="text-sm font-semibold leading-tight">Simulados</p>
-                        {weeklyStatus?.available ? (
-                          <Badge className="text-[10px] w-fit bg-green-500 hover:bg-green-500">Semanal disponível</Badge>
-                        ) : weeklyStatus?.nextAvailableAt ? (
-                          <p className="text-[11px] text-muted-foreground">
-                            Próximo em {Math.ceil((new Date(weeklyStatus.nextAvailableAt).getTime() - Date.now()) / 86400000)}d
-                          </p>
+                  {(() => {
+                    const weeklyAvailable = weeklyStatus?.available === true;
+                    const weeklyCooldown = weeklyStatus?.reason === "cooldown";
+                    return (
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="h-full">
+                        {weeklyAvailable ? (
+                          /* ── PROVA LIBERADA — brilho verde ── */
+                          <motion.div
+                            className="rounded-lg h-full"
+                            animate={{ boxShadow: ["0 0 0 0 rgba(34,197,94,0)", "0 0 0 7px rgba(34,197,94,0.22)", "0 0 0 0 rgba(34,197,94,0)"] }}
+                            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+                          >
+                            <Card className="h-full cursor-pointer border-2 border-green-300/60 hover:border-green-400 hover:shadow-md transition-all active:scale-95"
+                              onClick={() => { setShowDashboard(false); setStudyMode("simulado"); fetchSimulados(); }}>
+                              <CardContent className="p-4 flex flex-col gap-2">
+                                <Trophy className="h-7 w-7 text-green-600" />
+                                <div>
+                                  <Badge className="text-[8px] font-bold tracking-widest uppercase bg-green-500 hover:bg-green-500 px-1.5 py-0 mb-1.5">
+                                    PROVA LIBERADA
+                                  </Badge>
+                                  <p className="text-sm font-semibold leading-tight">Simulados</p>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground">Simulado semanal pronto</p>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        ) : weeklyCooldown ? (
+                          /* ── COOLDOWN — consolidando base ── */
+                          <Card className="h-full cursor-pointer border-2 bg-emerald-900/10 border-emerald-900/20 hover:shadow-sm transition-all active:scale-95"
+                            onClick={() => { setShowDashboard(false); setStudyMode("simulado"); fetchSimulados(); }}>
+                            <CardContent className="p-4 flex flex-col gap-2">
+                              <Trophy className="h-7 w-7 text-emerald-800/25" />
+                              <div>
+                                <Badge variant="outline" className="text-[8px] font-bold tracking-widest uppercase text-emerald-800/50 border-emerald-800/25 px-1.5 py-0 mb-1.5">
+                                  CONSOLIDANDO BASE
+                                </Badge>
+                                <p className="text-sm font-semibold leading-tight text-foreground/50">Simulados</p>
+                              </div>
+                              <div className="space-y-1 mt-1">
+                                <p className="text-[10px] font-medium tabular-nums text-emerald-900/40">
+                                  Próximo em {Math.ceil((new Date(weeklyStatus!.nextAvailableAt!).getTime() - Date.now()) / 86400000)}d
+                                </p>
+                                <p className="text-[9px] text-muted-foreground/60 leading-snug">Atinja sua cota de estudos para desbloquear</p>
+                              </div>
+                            </CardContent>
+                          </Card>
                         ) : (
-                          <p className="text-[11px] text-muted-foreground">Mensal + Semanal</p>
+                          /* ── ESTADO NEUTRO ── */
+                          <Card className="h-full cursor-pointer hover:shadow-md hover:border-violet-300 transition-all active:scale-95"
+                            onClick={() => { setShowDashboard(false); setStudyMode("simulado"); fetchSimulados(); }}>
+                            <CardContent className="p-4 flex flex-col gap-2">
+                              <Trophy className="h-7 w-7 text-violet-500" />
+                              <p className="text-sm font-semibold leading-tight">Simulados</p>
+                              <p className="text-[11px] text-muted-foreground">Mensal + Semanal</p>
+                            </CardContent>
+                          </Card>
                         )}
-                      </CardContent>
-                    </Card>
-                  </motion.div>
+                      </motion.div>
+                    );
+                  })()}
 
                   {/* Card 4 — Desempenho */}
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
