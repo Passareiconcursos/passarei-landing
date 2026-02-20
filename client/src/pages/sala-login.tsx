@@ -26,19 +26,27 @@ import { GraduationCap, Loader2, Eye, EyeOff, Send } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
-  password: z.string().min(6, { message: "Senha deve ter no mínimo 6 caracteres" }),
+  password: z
+    .string()
+    .min(6, { message: "Senha deve ter no mínimo 6 caracteres" }),
 });
 
-const registerSchema = z.object({
-  name: z.string().min(2, { message: "Nome deve ter no mínimo 2 caracteres" }),
-  email: z.string().email({ message: "Email inválido" }),
-  phone: z.string().optional(),
-  password: z.string().min(6, { message: "Senha deve ter no mínimo 6 caracteres" }),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "As senhas não coincidem",
-  path: ["confirmPassword"],
-});
+const registerSchema = z
+  .object({
+    name: z
+      .string()
+      .min(2, { message: "Nome deve ter no mínimo 2 caracteres" }),
+    email: z.string().email({ message: "Email inválido" }),
+    phone: z.string().optional(),
+    password: z
+      .string()
+      .min(6, { message: "Senha deve ter no mínimo 6 caracteres" }),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "As senhas não coincidem",
+    path: ["confirmPassword"],
+  });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -48,7 +56,12 @@ export default function SalaLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
-  const { login, register: registerStudent, isAuthenticated, student } = useStudentAuth();
+  const {
+    login,
+    register: registerStudent,
+    isAuthenticated,
+    student,
+  } = useStudentAuth();
   const [, setLocation] = useLocation();
 
   // Redirect if already authenticated
@@ -68,7 +81,13 @@ export default function SalaLogin() {
 
   const registerForm = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: "", email: "", phone: "", password: "", confirmPassword: "" },
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
+    },
   });
 
   const onLogin = async (data: LoginFormData) => {
@@ -79,7 +98,11 @@ export default function SalaLogin() {
         toast({ title: "Bem-vindo de volta!" });
         // Redirect handled by auth state change
       } else {
-        toast({ variant: "destructive", title: "Erro", description: result.error });
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: result.error,
+        });
       }
     } finally {
       setIsLoading(false);
@@ -99,7 +122,11 @@ export default function SalaLogin() {
         toast({ title: "Conta criada com sucesso!" });
         // Redirect handled by auth state change
       } else {
-        toast({ variant: "destructive", title: "Erro", description: result.error });
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: result.error,
+        });
       }
     } finally {
       setIsLoading(false);
@@ -156,7 +183,10 @@ export default function SalaLogin() {
 
             {mode === "login" ? (
               <Form key="login-form" {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
+                <form
+                  onSubmit={loginForm.handleSubmit(onLogin)}
+                  className="space-y-4"
+                >
                   <FormField
                     control={loginForm.control}
                     name="email"
@@ -196,7 +226,11 @@ export default function SalaLogin() {
                               onClick={() => setShowPassword(!showPassword)}
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                             >
-                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
                             </button>
                           </div>
                         </FormControl>
@@ -206,7 +240,10 @@ export default function SalaLogin() {
                   />
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando...</>
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                        Entrando...
+                      </>
                     ) : (
                       "Entrar"
                     )}
@@ -215,7 +252,10 @@ export default function SalaLogin() {
               </Form>
             ) : (
               <Form key="register-form" {...registerForm}>
-                <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
+                <form
+                  onSubmit={registerForm.handleSubmit(onRegister)}
+                  className="space-y-4"
+                >
                   <FormField
                     control={registerForm.control}
                     name="name"
@@ -223,7 +263,11 @@ export default function SalaLogin() {
                       <FormItem>
                         <FormLabel>Nome completo</FormLabel>
                         <FormControl>
-                          <Input placeholder="Seu nome" disabled={isLoading} {...field} />
+                          <Input
+                            placeholder="Seu nome"
+                            disabled={isLoading}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -236,7 +280,13 @@ export default function SalaLogin() {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input placeholder="seu@email.com" type="email" autoComplete="email" disabled={isLoading} {...field} />
+                          <Input
+                            placeholder="seu@email.com"
+                            type="email"
+                            autoComplete="email"
+                            disabled={isLoading}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -249,7 +299,11 @@ export default function SalaLogin() {
                       <FormItem>
                         <FormLabel>Telefone (opcional)</FormLabel>
                         <FormControl>
-                          <Input placeholder="(11) 99999-9999" disabled={isLoading} {...field} />
+                          <Input
+                            placeholder="(11) 99999-9999"
+                            disabled={isLoading}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -275,7 +329,11 @@ export default function SalaLogin() {
                               onClick={() => setShowPassword(!showPassword)}
                               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                             >
-                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
                             </button>
                           </div>
                         </FormControl>
@@ -304,7 +362,10 @@ export default function SalaLogin() {
                   />
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Criando conta...</>
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                        Criando conta...
+                      </>
                     ) : (
                       "Criar conta grátis"
                     )}
@@ -325,7 +386,7 @@ export default function SalaLogin() {
               className="flex items-center justify-center gap-2 text-sm text-blue-700 hover:text-blue-900 font-medium transition-colors"
             >
               <Send className="h-4 w-4" />
-              Prefere estudar pelo Telegram? Acesse nosso bot
+              Se Preferir, Estude no Telegram!
             </a>
           </CardContent>
         </Card>
