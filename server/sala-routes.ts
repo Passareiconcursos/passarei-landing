@@ -1077,6 +1077,221 @@ export function registerSalaRoutes(app: Express) {
   });
 
   // ============================================
+  // PROGRESSO DO EDITAL + SIMULADO SEMANAL
+  // ============================================
+
+  // GET /api/sala/edital/progress — calcula % de conclusão do edital alvo
+  app.get("/api/sala/edital/progress", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+
+      const userRows = await db.execute(sql`
+        SELECT target_concurso_id FROM "User" WHERE id = ${student.userId} LIMIT 1
+      `) as any[];
+      const targetId = userRows[0]?.target_concurso_id;
+      if (!targetId) return res.json({ success: true, percentage: 0, studiedCount: 0, totalCount: 0, subjects: [] });
+
+      const concursoRows = await db.execute(sql`
+        SELECT lista_materias_json FROM concursos WHERE id = ${targetId} LIMIT 1
+      `) as any[];
+      const raw = concursoRows[0]?.lista_materias_json;
+      const materias: any[] = Array.isArray(raw) ? raw : (typeof raw === "string" ? JSON.parse(raw) : []);
+      if (!materias.length) return res.json({ success: true, percentage: 0, studiedCount: 0, totalCount: 0, subjects: [] });
+
+      const subjects: any[] = [];
+      let totalStudied = 0, totalAll = 0;
+
+      for (const m of materias) {
+        const materiaName: string = m.name || "";
+        if (!materiaName) continue;
+
+        const subjectRows = await db.execute(sql`
+          SELECT id FROM "Subject" WHERE name ILIKE ${"%" + materiaName + "%"} LIMIT 1
+        `) as any[];
+        if (!subjectRows[0]) continue;
+        const sid = subjectRows[0].id;
+
+        const totalRows = await db.execute(sql`
+          SELECT COUNT(*)::int AS total FROM "Content"
+          WHERE "subjectId" = ${sid} AND "isActive" = true
+        `) as any[];
+
+        const studiedRows = await db.execute(sql`
+          SELECT COUNT(DISTINCT q."contentId")::int AS studied
+          FROM "QuestionAttempt" qa
+          JOIN "Question" q ON q.id = qa."questionId"
+          JOIN "Content" c ON c.id = q."contentId"
+          WHERE qa."userId" = ${student.userId} AND c."subjectId" = ${sid} AND c."isActive" = true
+        `) as any[];
+
+        const total = parseInt(totalRows[0]?.total ?? "0", 10);
+        const studied = parseInt(studiedRows[0]?.studied ?? "0", 10);
+        totalStudied += studied;
+        totalAll += total;
+        subjects.push({
+          name: materiaName,
+          studiedCount: studied,
+          totalCount: total,
+          percentage: total > 0 ? Math.round(studied / total * 100) : 0,
+        });
+      }
+
+      const percentage = totalAll > 0 ? Math.round(totalStudied / totalAll * 100) : 0;
+      return res.json({ success: true, percentage, studiedCount: totalStudied, totalCount: totalAll, subjects });
+    } catch (error) {
+      console.error("❌ [Sala] Erro em edital/progress:", error);
+      return res.status(500).json({ success: false, error: "Erro ao calcular progresso." });
+    }
+  });
+
+  // GET /api/sala/simulados/weekly-status — verifica disponibilidade do simulado semanal
+  app.get("/api/sala/simulados/weekly-status", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+
+      const userRows = await db.execute(sql`
+        SELECT target_concurso_id FROM "User" WHERE id = ${student.userId} LIMIT 1
+      `) as any[];
+      if (!userRows[0]?.target_concurso_id) {
+        return res.json({ available: false, reason: "no_target" });
+      }
+
+      const lastWeeklyRows = await db.execute(sql`
+        SELECT us.finished_at FROM user_simulados us
+        JOIN simulados s ON s.id = us.simulado_id
+        WHERE us.user_id = ${student.userId} AND s.type = 'WEEKLY' AND us.status = 'COMPLETED'
+        ORDER BY us.finished_at DESC NULLS LAST LIMIT 1
+      `) as any[];
+
+      const lastAt = lastWeeklyRows[0]?.finished_at;
+      if (lastAt) {
+        const sevenDaysLater = new Date(new Date(lastAt).getTime() + 7 * 24 * 60 * 60 * 1000);
+        if (new Date() < sevenDaysLater) {
+          return res.json({ available: false, reason: "cooldown", nextAvailableAt: sevenDaysLater.toISOString() });
+        }
+      }
+
+      return res.json({ available: true, reason: "ok", lastFinishedAt: lastAt || null });
+    } catch (error) {
+      console.error("❌ [Sala] Erro em weekly-status:", error);
+      return res.status(500).json({ success: false, error: "Erro ao verificar status semanal." });
+    }
+  });
+
+  // POST /api/sala/simulados/weekly/start — cria simulado semanal (80% inédito + 20% erros)
+  app.post("/api/sala/simulados/weekly/start", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+
+      const userRows = await db.execute(sql`
+        SELECT target_concurso_id FROM "User" WHERE id = ${student.userId} LIMIT 1
+      `) as any[];
+      const targetId = userRows[0]?.target_concurso_id;
+      if (!targetId) return res.status(400).json({ success: false, error: "Defina seu concurso-alvo primeiro." });
+
+      const concursoRows = await db.execute(sql`
+        SELECT lista_materias_json, exam_type, nome FROM concursos WHERE id = ${targetId} LIMIT 1
+      `) as any[];
+      const rawMaterias = concursoRows[0]?.lista_materias_json;
+      const materias: any[] = Array.isArray(rawMaterias) ? rawMaterias : (typeof rawMaterias === "string" ? JSON.parse(rawMaterias) : []);
+      const examType: string = concursoRows[0]?.exam_type || "POLICIAL";
+      const concursoNome: string = concursoRows[0]?.nome || "Semanal";
+
+      // Coletar subjectIds do edital
+      const subjectIds: string[] = [];
+      for (const m of materias) {
+        const materiaName: string = m.name || "";
+        if (!materiaName) continue;
+        const sRows = await db.execute(sql`
+          SELECT id FROM "Subject" WHERE name ILIKE ${"%" + materiaName + "%"} LIMIT 1
+        `) as any[];
+        if (sRows[0]?.id) subjectIds.push(sRows[0].id);
+      }
+      if (!subjectIds.length) return res.status(400).json({ success: false, error: "Nenhuma matéria encontrada para este edital." });
+
+      // 80% conteúdo inédito (sem tentativa do usuário)
+      const newContentRows = await db.execute(sql`
+        SELECT c.id FROM "Content" c
+        WHERE c."isActive" = true
+          AND c."subjectId" = ANY(${subjectIds})
+          AND c.id NOT IN (
+            SELECT DISTINCT q."contentId" FROM "QuestionAttempt" qa
+            JOIN "Question" q ON q.id = qa."questionId"
+            WHERE qa."userId" = ${student.userId}
+          )
+        ORDER BY RANDOM() LIMIT 8
+      `) as any[];
+
+      // 20% revisão de erros
+      const errorContentRows = await db.execute(sql`
+        SELECT DISTINCT q."contentId" AS id FROM "QuestionAttempt" qa
+        JOIN "Question" q ON q.id = qa."questionId"
+        JOIN "Content" c ON c.id = q."contentId"
+        WHERE qa."userId" = ${student.userId} AND qa."isCorrect" = false
+          AND c."subjectId" = ANY(${subjectIds}) AND c."isActive" = true
+        ORDER BY RANDOM() LIMIT 2
+      `) as any[];
+
+      const contentIds: string[] = [
+        ...newContentRows.map((r: any) => r.id),
+        ...errorContentRows.map((r: any) => r.id),
+      ];
+      if (contentIds.length < 2) {
+        return res.status(400).json({ success: false, error: "Conteúdo insuficiente para simulado semanal. Estude mais alguns tópicos primeiro." });
+      }
+
+      // Criar registro do simulado semanal
+      const now = new Date();
+      const weekNum = Math.ceil(now.getDate() / 7);
+      const weekLabel = `${now.getFullYear()}-W${now.getMonth() + 1}-${weekNum}`;
+      const availableUntil = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      const simuladoRows = await db.execute(sql`
+        INSERT INTO simulados (
+          title, description, exam_type, total_questions, duration_minutes, passing_score,
+          month, available_from, available_until, is_active, type
+        ) VALUES (
+          ${"Simulado Semanal — " + concursoNome},
+          ${"Composição: 80% inédito + 20% revisão de erros"},
+          ${examType}, ${contentIds.length}, 60, 60,
+          ${weekLabel}, ${now.toISOString()}, ${availableUntil.toISOString()},
+          true, 'WEEKLY'
+        ) RETURNING id
+      `) as any[];
+      const simId = simuladoRows[0]?.id;
+      if (!simId) throw new Error("Falha ao criar simulado semanal.");
+
+      // Inserir simulado_questions
+      for (let i = 0; i < contentIds.length; i++) {
+        await db.execute(sql`
+          INSERT INTO simulado_questions (simulado_id, content_id, question_order)
+          VALUES (${simId}, ${contentIds[i]}, ${i + 1})
+        `);
+      }
+
+      // Iniciar user_simulados
+      const userSimRows = await db.execute(sql`
+        INSERT INTO user_simulados (user_id, simulado_id, status, current_question, correct_answers, wrong_answers)
+        VALUES (${student.userId}, ${simId}, 'IN_PROGRESS', 0, 0, 0)
+        RETURNING id, started_at
+      `) as any[];
+      const userSimuladoId = userSimRows[0]?.id;
+
+      return res.json({
+        success: true,
+        userSimuladoId,
+        totalQuestions: contentIds.length,
+        durationMinutes: 60,
+        startedAt: userSimRows[0]?.started_at,
+        resumed: false,
+      });
+    } catch (error) {
+      console.error("❌ [Sala] Erro em weekly/start:", error);
+      return res.status(500).json({ success: false, error: "Erro ao criar simulado semanal." });
+    }
+  });
+
+  // ============================================
   // REDAÇÃO
   // ============================================
 

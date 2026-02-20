@@ -31,6 +31,7 @@ export async function runAutoMigrations() {
   await run("questionsNullable", migrateQuestionsCreatedByNullable);
   await run("concursosTables",   migrateConcursosTables);
   await run("userConcurso",      migrateUserConcursoColumn);
+  await run("simuladoType",      migrateSimuladoTypeColumn);
 
   console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
@@ -1096,6 +1097,13 @@ async function migrateUserConcursoColumn() {
     ALTER TABLE "User" ADD COLUMN IF NOT EXISTS target_concurso_id TEXT
   `);
   console.log("  ✅ Coluna User.target_concurso_id adicionada");
+}
+
+async function migrateSimuladoTypeColumn() {
+  await db.execute(sql`
+    ALTER TABLE simulados ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'MONTHLY'
+  `);
+  console.log("  ✅ Coluna simulados.type adicionada");
 }
 
 async function migrateGamificationColumns() {

@@ -9,13 +9,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import {
   BookOpen,
   Brain,
   ChevronRight,
+  ChevronLeft,
   Loader2,
   BarChart3,
   CheckCircle2,
@@ -34,6 +38,8 @@ import {
   Zap,
   Medal,
   Target,
+  LogOut,
+  Send,
 } from "lucide-react";
 
 // ============================================
@@ -165,7 +171,7 @@ function groupConcursos(list: ConcursoItem[]): Record<string, ConcursoItem[]> {
 // ============================================
 
 export default function SalaAula() {
-  const { token, student, updateProfile } = useStudentAuth();
+  const { token, student, updateProfile, logout } = useStudentAuth();
   const { toast } = useToast();
 
   // State
@@ -200,6 +206,15 @@ export default function SalaAula() {
   const [showConcursoSelector, setShowConcursoSelector] = useState(false);
   const [concursosList, setConcursosList] = useState<ConcursoItem[]>([]);
   const [targetConcurso, setTargetConcurso] = useState<{ id: string; nome: string; banca: string } | null>(null);
+  const [showDashboard, setShowDashboard] = useState(true);
+  const [showNavSheet, setShowNavSheet] = useState(false);
+  const [editalProgress, setEditalProgress] = useState<{
+    percentage: number; studiedCount: number; totalCount: number;
+    subjects: { name: string; studiedCount: number; totalCount: number; percentage: number }[];
+  } | null>(null);
+  const [weeklyStatus, setWeeklyStatus] = useState<{
+    available: boolean; reason: string; nextAvailableAt?: string;
+  } | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -244,6 +259,14 @@ export default function SalaAula() {
       .catch(() => { /* silent */ });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.id]);
+
+  // Carregar progresso do edital e status semanal quando student ou concurso mudar
+  useEffect(() => {
+    if (!student) return;
+    fetchEditalProgress();
+    fetchWeeklyStatus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.id, student?.targetConcursoId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -366,6 +389,53 @@ export default function SalaAula() {
       const data = await res.json();
       if (data.success) setGamification(data);
     } catch { /* silent */ }
+  };
+
+  const fetchEditalProgress = async () => {
+    try {
+      const res = await fetch("/api/sala/edital/progress", { headers });
+      const data = await res.json();
+      if (data.success) setEditalProgress(data);
+    } catch { /* silent */ }
+  };
+
+  const fetchWeeklyStatus = async () => {
+    try {
+      const res = await fetch("/api/sala/simulados/weekly-status", { headers });
+      const data = await res.json();
+      setWeeklyStatus(data);
+    } catch { /* silent */ }
+  };
+
+  const startWeeklySimulado = async () => {
+    setIsLoadingSimulado(true);
+    try {
+      const res = await fetch("/api/sala/simulados/weekly/start", { method: "POST", headers });
+      const data = await res.json();
+      if (!data.success) {
+        addMessage("system", { text: data.error || "Erro ao iniciar simulado semanal." });
+        return;
+      }
+      const newActive: ActiveSimulado = {
+        userSimuladoId: data.userSimuladoId,
+        title: "Simulado Semanal",
+        totalQuestions: data.totalQuestions,
+        durationMinutes: data.durationMinutes,
+        startedAt: new Date(data.startedAt),
+        currentQuestion: 1,
+        correctAnswers: 0,
+        wrongAnswers: 0,
+      };
+      setActiveSimulado(newActive);
+      setSimuladoTimeRemaining(data.durationMinutes);
+      addMessage("system", { text: "Simulado Semanal iniciado! Boa sorte!" });
+      await fetchSimuladoQuestion(data.userSimuladoId);
+      fetchWeeklyStatus();
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao iniciar simulado semanal" });
+    } finally {
+      setIsLoadingSimulado(false);
+    }
   };
 
   const startSm2Review = async () => {
@@ -699,6 +769,8 @@ export default function SalaAula() {
         const found = concursosList.find(c => c.id === concursoId);
         setTargetConcurso(found ? { id: found.id, nome: found.nome, banca: found.banca } : null);
         setShowConcursoSelector(false);
+        fetchEditalProgress();
+        fetchWeeklyStatus();
       }
     } catch {
       toast({ variant: "destructive", title: "Erro ao salvar concurso" });
@@ -711,6 +783,15 @@ export default function SalaAula() {
 
   const renderSidebarContent = () => (
     <>
+      {/* Painel button (desktop only, shown when not on dashboard) */}
+      {!showDashboard && (
+        <div className="px-2 pt-2 pb-1 hidden md:block">
+          <Button variant="ghost" size="sm" className="w-full justify-start gap-1 text-xs text-muted-foreground"
+            onClick={() => setShowDashboard(true)}>
+            <ChevronLeft className="h-3 w-3" /> Painel
+          </Button>
+        </div>
+      )}
       {/* Mode toggle */}
           <div className="p-2 border-b">
             <div className="flex rounded-lg bg-muted p-1">
@@ -751,6 +832,27 @@ export default function SalaAula() {
             <div className="p-2 space-y-1">
               {studyMode === "simulado" ? (
                 <>
+                  {/* Simulado Semanal */}
+                  <div className="px-2 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5 px-1">Semanal</p>
+                    {weeklyStatus?.available ? (
+                      <Button size="sm" className="w-full bg-green-600 hover:bg-green-700 text-white text-xs"
+                        onClick={() => { setShowMobileSidebar(false); startWeeklySimulado(); }}
+                        disabled={isLoadingSimulado}>
+                        {isLoadingSimulado ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                        Iniciar Simulado Semanal
+                      </Button>
+                    ) : weeklyStatus?.reason === "no_target" ? (
+                      <p className="text-[11px] text-muted-foreground px-1">Defina seu concurso-alvo primeiro.</p>
+                    ) : weeklyStatus?.nextAvailableAt ? (
+                      <p className="text-[11px] text-muted-foreground px-1">
+                        Próximo em {Math.ceil((new Date(weeklyStatus.nextAvailableAt).getTime() - Date.now()) / 86400000)}d
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground px-1">Carregando...</p>
+                    )}
+                  </div>
+                  <Separator className="my-1" />
                   {!isVeterano && (
                     <div className="px-3 py-3 rounded-lg bg-amber-50 border border-amber-200 mx-1 my-2">
                       <div className="flex items-center gap-1.5 mb-1">
@@ -937,49 +1039,260 @@ export default function SalaAula() {
         </DialogContent>
       </Dialog>
 
-      {/* Mobile top bar — apenas em telas pequenas */}
-      <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b bg-background sticky top-0 z-30 h-10">
-        <Sheet open={showMobileSidebar} onOpenChange={setShowMobileSidebar}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-              <Menu className="h-4 w-4" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0">
-            <SheetHeader className="px-4 py-3 border-b">
-              <SheetTitle className="text-sm">Matérias</SheetTitle>
-            </SheetHeader>
-            {renderSidebarContent()}
-          </SheetContent>
-        </Sheet>
+      {showDashboard ? (
+        /* ═══════════════════════════════════════════
+           DASHBOARD VIEW
+           ═══════════════════════════════════════════ */
+        <div className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">
 
-        {/* Concurso alvo */}
-        {targetConcurso ? (
-          <button onClick={() => setShowConcursoSelector(true)} className="flex-1 min-w-0 text-left">
-            <p className="text-xs font-medium truncate leading-tight">{targetConcurso.nome}</p>
-            <p className="text-[10px] text-muted-foreground leading-tight">{targetConcurso.banca}</p>
-          </button>
-        ) : (
-          <button onClick={() => setShowConcursoSelector(true)} className="flex-1 text-xs text-muted-foreground flex items-center gap-1">
-            <Target className="h-3 w-3" /> Definir concurso-alvo
-          </button>
-        )}
+          {/* TOP BAR */}
+          <div className="flex items-center gap-2 px-4 h-12 border-b bg-background sticky top-0 z-30 shrink-0">
+            {/* Hamburger → Navigation Sheet */}
+            <Sheet open={showNavSheet} onOpenChange={setShowNavSheet}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72">
+                <SheetHeader className="pb-4 border-b">
+                  <SheetTitle className="text-sm">Menu</SheetTitle>
+                </SheetHeader>
+                <div className="mt-4 space-y-1">
+                  <div className="flex items-center gap-3 px-2 py-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary text-sm">
+                      {student?.name?.[0]?.toUpperCase() || "?"}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{student?.name}</p>
+                      <Badge variant="secondary" className="text-[10px]">{student?.plan || "FREE"}</Badge>
+                    </div>
+                  </div>
+                  <Separator />
+                  <Button variant="ghost" className="w-full justify-start gap-2 mt-2" onClick={() => { setShowConcursoSelector(true); setShowNavSheet(false); }}>
+                    <Target className="h-4 w-4" /> Mudar Concurso-Alvo
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start gap-2" asChild>
+                    <a href="https://t.me/passarei_bot" target="_blank" rel="noreferrer">
+                      <Send className="h-4 w-4" /> Estudar pelo Bot
+                    </a>
+                  </Button>
+                  <Separator className="my-2" />
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-destructive hover:text-destructive"
+                    onClick={() => { setShowNavSheet(false); logout(); }}>
+                    <LogOut className="h-4 w-4" /> Sair
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
 
-        {/* Gamification compacta */}
-        {gamification && (
-          <div className="flex items-center gap-2 shrink-0 text-xs">
-            <span className="flex items-center gap-0.5">
-              <Flame className="h-3 w-3 text-orange-500" />{gamification.streak}
-            </span>
-            <span className="flex items-center gap-0.5">
-              <Zap className="h-3 w-3 text-yellow-500" />Nv{gamification.level}
-            </span>
-            {remaining != null && (
-              <span className="text-muted-foreground">{remaining}q</span>
+            {/* Concurso / Logo */}
+            <div className="flex-1 min-w-0">
+              {targetConcurso ? (
+                <button onClick={() => setShowConcursoSelector(true)} className="text-left w-full">
+                  <p className="text-xs font-semibold truncate leading-tight">{targetConcurso.nome}</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">{targetConcurso.banca}</p>
+                </button>
+              ) : (
+                <button onClick={() => setShowConcursoSelector(true)} className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Target className="h-3 w-3" /> Definir concurso-alvo
+                </button>
+              )}
+            </div>
+
+            {/* Streak + Level */}
+            {gamification && (
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="flex items-center gap-0.5 text-xs font-medium text-orange-500">
+                  <Flame className="h-3.5 w-3.5" />{gamification.streak}
+                </span>
+                <Badge variant="secondary" className="text-[10px] h-5 px-1.5">Nv {gamification.level}</Badge>
+              </div>
             )}
           </div>
-        )}
-      </div>
+
+          {/* MAIN SCROLL */}
+          <ScrollArea className="flex-1">
+            <div className="px-4 py-5 space-y-6 max-w-xl mx-auto">
+
+              {/* HERO: Progresso do Edital */}
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h2 className="text-sm font-semibold">Progresso do Edital</h2>
+                      <span className="text-lg font-bold text-primary">{editalProgress?.percentage ?? 0}%</span>
+                    </div>
+                    <Progress value={editalProgress?.percentage ?? 0} className="h-2 mb-1" />
+                    <p className="text-xs text-muted-foreground">
+                      {editalProgress && editalProgress.totalCount > 0
+                        ? `${editalProgress.studiedCount} de ${editalProgress.totalCount} tópicos estudados`
+                        : "Selecione seu concurso-alvo para ver o progresso"}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* 4 ACTION CARDS */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">O que vamos fazer hoje?</h3>
+                <div className="grid grid-cols-2 gap-3">
+
+                  {/* Card 1 — Continuar Estudo (sempre ativo) */}
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                    <Card className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all active:scale-95 h-full"
+                      onClick={() => { setShowDashboard(false); setStudyMode("plano"); }}>
+                      <CardContent className="p-4 flex flex-col gap-2">
+                        <BookOpen className="h-7 w-7 text-primary" />
+                        <p className="text-sm font-semibold leading-tight">Continuar Estudo</p>
+                        <p className="text-[11px] text-muted-foreground">Seguir pelo edital</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  {/* Card 2 — Reforço SM2 (bloqueado até 15 questões) */}
+                  {(() => {
+                    const total = stats?.totalQuestionsAnswered ?? 0;
+                    const locked = total < 15;
+                    return (
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+                        <Card className={cn(
+                          "transition-all h-full",
+                          locked ? "opacity-50 grayscale cursor-not-allowed" : "cursor-pointer hover:shadow-md hover:border-orange-300 active:scale-95"
+                        )} onClick={locked ? undefined : () => { setShowDashboard(false); setStudyMode("livre"); startSm2Review(); }}>
+                          <CardContent className="p-4 flex flex-col gap-2">
+                            <RotateCcw className="h-7 w-7 text-orange-500" />
+                            <p className="text-sm font-semibold leading-tight">Reforço SM2</p>
+                            {locked ? (
+                              <>
+                                <Progress value={Math.round(total / 15 * 100)} className="h-1" />
+                                <p className="text-[11px] text-muted-foreground">{total}/15 para desbloquear</p>
+                              </>
+                            ) : (
+                              <p className="text-[11px] text-muted-foreground">{sm2DueCount} itens para revisar</p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })()}
+
+                  {/* Card 3 — Simulados */}
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                    <Card className="cursor-pointer hover:shadow-md hover:border-violet-300 transition-all active:scale-95 h-full"
+                      onClick={() => { setShowDashboard(false); setStudyMode("simulado"); fetchSimulados(); }}>
+                      <CardContent className="p-4 flex flex-col gap-2">
+                        <Trophy className="h-7 w-7 text-violet-500" />
+                        <p className="text-sm font-semibold leading-tight">Simulados</p>
+                        {weeklyStatus?.available ? (
+                          <Badge className="text-[10px] w-fit bg-green-500 hover:bg-green-500">Semanal disponível</Badge>
+                        ) : weeklyStatus?.nextAvailableAt ? (
+                          <p className="text-[11px] text-muted-foreground">
+                            Próximo em {Math.ceil((new Date(weeklyStatus.nextAvailableAt).getTime() - Date.now()) / 86400000)}d
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground">Mensal + Semanal</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  {/* Card 4 — Desempenho */}
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+                    <Card className="cursor-pointer hover:shadow-md hover:border-sky-300 transition-all active:scale-95 h-full"
+                      onClick={() => setShowDashboard(false)}>
+                      <CardContent className="p-4 flex flex-col gap-2">
+                        <BarChart3 className="h-7 w-7 text-sky-500" />
+                        <p className="text-sm font-semibold leading-tight">Desempenho</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {stats
+                            ? `${stats.totalQuestionsAnswered} questões respondidas`
+                            : "Carregando..."}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </div>
+              </div>
+
+              {/* MEU EDITAL */}
+              {targetConcurso && editalProgress?.subjects && editalProgress.subjects.length > 0 && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Meu Edital</h3>
+                  <Accordion type="multiple" className="space-y-1">
+                    {editalProgress.subjects.map((s) => (
+                      <AccordionItem key={s.name} value={s.name} className="border rounded-lg px-3">
+                        <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">
+                          <span className="flex-1 text-left truncate pr-2">{s.name}</span>
+                          <span className="text-xs text-muted-foreground mr-2 shrink-0">{s.percentage}%</span>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-3 pt-0">
+                          <Progress value={s.percentage} className="h-1 mb-2" />
+                          <p className="text-xs text-muted-foreground mb-3">{s.studiedCount}/{s.totalCount} tópicos estudados</p>
+                          <Button size="sm" variant="outline" className="w-full text-xs h-8"
+                            onClick={() => {
+                              setShowDashboard(false);
+                              setStudyMode("plano");
+                              const match = subjects.find(sub =>
+                                sub.name.toLowerCase().includes(s.name.toLowerCase().split(" ")[0]) ||
+                                s.name.toLowerCase().includes(sub.name.toLowerCase().split(" ")[0])
+                              );
+                              if (match) {
+                                setSelectedSubject(match.id);
+                                fetchSequentialContent(match.id);
+                              } else {
+                                fetchNextContent(null);
+                              }
+                            }}>
+                            Estudar esta matéria
+                          </Button>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </motion.div>
+              )}
+
+            </div>
+          </ScrollArea>
+        </div>
+      ) : (
+        /* ═══════════════════════════════════════════
+           STUDY MODE VIEW (existing chat interface)
+           ═══════════════════════════════════════════ */
+        <>
+          {/* Mobile top bar — study mode */}
+          <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b bg-background sticky top-0 z-30 h-10">
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setShowDashboard(true)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Sheet open={showMobileSidebar} onOpenChange={setShowMobileSidebar}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0">
+                <SheetHeader className="px-4 py-3 border-b">
+                  <SheetTitle className="text-sm">Matérias</SheetTitle>
+                </SheetHeader>
+                {renderSidebarContent()}
+              </SheetContent>
+            </Sheet>
+
+            <span className="flex-1 text-xs font-medium truncate">
+              {studyMode === "simulado" ? "Simulados" : studyMode === "livre" ? "Estudo Livre" : "Continuar Estudo"}
+            </span>
+
+            {gamification && (
+              <div className="flex items-center gap-2 shrink-0 text-xs">
+                <span className="flex items-center gap-0.5">
+                  <Flame className="h-3 w-3 text-orange-500" />{gamification.streak}
+                </span>
+                {remaining != null && <span className="text-muted-foreground">{remaining}q</span>}
+              </div>
+            )}
+          </div>
 
       {/* Main layout — ajustado para descontar a top bar mobile */}
       <div className="flex h-[calc(100vh-3.5rem-2.5rem)] md:h-[calc(100vh-3.5rem)]">
@@ -1326,6 +1639,8 @@ export default function SalaAula() {
           </ScrollArea>
         </aside>
       </div>
+        </>
+      )}
     </SalaLayout>
   );
 }
