@@ -32,6 +32,7 @@ export interface LearningSessionState {
   wrongAnswers: number;
   contentsSent: number;
   subjectStats: Record<string, { name: string; correct: number; total: number }>;
+  targetConcursoId?: string; // UUID da tabela concursos — habilita filtro por edital
 }
 
 export interface ContentResult {
@@ -72,8 +73,35 @@ export async function getSmartContent(
     ? sql`AND c."id" NOT IN (${sql.join(session.usedContentIds.map((id) => sql`${id}`), sql`, `)})`
     : sql``;
 
-  // Filtro opcional por matérias do currículo policial (usado pelo bot)
-  const policeClause = options?.policeFilter
+  // Filtro por concurso alvo (targetConcursoId) ou matérias policiais genéricas
+  let concursoClause = sql``;
+  if (session.targetConcursoId) {
+    try {
+      const concursoRow = await db.execute(sql`
+        SELECT lista_materias_json FROM concursos
+        WHERE id = ${session.targetConcursoId} AND is_active = true LIMIT 1
+      `) as any[];
+
+      if (concursoRow.length > 0) {
+        const materias: any[] = Array.isArray(concursoRow[0].lista_materias_json)
+          ? concursoRow[0].lista_materias_json
+          : (typeof concursoRow[0].lista_materias_json === "string"
+              ? JSON.parse(concursoRow[0].lista_materias_json)
+              : []);
+
+        if (materias.length > 0) {
+          const names = materias.map((m: any) => String(m.name || ""));
+          concursoClause = sql`AND c."subjectId" IN (
+            SELECT id FROM "Subject"
+            WHERE ${sql.join(names.map((n) => sql`name ILIKE ${'%' + n + '%'}`), sql` OR `)}
+          )`;
+        }
+      }
+    } catch (_e) { /* non-fatal — fallback para policeClause */ }
+  }
+
+  // Filtro genérico por currículo policial (bot sem concurso específico)
+  const policeClause = options?.policeFilter && !session.targetConcursoId
     ? sql`AND c."subjectId" IN (
         SELECT id FROM "Subject" WHERE
           name ILIKE '%Penal%' OR name ILIKE '%Processual%' OR name ILIKE '%Constitucional%'
@@ -82,6 +110,9 @@ export async function getSmartContent(
           OR name ILIKE '%Trânsito%' OR name ILIKE '%Transito%'
       )`
     : sql``;
+
+  // Filtro ativo: concurso específico tem prioridade sobre policeClause genérico
+  const activeFilter = session.targetConcursoId ? concursoClause : policeClause;
 
   // Cada sub-query tem try/catch individual para não abortar a função inteira
   const tryQuery = async (label: string, query: () => Promise<any[]>): Promise<ContentResult | null> => {
@@ -96,6 +127,23 @@ export async function getSmartContent(
     }
     return null;
   };
+
+  // 0. Prioridade máxima: conteúdo diretamente vinculado ao concurso alvo
+  if (session.targetConcursoId && session.usedContentIds.length >= 0) {
+    const evUsedClause = session.usedContentIds.length > 0
+      ? sql`AND c."id" NOT IN (${sql.join(session.usedContentIds.map((id) => sql`${id}`), sql`, `)})`
+      : sql``;
+    const r = await tryQuery("Edital Vínculo", () => db.execute(sql`
+      SELECT c.* FROM "Content" c
+      JOIN edital_vinculos ev ON ev.content_id = c.id
+      WHERE ev.concurso_id = ${session.targetConcursoId}
+        AND c."isActive" = true
+        ${evUsedClause}
+      ORDER BY RANDOM()
+      LIMIT 1
+    `));
+    if (r) return r;
+  }
 
   // 1. SM2: Priorizar revisões pendentes (Veterano)
   const dueReviews = await getSM2DueReviews(session.userId, session.examType);
@@ -148,7 +196,7 @@ export async function getSmartContent(
       SELECT c.* FROM "Content" c
       WHERE c."isActive" = true
         AND c."id" NOT IN (${sql.join(session.usedContentIds.map((id) => sql`${id}`), sql`, `)})
-        ${policeClause}
+        ${activeFilter}
       ORDER BY RANDOM()
       LIMIT 1
     `));

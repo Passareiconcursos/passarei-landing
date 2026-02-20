@@ -200,27 +200,36 @@ export async function generateExplanation(
 }
 
 // ============================================
-// GERAR QUESTÃO CONTEXTUAL VIA IA
+// CONTEXTO DE CONCURSO (opcional em todos os geradores)
 // ============================================
 
-export async function generateQuestion(
+export interface ConcursoCtx {
+  nome: string;   // "Polícia Federal"
+  banca: string;  // "CEBRASPE"
+  cargo: string;  // "Agente de Polícia Federal"
+}
+
+function buildQuestionPrompt(
   title: string,
   textContent: string,
   examType: string,
-): Promise<GeneratedQuestion | null> {
-  try {
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 600,
-      messages: [
-        {
-          role: "user",
-          content: `Você é um professor especialista em concursos policiais (${examType}).
+  concursoCtx?: ConcursoCtx,
+): string {
+  const header = concursoCtx
+    ? `Você é um professor especialista em concursos policiais.
+CONCURSO: ${concursoCtx.nome} | BANCA: ${concursoCtx.banca} | CARGO: ${concursoCtx.cargo}`
+    : `Você é um professor especialista em concursos policiais (${examType}).`;
+
+  const instruction = concursoCtx
+    ? `Elabore UMA questão no estilo da banca ${concursoCtx.banca} para o cargo de ${concursoCtx.cargo}, DIRETAMENTE sobre o conteúdo acima.`
+    : `Elabore UMA questão de múltipla escolha DIRETAMENTE sobre o conteúdo acima.`;
+
+  return `${header}
 
 TEMA: ${title}
 CONTEÚDO ESTUDADO: ${textContent}
 
-Elabore UMA questão de múltipla escolha DIRETAMENTE sobre o conteúdo acima.
+${instruction}
 A questão DEVE testar o conhecimento específico do texto apresentado.
 
 Responda em JSON válido:
@@ -231,7 +240,27 @@ Responda em JSON válido:
   "explicacao": "Explicação breve de por que a alternativa correta está certa"
 }
 
-IMPORTANTE: Retorne APENAS o JSON, sem markdown ou texto adicional.`,
+IMPORTANTE: Retorne APENAS o JSON, sem markdown ou texto adicional.`;
+}
+
+// ============================================
+// GERAR QUESTÃO CONTEXTUAL VIA IA
+// ============================================
+
+export async function generateQuestion(
+  title: string,
+  textContent: string,
+  examType: string,
+  concursoCtx?: ConcursoCtx,
+): Promise<GeneratedQuestion | null> {
+  try {
+    const response = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 600,
+      messages: [
+        {
+          role: "user",
+          content: buildQuestionPrompt(title, textContent, examType, concursoCtx),
         },
       ],
     });
@@ -269,6 +298,7 @@ export async function generateQuestionHaiku(
   title: string,
   bodyText: string,
   examType: string,
+  concursoCtx?: ConcursoCtx,
 ): Promise<GeneratedQuestion | null> {
   try {
     const response = await anthropic.messages.create({
@@ -277,23 +307,7 @@ export async function generateQuestionHaiku(
       messages: [
         {
           role: "user",
-          content: `Você é um professor especialista em concursos policiais (${examType}).
-
-TEMA: ${title}
-CONTEÚDO ESTUDADO: ${bodyText}
-
-Elabore UMA questão de múltipla escolha DIRETAMENTE sobre o conteúdo acima.
-A questão DEVE testar o conhecimento específico do texto apresentado.
-
-Responda em JSON válido:
-{
-  "pergunta": "Enunciado da questão",
-  "opcoes": ["A) ...", "B) ...", "C) ...", "D) ..."],
-  "correta": 0,
-  "explicacao": "Explicação breve de por que a alternativa correta está certa"
-}
-
-IMPORTANTE: Retorne APENAS o JSON, sem markdown ou texto adicional.`,
+          content: buildQuestionPrompt(title, bodyText, examType, concursoCtx),
         },
       ],
     });

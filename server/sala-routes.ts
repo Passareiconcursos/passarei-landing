@@ -1338,6 +1338,50 @@ export function registerSalaRoutes(app: Express) {
   });
 
   // ============================================
+  // INTELIGÊNCIA DE EDITAIS
+  // ============================================
+
+  // GET /api/edital/search?concurso=X&estado=SP
+  // Busca ou infere via Anthropic as matérias de um concurso
+  app.get("/api/edital/search", requireStudentAuth, async (req, res) => {
+    try {
+      const { concurso, estado } = req.query as { concurso?: string; estado?: string };
+      if (!concurso || String(concurso).trim() === "") {
+        return res.status(400).json({ error: "Parâmetro 'concurso' é obrigatório" });
+      }
+      const { getOrSearchEdital } = await import("./services/edital-engine");
+      const result = await getOrSearchEdital(
+        String(concurso).trim(),
+        estado ? String(estado).trim() : undefined,
+      );
+      if (!result) {
+        return res.status(404).json({ error: "Concurso não encontrado e não foi possível inferir o edital" });
+      }
+      return res.json(result);
+    } catch (err: any) {
+      console.error("❌ [Edital Search]", err?.message ?? err);
+      return res.status(500).json({ error: "Erro interno ao buscar edital" });
+    }
+  });
+
+  // GET /api/edital/concursos — lista todos os concursos cadastrados
+  app.get("/api/edital/concursos", requireStudentAuth, async (req, res) => {
+    try {
+      const rows = await db.execute(sql`
+        SELECT id, nome, sigla, esfera, exam_type, banca, cargo_padrao, estado,
+               lista_materias_json, is_active, ordem
+        FROM concursos
+        WHERE is_active = true
+        ORDER BY esfera, nome
+      `) as any[];
+      return res.json(rows);
+    } catch (err: any) {
+      console.error("❌ [Edital Concursos]", err?.message ?? err);
+      return res.status(500).json({ error: "Erro ao listar concursos" });
+    }
+  });
+
+  // ============================================
   // GAMIFICAÇÃO — STREAK + RANKING
   // ============================================
 

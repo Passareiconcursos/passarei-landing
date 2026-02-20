@@ -29,6 +29,8 @@ export async function runAutoMigrations() {
   await run("gamification",      migrateGamificationColumns);
   await run("educationTables",   migrateEducationTables);
   await run("questionsNullable", migrateQuestionsCreatedByNullable);
+  await run("concursosTables",   migrateConcursosTables);
+  await run("userConcurso",      migrateUserConcursoColumn);
 
   console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
@@ -574,6 +576,82 @@ async function migrateQuestionsCreatedByNullable() {
     `);
     console.log("  ✅ questions.created_by agora é nullable (suporte a geração por IA)");
   }
+}
+
+async function migrateConcursosTables() {
+  // 1. Criar tabela concursos (com colunas de inteligência de editais)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS concursos (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      nome VARCHAR(100) NOT NULL,
+      sigla VARCHAR(20) NOT NULL UNIQUE,
+      descricao TEXT,
+      esfera VARCHAR(20) NOT NULL DEFAULT 'FEDERAL',
+      exam_type VARCHAR(50) NOT NULL DEFAULT 'PF',
+      edital_url TEXT,
+      site_oficial TEXT,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      ordem INTEGER DEFAULT 0,
+      estado VARCHAR(2),
+      banca VARCHAR(100),
+      cargo_padrao VARCHAR(100),
+      lista_materias_json JSONB NOT NULL DEFAULT '[]',
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  // 2. Adicionar colunas extras caso a tabela já exista (via Drizzle push sem elas)
+  await db.execute(sql`ALTER TABLE concursos ADD COLUMN IF NOT EXISTS estado VARCHAR(2)`);
+  await db.execute(sql`ALTER TABLE concursos ADD COLUMN IF NOT EXISTS banca VARCHAR(100)`);
+  await db.execute(sql`ALTER TABLE concursos ADD COLUMN IF NOT EXISTS cargo_padrao VARCHAR(100)`);
+  await db.execute(sql`ALTER TABLE concursos ADD COLUMN IF NOT EXISTS lista_materias_json JSONB NOT NULL DEFAULT '[]'`);
+
+  // 3. Criar tabela edital_vinculos (link content ↔ concurso)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS edital_vinculos (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      concurso_id UUID NOT NULL REFERENCES concursos(id) ON DELETE CASCADE,
+      content_id TEXT NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE(concurso_id, content_id)
+    )
+  `);
+
+  // 4. Pre-seed: 5 concursos principais com editais reais conhecidos
+  await db.execute(sql`
+    INSERT INTO concursos (nome, sigla, esfera, exam_type, banca, cargo_padrao, lista_materias_json, created_at, updated_at)
+    VALUES
+      ('Polícia Federal', 'PF', 'FEDERAL', 'PF', 'CEBRASPE', 'Agente de Polícia Federal',
+       '[{"name":"Língua Portuguesa","weight":1,"questions":15,"topics":[]},{"name":"Direito Constitucional","weight":2,"questions":25,"topics":[]},{"name":"Direito Administrativo","weight":1,"questions":15,"topics":[]},{"name":"Direito Penal","weight":2,"questions":20,"topics":[]},{"name":"Direito Processual Penal","weight":2,"questions":20,"topics":[]},{"name":"Legislação Especial","weight":1,"questions":10,"topics":[]},{"name":"Informática","weight":1,"questions":10,"topics":[]}]'::jsonb,
+       NOW(), NOW()),
+      ('Polícia Rodoviária Federal', 'PRF', 'FEDERAL', 'PRF', 'CEBRASPE', 'Policial Rodoviário Federal',
+       '[{"name":"Língua Portuguesa","weight":1,"questions":15,"topics":[]},{"name":"Raciocínio Lógico e Matemático","weight":1,"questions":15,"topics":[]},{"name":"Direito Constitucional","weight":1,"questions":15,"topics":[]},{"name":"Legislação de Trânsito","weight":2,"questions":20,"topics":[]},{"name":"Informática","weight":1,"questions":10,"topics":[]}]'::jsonb,
+       NOW(), NOW()),
+      ('Polícia Penal Federal', 'PPF', 'FEDERAL', 'PP_FEDERAL', 'CEBRASPE', 'Agente de Polícia Penal Federal',
+       '[{"name":"Língua Portuguesa","weight":1,"questions":15,"topics":[]},{"name":"Direito Constitucional","weight":2,"questions":20,"topics":[]},{"name":"Direito Penal","weight":2,"questions":20,"topics":[]},{"name":"Direito Processual Penal","weight":2,"questions":20,"topics":[]},{"name":"Direito Administrativo","weight":1,"questions":15,"topics":[]}]'::jsonb,
+       NOW(), NOW()),
+      ('Polícia Militar de São Paulo', 'PM_SP', 'ESTADUAL', 'PM', 'VUNESP', 'Soldado PM',
+       '[{"name":"Língua Portuguesa","weight":1,"questions":15,"topics":[]},{"name":"Matemática","weight":1,"questions":10,"topics":[]},{"name":"Raciocínio Lógico e Matemático","weight":1,"questions":10,"topics":[]},{"name":"Direito Constitucional","weight":1,"questions":10,"topics":[]},{"name":"Legislação Específica PM","weight":2,"questions":15,"topics":[]}]'::jsonb,
+       NOW(), NOW()),
+      ('Polícia Civil de São Paulo', 'PC_SP', 'ESTADUAL', 'PC', 'VUNESP', 'Investigador de Polícia',
+       '[{"name":"Língua Portuguesa","weight":1,"questions":15,"topics":[]},{"name":"Direito Penal","weight":2,"questions":15,"topics":[]},{"name":"Direito Processual Penal","weight":2,"questions":15,"topics":[]},{"name":"Direito Constitucional","weight":1,"questions":10,"topics":[]},{"name":"Direito Administrativo","weight":1,"questions":10,"topics":[]}]'::jsonb,
+       NOW(), NOW())
+    ON CONFLICT (sigla) DO UPDATE SET
+      banca = EXCLUDED.banca,
+      cargo_padrao = EXCLUDED.cargo_padrao,
+      lista_materias_json = EXCLUDED.lista_materias_json,
+      updated_at = NOW()
+  `);
+
+  console.log("  ✅ Tabelas concursos + edital_vinculos OK (5 concursos pré-seeded)");
+}
+
+async function migrateUserConcursoColumn() {
+  await db.execute(sql`
+    ALTER TABLE "User" ADD COLUMN IF NOT EXISTS target_concurso_id TEXT
+  `);
+  console.log("  ✅ Coluna User.target_concurso_id adicionada");
 }
 
 async function migrateGamificationColumns() {
