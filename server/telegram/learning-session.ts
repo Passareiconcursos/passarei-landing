@@ -7,7 +7,6 @@ import {
   consumeQuestion,
   QuestionAccessResult,
   recordSM2Review,
-  getSM2DueReviews,
   getQuestionForSubject,
   getQuestionForContent,
   recordQuestionAttempt,
@@ -15,6 +14,7 @@ import {
   saveStudyProgress,
   getMnemonicForContent,
 } from "./database";
+import { getSmartContent as getSmartContentEngine } from "../services/learning-engine";
 
 interface LearningSession {
   userId: string;
@@ -261,148 +261,6 @@ export async function startLearningSession(
   await sendNextContent(bot, session);
 }
 
-async function getSmartContent(session: LearningSession) {
-  try {
-    let result;
-
-    // ============================================
-    // SM2: PRIORIZAR REVISÕES PENDENTES (VETERANO)
-    // ============================================
-    const dueReviews = await getSM2DueReviews(
-      session.userId,
-      session.examType,
-      5,
-    );
-
-    // Filtrar revisões que ainda não foram usadas nesta sessão
-    const availableDueReviews = dueReviews.filter(
-      (id) => !session.usedContentIds.includes(id),
-    );
-
-    if (availableDueReviews.length > 0) {
-      const dueContentId = availableDueReviews[0];
-      console.log(`📚 [SM2] Revisão pendente encontrada: ${dueContentId}`);
-
-      result = await db.execute(sql`
-        SELECT * FROM "Content"
-        WHERE "id" = ${dueContentId}
-          AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-        LIMIT 1
-      `);
-
-      if (result.length > 0) {
-        console.log(`✅ [SM2] Revisão: ${result[0].title}`);
-        return result[0];
-      }
-    }
-
-    // ============================================
-    // CORREÇÃO 2: PRIORIZAR MATÉRIAS DE DIFICULDADE
-    // 70% dificuldade, 30% facilidade (plano de estudo)
-    // ============================================
-    const shouldPrioritizeDifficulty = Math.random() < 0.7;
-    const usedIdsClause = session.usedContentIds.length > 0
-      ? sql`AND c."id" NOT IN (${sql.join(session.usedContentIds.map((id) => sql`${id}`), sql`, `)})`
-      : sql``;
-    // D1: Excluir conteúdos REJEITADOS pelo Professor Revisor
-    const reviewClause = sql`AND (c."reviewStatus" IS NULL OR c."reviewStatus" != 'REJEITADO')`;
-    // 2a. Tentar buscar de matérias de DIFICULDADE (70% das vezes)
-    if (shouldPrioritizeDifficulty && session.difficulties.length > 0) {
-      console.log(`🎯 [PLANO] Buscando matéria de DIFICULDADE...`);
-
-      result = await db.execute(sql`
-        SELECT c.* FROM "Content" c
-        JOIN "Subject" s ON c."subjectId" = s.id
-        WHERE s."displayName" IN (${sql.join(session.difficulties.map((d) => sql`${d}`), sql`, `)})
-          AND c."isActive" = true
-          ${usedIdsClause}
-          ${reviewClause}
-
-        ORDER BY RANDOM()
-        LIMIT 1
-      `);
-
-      if (result.length > 0) {
-        console.log(`✅ [DIFICULDADE] Encontrado: ${result[0].title}`);
-        return result[0];
-      }
-      console.log(`⚠️ [DIFICULDADE] Nenhum conteúdo disponível, tentando facilidade...`);
-    }
-
-    // 2b. Tentar buscar de matérias de FACILIDADE (30% das vezes ou fallback)
-    if (session.facilities.length > 0) {
-      console.log(`📚 [PLANO] Buscando matéria de FACILIDADE...`);
-
-      result = await db.execute(sql`
-        SELECT c.* FROM "Content" c
-        JOIN "Subject" s ON c."subjectId" = s.id
-        WHERE s."displayName" IN (${sql.join(session.facilities.map((f) => sql`${f}`), sql`, `)})
-          AND c."isActive" = true
-          ${usedIdsClause}
-          ${reviewClause}
-
-        ORDER BY RANDOM()
-        LIMIT 1
-      `);
-
-      if (result.length > 0) {
-        console.log(`✅ [FACILIDADE] Encontrado: ${result[0].title}`);
-        return result[0];
-      }
-      console.log(`⚠️ [FACILIDADE] Nenhum conteúdo disponível, buscando geral...`);
-    }
-
-    // 2c. Fallback: qualquer conteúdo não usado
-    console.log(`📚 [FALLBACK] Buscando qualquer conteúdo para ${session.examType}...`);
-    if (session.usedContentIds.length > 0) {
-      result = await db.execute(sql`
-        SELECT * FROM "Content"
-        WHERE "isActive" = true
-          AND "id" NOT IN (${sql.join(
-            session.usedContentIds.map((id) => sql`${id}`),
-            sql`, `,
-          )})
-          AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-
-        ORDER BY RANDOM()
-        LIMIT 1
-      `);
-    } else {
-      result = await db.execute(sql`
-        SELECT * FROM "Content"
-        WHERE "isActive" = true
-          AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-
-        ORDER BY RANDOM()
-        LIMIT 1
-      `);
-    }
-
-    if (result.length > 0) {
-      console.log(`✅ [GERAL] Conteúdo encontrado: ${result[0].title}`);
-      return result[0];
-    }
-
-    // Fallback: qualquer conteúdo (exceto rejeitados)
-    console.log(`⚠️ Buscando qualquer conteúdo...`);
-    const fallback = await db.execute(sql`
-      SELECT * FROM "Content"
-      WHERE ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-      ORDER BY RANDOM() LIMIT 1
-    `);
-
-    if (fallback.length > 0) {
-      console.log(`✅ Fallback encontrado: ${fallback[0].title}`);
-      return fallback[0];
-    }
-
-    console.log(`❌ Nenhum conteúdo no banco`);
-    return null;
-  } catch (error) {
-    console.error(`❌ Erro ao buscar conteúdo:`, error);
-    return null;
-  }
-}
 
 // Parse textContent que já pode conter PONTOS-CHAVE/EXEMPLO/DICA embutidos
 function parseTextContent(text: string): {
@@ -483,7 +341,7 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
     await new Promise((r) => setTimeout(r, 1000));
   }
 
-  const content = await getSmartContent(session);
+  const content = await getSmartContentEngine(session, { policeFilter: true });
 
   if (!content) {
     await bot.sendMessage(
@@ -1205,7 +1063,7 @@ export async function handleLearningCallback(
       `);
 
       if (userData && userData.length > 0) {
-        const userId = userData[0].id;
+        const userId = (userData[0] as any).id as string;
 
         // Salvar resposta na user_answers
         await db.execute(sql`
@@ -1216,6 +1074,74 @@ VALUES (${userId}, ${session.currentContent.id}, ${answerIdx}, ${isCorrect}, NOW
         console.log(
           `💾 [Learning] Resposta salva: ${telegramId} - ${isCorrect ? "✅" : "❌"}`,
         );
+
+        // 📈 XP: incrementar totalQuestionsAnswered
+        try {
+          await db.execute(sql`
+            UPDATE "User"
+            SET "totalQuestionsAnswered" = COALESCE("totalQuestionsAnswered", 0) + 1,
+                "updatedAt" = NOW()
+            WHERE id = ${userId}
+          `);
+        } catch (_e) { /* non-fatal */ }
+
+        // 🔥 Streak: atualizar uma vez por dia
+        try {
+          const today = new Date().toISOString().slice(0, 10);
+          const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+          const streakRow = await db.execute(sql`
+            SELECT streak_days, best_streak, last_streak_date FROM "User" WHERE id = ${userId} LIMIT 1
+          `) as any[];
+          if (streakRow.length > 0) {
+            const s = streakRow[0];
+            if (s.last_streak_date !== today) {
+              const newStreak = s.last_streak_date === yesterday ? (Number(s.streak_days) + 1) : 1;
+              const newBest = Math.max(Number(s.best_streak) || 0, newStreak);
+              await db.execute(sql`
+                UPDATE "User" SET streak_days=${newStreak}, best_streak=${newBest},
+                  last_streak_date=${today}, "updatedAt"=NOW()
+                WHERE id=${userId}
+              `);
+              console.log(`🔥 [Streak] ${telegramId}: ${newStreak} dias`);
+            }
+          }
+        } catch (_e) { /* non-fatal */ }
+
+        // 🧠 SM2: upsert sm2_reviews (Drizzle — sync com painel web)
+        try {
+          const { calculateSM2, getQualityFromAnswer } = await import("../services/sm2-engine");
+          const q = getQualityFromAnswer(isCorrect);
+          const contentId = session.currentContent.id as string;
+          const existing = await db.execute(sql`
+            SELECT id, ease_factor, interval, repetitions FROM sm2_reviews
+            WHERE user_id = ${userId} AND content_id = ${contentId} LIMIT 1
+          `) as any[];
+          if (existing.length > 0) {
+            const s = existing[0];
+            const r = calculateSM2(q, Number(s.ease_factor), Number(s.interval), Number(s.repetitions));
+            await db.execute(sql`
+              UPDATE sm2_reviews SET
+                ease_factor=${r.easeFactor}, interval=${r.interval}, repetitions=${r.repetitions},
+                next_review_date=${r.nextReviewDate.toISOString()}, last_quality=${q},
+                times_correct=times_correct+${isCorrect ? 1 : 0},
+                times_incorrect=times_incorrect+${isCorrect ? 0 : 1},
+                total_reviews=total_reviews+1, last_reviewed_at=NOW(), updated_at=NOW()
+              WHERE id=${existing[0].id}
+            `);
+          } else {
+            const r = calculateSM2(q);
+            await db.execute(sql`
+              INSERT INTO sm2_reviews (user_id, content_id, ease_factor, interval, repetitions,
+                next_review_date, last_quality, times_correct, times_incorrect, total_reviews,
+                first_seen_at, last_reviewed_at, created_at, updated_at)
+              VALUES (${userId}, ${contentId}, ${r.easeFactor}, ${r.interval}, ${r.repetitions},
+                ${r.nextReviewDate.toISOString()}, ${q}, ${isCorrect ? 1 : 0}, ${isCorrect ? 0 : 1},
+                1, NOW(), NOW(), NOW(), NOW())
+              ON CONFLICT DO NOTHING
+            `);
+          }
+          console.log(`🧠 [SM2 Sync] sm2_reviews atualizado: ${contentId}`);
+        } catch (_e) { /* non-fatal */ }
       }
     } catch (error) {
       console.error("❌ [Learning] Erro ao salvar resposta:", error);
@@ -1249,9 +1175,11 @@ VALUES (${userId}, ${session.currentContent.id}, ${answerIdx}, ${isCorrect}, NOW
 
     await new Promise((r) => setTimeout(r, 2000));
 
+    const appUrl = process.env.APP_URL || "https://passarei.com.br";
     const keyboard = {
       inline_keyboard: [
         [{ text: "✅ Próxima questão", callback_data: "next_question" }],
+        [{ text: "📖 Estudar Teoria na Web", url: `${appUrl}/sala/aula?contentId=${session.currentContent.id}` }],
       ],
     };
 

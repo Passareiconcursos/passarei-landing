@@ -66,9 +66,21 @@ export interface SessionReport {
 
 export async function getSmartContent(
   session: LearningSessionState,
+  options?: { policeFilter?: boolean },
 ): Promise<ContentResult | null> {
   const usedIdsClause = session.usedContentIds.length > 0
     ? sql`AND c."id" NOT IN (${sql.join(session.usedContentIds.map((id) => sql`${id}`), sql`, `)})`
+    : sql``;
+
+  // Filtro opcional por matérias do currículo policial (usado pelo bot)
+  const policeClause = options?.policeFilter
+    ? sql`AND c."subjectId" IN (
+        SELECT id FROM "Subject" WHERE
+          name ILIKE '%Penal%' OR name ILIKE '%Processual%' OR name ILIKE '%Constitucional%'
+          OR name ILIKE '%Administrativo%' OR name ILIKE '%Portugu%' OR name ILIKE '%RLM%'
+          OR name ILIKE '%Racioc%' OR name ILIKE '%Inform%'
+          OR name ILIKE '%Trânsito%' OR name ILIKE '%Transito%'
+      )`
     : sql``;
 
   // Cada sub-query tem try/catch individual para não abortar a função inteira
@@ -133,9 +145,10 @@ export async function getSmartContent(
   // 2c. Qualquer conteúdo não usado (sem filtro reviewStatus — pode não existir)
   if (session.usedContentIds.length > 0) {
     const r = await tryQuery("Geral (não usado)", () => db.execute(sql`
-      SELECT * FROM "Content"
-      WHERE "isActive" = true
-        AND "id" NOT IN (${sql.join(session.usedContentIds.map((id) => sql`${id}`), sql`, `)})
+      SELECT c.* FROM "Content" c
+      WHERE c."isActive" = true
+        AND c."id" NOT IN (${sql.join(session.usedContentIds.map((id) => sql`${id}`), sql`, `)})
+        ${policeClause}
       ORDER BY RANDOM()
       LIMIT 1
     `));
@@ -144,14 +157,15 @@ export async function getSmartContent(
 
   // 2d. Qualquer conteúdo ativo
   const r = await tryQuery("Geral (ativo)", () => db.execute(sql`
-    SELECT * FROM "Content"
-    WHERE "isActive" = true
+    SELECT c.* FROM "Content" c
+    WHERE c."isActive" = true
+      ${policeClause}
     ORDER BY RANDOM()
     LIMIT 1
   `));
   if (r) return r;
 
-  // Último fallback sem filtro
+  // Último fallback sem filtro policial (garante que o bot nunca fica em branco)
   const fb = await tryQuery("Fallback total", () => db.execute(sql`
     SELECT * FROM "Content" ORDER BY RANDOM() LIMIT 1
   `));
