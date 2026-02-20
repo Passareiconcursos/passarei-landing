@@ -9,6 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   BookOpen,
   Brain,
@@ -30,6 +33,7 @@ import {
   Flame,
   Zap,
   Medal,
+  Target,
 } from "lucide-react";
 
 // ============================================
@@ -60,6 +64,7 @@ interface QuestionItem {
   id: string;
   text: string;
   options: string[];
+  banca?: string;
 }
 
 interface SubjectStat {
@@ -113,12 +118,54 @@ interface GamificationData {
   topUsers: { name: string; xp: number; level: number; streak: number }[];
 }
 
+interface ConcursoItem {
+  id: string;
+  nome: string;
+  sigla: string;
+  banca: string;
+  cargo_padrao: string;
+}
+
+// Agrupamento client-side dos concursos por órgão
+function groupConcursos(list: ConcursoItem[]): Record<string, ConcursoItem[]> {
+  const groups: Record<string, ConcursoItem[]> = {
+    "Polícia Federal": [],
+    "Polícia Rodoviária Federal": [],
+    "Polícia Penal / Ferroviária / Legislativa Federal": [],
+    "Poder Judiciário / CNJ": [],
+    "ABIN / ANAC / CPNU": [],
+    "Forças Armadas — Exército": [],
+    "Forças Armadas — Marinha": [],
+    "Forças Armadas — Aeronáutica / FAB": [],
+    "Polícia Militar": [],
+    "Corpo de Bombeiros": [],
+    "Polícia Civil": [],
+    "Outros Estaduais / Municipais": [],
+  };
+  for (const c of list) {
+    const s = c.sigla;
+    if (s.startsWith("PF")) groups["Polícia Federal"].push(c);
+    else if (s === "PRF") groups["Polícia Rodoviária Federal"].push(c);
+    else if (["PPF", "PFF", "PLF"].includes(s)) groups["Polícia Penal / Ferroviária / Legislativa Federal"].push(c);
+    else if (s === "PJ_CNJ") groups["Poder Judiciário / CNJ"].push(c);
+    else if (["ABIN", "ANAC", "CPNU"].includes(s)) groups["ABIN / ANAC / CPNU"].push(c);
+    else if (["ESPCEX", "IME", "ESA"].includes(s)) groups["Forças Armadas — Exército"].push(c);
+    else if (["CN", "EN", "FUZNAVAIS"].includes(s)) groups["Forças Armadas — Marinha"].push(c);
+    else if (["ITA", "EPCAR", "EAGS"].includes(s)) groups["Forças Armadas — Aeronáutica / FAB"].push(c);
+    else if (s.startsWith("PM")) groups["Polícia Militar"].push(c);
+    else if (s.startsWith("CBM")) groups["Corpo de Bombeiros"].push(c);
+    else if (s.startsWith("PC")) groups["Polícia Civil"].push(c);
+    else groups["Outros Estaduais / Municipais"].push(c);
+  }
+  return groups;
+}
+
 // ============================================
 // COMPONENT
 // ============================================
 
 export default function SalaAula() {
-  const { token, student } = useStudentAuth();
+  const { token, student, updateProfile } = useStudentAuth();
   const { toast } = useToast();
 
   // State
@@ -150,6 +197,9 @@ export default function SalaAula() {
   const [answeredIndex, setAnsweredIndex] = useState<number | null>(null);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [remaining, setRemaining] = useState<number | undefined>();
+  const [showConcursoSelector, setShowConcursoSelector] = useState(false);
+  const [concursosList, setConcursosList] = useState<ConcursoItem[]>([]);
+  const [targetConcurso, setTargetConcurso] = useState<{ id: string; nome: string; banca: string } | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -175,6 +225,25 @@ export default function SalaAula() {
       text: `Olá, ${student?.name?.split(" ")[0]}! Escolha uma matéria ao lado ou clique em "Próximo conteúdo" para começar.`,
     });
   }, []);
+
+  // Verificar concurso-alvo ao montar (ou quando student muda)
+  useEffect(() => {
+    if (!student) return;
+    fetch("/api/edital/concursos", { headers })
+      .then(r => r.json())
+      .then(d => {
+        const list: ConcursoItem[] = d.concursos || [];
+        setConcursosList(list);
+        if (!student.targetConcursoId) {
+          setShowConcursoSelector(true);
+        } else {
+          const found = list.find(c => c.id === student.targetConcursoId);
+          if (found) setTargetConcurso({ id: found.id, nome: found.nome, banca: found.banca });
+        }
+      })
+      .catch(() => { /* silent */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.id]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -617,30 +686,32 @@ export default function SalaAula() {
     }
   };
 
+  const selectConcurso = async (concursoId: string | null) => {
+    try {
+      const res = await fetch("/api/sala/profile/concurso", {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ concursoId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        updateProfile(data.profile);
+        const found = concursosList.find(c => c.id === concursoId);
+        setTargetConcurso(found ? { id: found.id, nome: found.nome, banca: found.banca } : null);
+        setShowConcursoSelector(false);
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao salvar concurso" });
+    }
+  };
+
   // ============================================
-  // RENDER
+  // SIDEBAR CONTENT (reutilizado em desktop aside + mobile Sheet)
   // ============================================
 
-  return (
-    <SalaLayout>
-      <div className="flex h-[calc(100vh-3.5rem)] md:h-[calc(100vh-3.5rem)]">
-        {/* Mobile sidebar toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden fixed bottom-4 left-4 z-50 rounded-full shadow-lg bg-primary text-primary-foreground h-12 w-12"
-          onClick={() => setShowMobileSidebar(!showMobileSidebar)}
-        >
-          {showMobileSidebar ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
-
-        {/* LEFT: Subject Sidebar */}
-        <aside
-          className={`${
-            showMobileSidebar ? "translate-x-0" : "-translate-x-full"
-          } md:translate-x-0 fixed md:relative z-40 w-64 h-full border-r bg-background transition-transform duration-200`}
-        >
-          {/* Mode toggle */}
+  const renderSidebarContent = () => (
+    <>
+      {/* Mode toggle */}
           <div className="p-2 border-b">
             <div className="flex rounded-lg bg-muted p-1">
               <button
@@ -817,6 +888,104 @@ export default function SalaAula() {
               )}
             </div>
           </ScrollArea>
+    </>
+  );
+
+  // ============================================
+  // RENDER
+  // ============================================
+
+  return (
+    <SalaLayout>
+      {/* Dialog de seleção de concurso-alvo */}
+      <Dialog open={showConcursoSelector} onOpenChange={setShowConcursoSelector}>
+        <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" /> Seu Concurso-Alvo
+            </DialogTitle>
+            <DialogDescription>
+              Escolha o órgão e depois o cargo. O estudo será filtrado pelas matérias deste edital.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1">
+            <Accordion type="single" collapsible className="pr-1">
+              {Object.entries(groupConcursos(concursosList))
+                .filter(([, items]) => items.length > 0)
+                .map(([grupo, items]) => (
+                  <AccordionItem key={grupo} value={grupo}>
+                    <AccordionTrigger className="text-sm font-medium py-3 px-1">{grupo}</AccordionTrigger>
+                    <AccordionContent className="pb-2 space-y-1">
+                      {items.map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => selectConcurso(c.id)}
+                          className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-colors"
+                        >
+                          <div className="text-sm font-medium">{c.cargo_padrao}</div>
+                          <div className="text-xs text-muted-foreground">{c.banca}</div>
+                        </button>
+                      ))}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+            </Accordion>
+          </ScrollArea>
+          <Button variant="ghost" size="sm" className="w-full mt-2" onClick={() => setShowConcursoSelector(false)}>
+            Decidir depois
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mobile top bar — apenas em telas pequenas */}
+      <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b bg-background sticky top-0 z-30 h-10">
+        <Sheet open={showMobileSidebar} onOpenChange={setShowMobileSidebar}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+              <Menu className="h-4 w-4" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-72 p-0">
+            <SheetHeader className="px-4 py-3 border-b">
+              <SheetTitle className="text-sm">Matérias</SheetTitle>
+            </SheetHeader>
+            {renderSidebarContent()}
+          </SheetContent>
+        </Sheet>
+
+        {/* Concurso alvo */}
+        {targetConcurso ? (
+          <button onClick={() => setShowConcursoSelector(true)} className="flex-1 min-w-0 text-left">
+            <p className="text-xs font-medium truncate leading-tight">{targetConcurso.nome}</p>
+            <p className="text-[10px] text-muted-foreground leading-tight">{targetConcurso.banca}</p>
+          </button>
+        ) : (
+          <button onClick={() => setShowConcursoSelector(true)} className="flex-1 text-xs text-muted-foreground flex items-center gap-1">
+            <Target className="h-3 w-3" /> Definir concurso-alvo
+          </button>
+        )}
+
+        {/* Gamification compacta */}
+        {gamification && (
+          <div className="flex items-center gap-2 shrink-0 text-xs">
+            <span className="flex items-center gap-0.5">
+              <Flame className="h-3 w-3 text-orange-500" />{gamification.streak}
+            </span>
+            <span className="flex items-center gap-0.5">
+              <Zap className="h-3 w-3 text-yellow-500" />Nv{gamification.level}
+            </span>
+            {remaining != null && (
+              <span className="text-muted-foreground">{remaining}q</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Main layout — ajustado para descontar a top bar mobile */}
+      <div className="flex h-[calc(100vh-3.5rem-2.5rem)] md:h-[calc(100vh-3.5rem)]">
+        {/* LEFT: Subject Sidebar — apenas desktop */}
+        <aside className="hidden md:flex md:flex-col w-64 border-r bg-background shrink-0">
+          {renderSidebarContent()}
         </aside>
 
         {/* CENTER: Chat Panel */}
@@ -1318,14 +1487,17 @@ function MessageBubble({
   if (type === "question") {
     const isAnswered = answeredIndex !== null;
     return (
-      <Card className="border-l-4 border-l-blue-500">
+      <Card className="border-l-4 border-l-blue-500 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             <Brain className="h-4 w-4 text-blue-600" /> Questão
+            {data.banca && (
+              <Badge variant="secondary" className="text-[10px] font-normal ml-auto">{data.banca}</Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm mb-3">{data.text}</p>
+          <p className="text-base leading-relaxed mb-4">{data.text}</p>
           <div className="space-y-2">
             {data.options?.map((option: string, i: number) => {
               let variant: "outline" | "default" | "destructive" | "secondary" = "outline";

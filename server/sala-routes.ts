@@ -247,6 +247,11 @@ export function registerSalaRoutes(app: Express) {
       // subjectId reserved for future subject-scoped smart selection
       const progress = await getStudyProgress(student.userId, "userId");
 
+      // Buscar concurso-alvo do aluno
+      const userConcursoRow = await db.execute(sql`
+        SELECT target_concurso_id FROM "User" WHERE id = ${student.userId} LIMIT 1
+      `) as any[];
+
       const sessionState: LearningSessionState = {
         userId: student.userId,
         examType: progress.examType || "POLICIA_FEDERAL",
@@ -258,6 +263,7 @@ export function registerSalaRoutes(app: Express) {
         wrongAnswers: 0,
         contentsSent: 0,
         subjectStats: {},
+        targetConcursoId: userConcursoRow[0]?.target_concurso_id || undefined,
       };
 
       const contentResult = await getSmartContent(sessionState);
@@ -354,6 +360,18 @@ export function registerSalaRoutes(app: Express) {
       // 3. Consume credit
       await consumeQuestion(student.userId, access.reason, "userId");
 
+      // Buscar banca do concurso-alvo do aluno (para badge na questão)
+      let banca: string | undefined;
+      try {
+        const bancaRows = await db.execute(sql`
+          SELECT c.banca FROM "User" u
+          LEFT JOIN concursos c ON c.id::text = u.target_concurso_id
+          WHERE u.id = ${student.userId} AND u.target_concurso_id IS NOT NULL
+          LIMIT 1
+        `) as any[];
+        banca = bancaRows[0]?.banca || undefined;
+      } catch (_e) { /* não bloquear se falhar */ }
+
       // Calculate remaining
       const remaining = access.freeRemaining ?? access.dailyRemaining;
 
@@ -363,6 +381,7 @@ export function registerSalaRoutes(app: Express) {
           id: question.id,
           text: question.pergunta || question.text,
           options: question.opcoes || question.options,
+          banca,
           // NOTE: Don't send correct answer yet
         },
         remaining: remaining != null ? remaining - 1 : undefined,
@@ -631,6 +650,38 @@ export function registerSalaRoutes(app: Express) {
     } catch (error) {
       console.error("❌ [Sala] Erro ao atualizar perfil:", error);
       return res.status(500).json({ success: false, error: "Erro ao atualizar perfil." });
+    }
+  });
+
+  // PUT /api/sala/profile/concurso — Definir concurso-alvo do aluno
+  app.put("/api/sala/profile/concurso", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const { concursoId } = req.body;
+
+      await db.execute(sql`
+        UPDATE "User"
+        SET target_concurso_id = ${concursoId ?? null}, "updatedAt" = NOW()
+        WHERE id = ${student.userId}
+      `);
+
+      // Disparar worker para pré-popular conteúdo do edital (fire-and-forget)
+      if (concursoId) {
+        const siglaRows = await db.execute(sql`
+          SELECT sigla FROM concursos WHERE id = ${concursoId} LIMIT 1
+        `) as any[];
+        if (siglaRows[0]?.sigla) {
+          import("./services/content-worker")
+            .then(m => (m as any).prepareEdital(siglaRows[0].sigla))
+            .catch((e: any) => console.error("[Worker] Erro no prepareEdital:", e));
+        }
+      }
+
+      const profile = await getStudentProfile(student.userId);
+      return res.json({ success: true, profile });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao definir concurso:", error);
+      return res.status(500).json({ success: false, error: "Erro ao definir concurso." });
     }
   });
 

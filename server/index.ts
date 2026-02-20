@@ -129,6 +129,13 @@ Sitemap: https://www.passarei.com.br/sitemap.xml`);
     startEmailScheduler();
   }
 
+  // Content Worker - pré-popular Content + Questions para editais prioritários (só Railway)
+  if (process.env.RAILWAY_ENVIRONMENT) {
+    import("./services/content-worker")
+      .then(m => m.startContentWorker())
+      .catch((e: any) => console.error("❌ [ContentWorker] Erro no startup:", e?.message ?? e));
+  }
+
   const port = parseInt(process.env.PORT || "5000", 10);
   console.log("🚀 Tentando iniciar servidor na porta:", port);
   console.log("🚀 PORT do ambiente:", process.env.PORT);

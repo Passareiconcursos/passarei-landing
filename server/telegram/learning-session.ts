@@ -49,6 +49,8 @@ interface LearningSession {
   pendingQuestion?: any; // Questão aguardando clique no botão "Responder"
   lastInteractionAt: Date; // C1: controle de inatividade 30min
   subjectStats: Record<string, { name: string; correct: number; total: number }>; // C1: stats por matéria
+  targetConcursoId?: string;  // UUID da tabela concursos — sincronizado do target_concurso_id do User
+  concursoNome?: string;      // Nome legível do concurso (para exibição no bot)
 }
 
 const activeSessions = new Map<string, LearningSession>();
@@ -77,7 +79,8 @@ function generateConsolidatedReport(session: LearningSession): string {
   const total = session.correctAnswers + session.wrongAnswers;
   const pct = total > 0 ? Math.round((session.correctAnswers / total) * 100) : 0;
 
-  let msg = `📊 *RELATÓRIO DE ESTUDOS*\n\n`;
+  const concursoHeader = session.concursoNome ? ` — ${session.concursoNome}` : "";
+  let msg = `📊 *RELATÓRIO DE ESTUDOS${concursoHeader}*\n\n`;
   msg += `📚 Questões respondidas: *${total}*\n`;
   msg += `✅ Acertos: *${session.correctAnswers}*\n`;
   msg += `❌ Erros: *${session.wrongAnswers}*\n`;
@@ -230,6 +233,22 @@ export async function startLearningSession(
     console.log(`📂 [Session] Progresso carregado: ${persistedContentIds.length} conteúdos já vistos`);
   }
 
+  // Buscar concurso-alvo definido na web (sincronização Bot↔Web)
+  let targetConcursoId: string | undefined;
+  let concursoNome: string | undefined;
+  try {
+    const userRows = await db.execute(sql`
+      SELECT target_concurso_id FROM "User" WHERE "telegramId" = ${telegramId} LIMIT 1
+    `) as any[];
+    targetConcursoId = userRows[0]?.target_concurso_id || undefined;
+    if (targetConcursoId) {
+      const cRows = await db.execute(sql`
+        SELECT nome FROM concursos WHERE id = ${targetConcursoId} LIMIT 1
+      `) as any[];
+      concursoNome = cRows[0]?.nome || undefined;
+    }
+  } catch (_e) { /* não bloquear sessão se falhar */ }
+
   const session: LearningSession = {
     userId: telegramId,
     chatId: chatId,
@@ -254,10 +273,21 @@ export async function startLearningSession(
     currentSubjectCorrect: 0,
     lastInteractionAt: new Date(),
     subjectStats: {},
+    targetConcursoId,
+    concursoNome,
   };
 
   activeSessions.set(telegramId, session);
-  await new Promise((r) => setTimeout(r, 2000));
+
+  // Mensagem de boas-vindas com concurso-alvo (se definido na web)
+  const concursoLine = concursoNome ? `\n🎯 Alvo: *${concursoNome}*` : "";
+  await bot.sendMessage(
+    chatId,
+    `🎓 *Sessão de Estudos Iniciada!*${concursoLine}\n\nBuscando conteúdo para você...`,
+    { parse_mode: "Markdown" },
+  );
+
+  await new Promise((r) => setTimeout(r, 1500));
   await sendNextContent(bot, session);
 }
 

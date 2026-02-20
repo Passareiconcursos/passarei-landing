@@ -38,6 +38,7 @@ export interface StudentProfile {
   firstInteractionDate: string | null;
   totalQuestionsAnswered: number;
   onboardingDone: boolean;
+  targetConcursoId?: string | null;
 }
 
 // ============================================
@@ -201,7 +202,8 @@ export async function getStudentProfile(userId: string): Promise<StudentProfile 
         "examType", cargo, state,
         "firstInteractionDate",
         "totalQuestionsAnswered",
-        "onboardingCompleted"
+        "onboardingCompleted",
+        target_concurso_id
       FROM "User"
       WHERE id = ${userId}
       LIMIT 1
@@ -223,6 +225,7 @@ export async function getStudentProfile(userId: string): Promise<StudentProfile 
       firstInteractionDate: u.firstInteractionDate,
       totalQuestionsAnswered: u.totalQuestionsAnswered || 0,
       onboardingDone: !!u.onboardingCompleted,
+      targetConcursoId: u.target_concurso_id || null,
     };
   } catch (error) {
     console.error("❌ [Student Auth] Erro ao buscar perfil:", error);

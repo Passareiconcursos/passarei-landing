@@ -14,6 +14,7 @@ export interface StudentProfile {
   firstInteractionDate: string | null;
   totalQuestionsAnswered: number;
   onboardingDone: boolean;
+  targetConcursoId?: string | null;
 }
 
 interface StudentAuthContextType {
