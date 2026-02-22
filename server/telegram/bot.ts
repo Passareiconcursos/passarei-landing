@@ -8,6 +8,8 @@ import {
   incrementUserCount,
   isUserActive,
   generateConcursosKeyboard,
+  generateConcursosByCategoryKeyboard,
+  BOT_CATEGORIES,
   resetStudyProgress,
 } from "./database";
 import {
@@ -509,6 +511,28 @@ export async function startTelegramBot() {
         );
         return;
       }
+    }
+
+    // 3b. Seleção de categoria de concurso (Nível 1 do /concurso command)
+    if (data.startsWith("cat:concurso_:")) {
+      await bot!.answerCallbackQuery(query.id);
+      const categoryKey = data.replace("cat:concurso_:", "");
+
+      if (categoryKey === "BACK") {
+        const keyboard = await generateConcursosKeyboard("concurso_");
+        await bot!.editMessageText(
+          "🎯 *Escolha seu concurso:*\n\nSelecione a categoria de concurso.",
+          { chat_id: chatId, message_id: query.message?.message_id, parse_mode: "Markdown", reply_markup: keyboard }
+        );
+      } else {
+        const cat = BOT_CATEGORIES.find(c => c.key === categoryKey);
+        const keyboard = await generateConcursosByCategoryKeyboard(categoryKey, "concurso_");
+        await bot!.editMessageText(
+          `🎯 *Escolha seu concurso:*\n\n${cat?.emoji || "📌"} *${cat?.label || categoryKey}*\n\nQual concurso específico?`,
+          { chat_id: chatId, message_id: query.message?.message_id, parse_mode: "Markdown", reply_markup: keyboard }
+        );
+      }
+      return;
     }
 
     // 4. Processar concurso

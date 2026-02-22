@@ -1397,9 +1397,47 @@ export async function getMateriasFromDB(
   }
 }
 
+// Categorias hierárquicas de concursos para o bot
+export const BOT_CATEGORIES: { key: string; label: string; emoji: string; siglaMatch: (s: string) => boolean }[] = [
+  { key: "PF",          label: "Polícia Federal",                    emoji: "🛡️",  siglaMatch: (s) => s.startsWith("PF") },
+  { key: "PRF",         label: "Polícia Rodoviária Federal",         emoji: "🚓",  siglaMatch: (s) => s === "PRF" },
+  { key: "PM",          label: "Polícia Militar",                    emoji: "🚔",  siglaMatch: (s) => s.startsWith("PM") },
+  { key: "PC",          label: "Polícia Civil",                      emoji: "🕵️", siglaMatch: (s) => s.startsWith("PC") },
+  { key: "CBM",         label: "Corpo de Bombeiros",                 emoji: "🚒",  siglaMatch: (s) => s.startsWith("CBM") },
+  { key: "JUDICIARIO",  label: "Poder Judiciário / CNJ",             emoji: "⚖️",  siglaMatch: (s) => s.startsWith("PJ") },
+  { key: "EXERCITO",    label: "Forças Armadas — Exército",          emoji: "⚔️",  siglaMatch: (s) => ["ESPCEX", "IME", "ESA", "EXERCITO"].includes(s) },
+  { key: "MARINHA",     label: "Forças Armadas — Marinha",           emoji: "⚓",  siglaMatch: (s) => ["CN", "EN", "FUZNAVAIS", "MARINHA", "GP"].includes(s) },
+  { key: "FAB",         label: "Forças Armadas — Aeronáutica",       emoji: "✈️",  siglaMatch: (s) => ["ITA", "EPCAR", "EAGS", "FAB"].includes(s) },
+  { key: "INTELIGENCIA",label: "Inteligência / ABIN / CPNU",         emoji: "🔍",  siglaMatch: (s) => ["ABIN", "ANAC", "CPNU"].includes(s) },
+  { key: "PENAL_LEG",   label: "Polícia Penal / Legislativa",        emoji: "🔐",  siglaMatch: (s) => s.startsWith("PP_") || s.startsWith("PL_") || ["PPF", "PLF", "PFF", "PPE"].includes(s) },
+  { key: "OUTROS",      label: "Outros Concursos",                   emoji: "📍",  siglaMatch: () => true },
+];
+
+function groupConcursosByCategory(
+  concursos: { sigla: string; nome: string; esfera: string }[]
+): Record<string, { sigla: string; nome: string; esfera: string }[]> {
+  const groups: Record<string, { sigla: string; nome: string; esfera: string }[]> = {};
+  const assigned = new Set<string>();
+
+  for (const cat of BOT_CATEGORIES) {
+    if (cat.key === "OUTROS") continue;
+    const matching = concursos.filter(c => !assigned.has(c.sigla) && cat.siglaMatch(c.sigla));
+    if (matching.length > 0) {
+      groups[cat.key] = matching;
+      matching.forEach(c => assigned.add(c.sigla));
+    }
+  }
+
+  const outros = concursos.filter(c => !assigned.has(c.sigla));
+  if (outros.length > 0) groups["OUTROS"] = outros;
+
+  return groups;
+}
+
 /**
- * Gera teclado inline do Telegram para seleção de concurso
- * @param prefix - Prefixo para callback_data (padrão: "onb_" para onboarding, usar "concurso_" para /concurso)
+ * Gera teclado de CATEGORIAS (Nível 1) para seleção de concurso.
+ * Callback usa cat:{prefix}:{CATEGORY_KEY} para codificar o contexto.
+ * @param prefix - "onb_" para onboarding, "concurso_" para /concurso
  */
 export async function generateConcursosKeyboard(
   prefix: string = "onb_"
@@ -1407,38 +1445,46 @@ export async function generateConcursosKeyboard(
   inline_keyboard: { text: string; callback_data: string }[][];
 }> {
   const concursos = await getConcursosFromDB();
+  const groups = groupConcursosByCategory(concursos);
 
-  // Ícones por sigla
-  const icons: Record<string, string> = {
-    PF: "🎯", PRF: "🚓", PM: "🚔", PC: "🕵️", CBM: "🚒",
-    GM: "🛡️", PP_ESTADUAL: "🔐", PP_FEDERAL: "⚖️",
-    PL_ESTADUAL: "🏛️", PL_FEDERAL: "🏛️", ABIN: "🔍",
-    EXERCITO: "⚔️", MARINHA: "⚓", FAB: "✈️", ANAC: "🛫",
-    CPNU: "📋", PFF: "🚂", PJ_CNJ: "⚖️", MD: "🎖️",
-    PC_CIENT: "🔬", GP: "🚢", PPF: "🔒", PLF: "🏛️", PPE: "🔐",
-  };
+  const rows: { text: string; callback_data: string }[][] = BOT_CATEGORIES
+    .filter(cat => groups[cat.key]?.length > 0)
+    .map(cat => [{
+      text: `${cat.emoji} ${cat.label}`,
+      callback_data: `cat:${prefix}:${cat.key}`,
+    }]);
 
-  // Agrupa em linhas de 2
+  return { inline_keyboard: rows };
+}
+
+/**
+ * Gera teclado de CONCURSOS (Nível 2) para uma categoria específica.
+ * Inclui botão "Voltar" para retornar às categorias.
+ * @param categoryKey - chave da categoria (ex: "PF", "PM")
+ * @param prefix - "onb_" para onboarding, "concurso_" para /concurso
+ */
+export async function generateConcursosByCategoryKeyboard(
+  categoryKey: string,
+  prefix: string = "onb_"
+): Promise<{
+  inline_keyboard: { text: string; callback_data: string }[][];
+}> {
+  const concursos = await getConcursosFromDB();
+  const groups = groupConcursosByCategory(concursos);
+  const items = groups[categoryKey] || [];
+
   const rows: { text: string; callback_data: string }[][] = [];
   let currentRow: { text: string; callback_data: string }[] = [];
 
-  for (const c of concursos) {
-    const icon = icons[c.sigla] || "📌";
-    currentRow.push({
-      text: `${icon} ${c.sigla}`,
-      callback_data: `${prefix}${c.sigla}`,
-    });
-
+  for (const c of items) {
+    currentRow.push({ text: c.nome, callback_data: `${prefix}${c.sigla}` });
     if (currentRow.length === 2) {
       rows.push(currentRow);
       currentRow = [];
     }
   }
-
-  // Adiciona última linha se tiver itens ímpares
-  if (currentRow.length > 0) {
-    rows.push(currentRow);
-  }
+  if (currentRow.length > 0) rows.push(currentRow);
+  rows.push([{ text: "⬅️ Voltar às categorias", callback_data: `cat:${prefix}:BACK` }]);
 
   return { inline_keyboard: rows };
 }

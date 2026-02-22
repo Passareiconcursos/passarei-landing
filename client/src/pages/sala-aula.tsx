@@ -40,6 +40,15 @@ import {
   Target,
   LogOut,
   Send,
+  ShieldCheck,
+  Anchor,
+  Plane,
+  FileBadge,
+  Scale,
+  Building2,
+  Shield,
+  Crosshair,
+  MapPin,
 } from "lucide-react";
 
 // ============================================
@@ -166,6 +175,25 @@ function groupConcursos(list: ConcursoItem[]): Record<string, ConcursoItem[]> {
   return groups;
 }
 
+// Ícones institucionais por área de concurso
+function getAreaIcon(grupo: string) {
+  const icons: Record<string, JSX.Element> = {
+    "Polícia Federal": <ShieldCheck size={36} className="text-blue-500" />,
+    "Polícia Rodoviária Federal": <ShieldCheck size={36} className="text-green-500" />,
+    "Polícia Penal / Ferroviária / Legislativa Federal": <FileBadge size={36} className="text-amber-500" />,
+    "Poder Judiciário / CNJ": <Scale size={36} className="text-violet-500" />,
+    "ABIN / ANAC / CPNU": <Building2 size={36} className="text-sky-500" />,
+    "Forças Armadas — Exército": <Crosshair size={36} className="text-green-600" />,
+    "Forças Armadas — Marinha": <Anchor size={36} className="text-blue-700" />,
+    "Forças Armadas — Aeronáutica / FAB": <Plane size={36} className="text-sky-600" />,
+    "Polícia Militar": <Shield size={36} className="text-indigo-500" />,
+    "Corpo de Bombeiros": <Flame size={36} className="text-red-500" />,
+    "Polícia Civil": <Shield size={36} className="text-slate-500" />,
+    "Outros Estaduais / Municipais": <MapPin size={36} className="text-muted-foreground" />,
+  };
+  return icons[grupo] || <MapPin size={36} className="text-muted-foreground" />;
+}
+
 // ============================================
 // COMPONENT
 // ============================================
@@ -208,6 +236,7 @@ export default function SalaAula() {
   const [targetConcurso, setTargetConcurso] = useState<{ id: string; nome: string; banca: string } | null>(null);
   const [showDashboard, setShowDashboard] = useState(true);
   const [showNavSheet, setShowNavSheet] = useState(false);
+  const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [editalProgress, setEditalProgress] = useState<{
     percentage: number; studiedCount: number; totalCount: number;
     subjects: { name: string; studiedCount: number; totalCount: number; percentage: number }[];
@@ -1012,42 +1041,66 @@ export default function SalaAula() {
   return (
     <SalaLayout>
       {/* Dialog de seleção de concurso-alvo */}
-      <Dialog open={showConcursoSelector} onOpenChange={setShowConcursoSelector}>
+      <Dialog open={showConcursoSelector} onOpenChange={(open) => { setShowConcursoSelector(open); if (!open) setSelectedArea(null); }}>
         <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" /> Seu Concurso-Alvo
+            <DialogTitle>
+              {selectedArea ? (
+                <button
+                  onClick={() => setSelectedArea(null)}
+                  className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" /> Voltar
+                </button>
+              ) : "Seu Concurso-Alvo"}
             </DialogTitle>
             <DialogDescription>
-              Escolha o órgão e depois o cargo. O estudo será filtrado pelas matérias deste edital.
+              {selectedArea ? selectedArea : "Escolha o órgão e depois o cargo."}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-1">
-            <Accordion type="single" collapsible className="pr-1">
-              {Object.entries(groupConcursos(concursosList))
-                .filter(([, items]) => items.length > 0)
-                .map(([grupo, items]) => (
-                  <AccordionItem key={grupo} value={grupo}>
-                    <AccordionTrigger className="text-sm font-medium py-3 px-1">{grupo}</AccordionTrigger>
-                    <AccordionContent className="pb-2 space-y-1">
-                      {items.map(c => (
-                        <button
-                          key={c.id}
-                          onClick={() => selectConcurso(c.id)}
-                          className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-colors"
-                        >
-                          <div className="text-sm font-medium">{c.cargo_padrao}</div>
-                          <div className="text-xs text-muted-foreground">{c.banca}</div>
-                        </button>
-                      ))}
-                    </AccordionContent>
-                  </AccordionItem>
+            {!selectedArea ? (
+              /* Nível 1 — Grid de Áreas */
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-1 pb-2">
+                {Object.entries(groupConcursos(concursosList))
+                  .filter(([, items]) => items.length > 0)
+                  .map(([grupo]) => (
+                    <button
+                      key={grupo}
+                      onClick={() => setSelectedArea(grupo)}
+                      className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-all active:scale-95 text-center"
+                    >
+                      {getAreaIcon(grupo)}
+                      <span className="text-xs font-medium leading-tight">{grupo}</span>
+                    </button>
+                  ))}
+              </div>
+            ) : (
+              /* Nível 2 — Lista de Editais da Área */
+              <div className="space-y-1 pr-1 pb-2">
+                {(groupConcursos(concursosList)[selectedArea] || []).map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => { selectConcurso(c.id); setSelectedArea(null); }}
+                    className={cn(
+                      "w-full text-left px-3 py-2.5 rounded-lg border transition-colors",
+                      targetConcurso?.id === c.id
+                        ? "border-primary/50 bg-primary/5"
+                        : "border-transparent hover:bg-primary/5 hover:border-primary/20"
+                    )}
+                  >
+                    <div className="text-sm font-medium">{c.cargo_padrao}</div>
+                    <div className="text-xs text-muted-foreground">{c.banca} · {c.sigla}</div>
+                  </button>
                 ))}
-            </Accordion>
+              </div>
+            )}
           </ScrollArea>
-          <Button variant="ghost" size="sm" className="w-full mt-2" onClick={() => setShowConcursoSelector(false)}>
-            Decidir depois
-          </Button>
+          {!selectedArea && (
+            <Button variant="ghost" size="sm" className="w-full mt-2" onClick={() => setShowConcursoSelector(false)}>
+              Decidir depois
+            </Button>
+          )}
         </DialogContent>
       </Dialog>
 

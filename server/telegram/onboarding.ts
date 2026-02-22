@@ -4,9 +4,11 @@ import { sql } from "drizzle-orm";
 import {
   updateUserOnboarding,
   generateConcursosKeyboard,
+  generateConcursosByCategoryKeyboard,
   generateCargosKeyboard,
   getCargosFromDB,
   getMateriasFromDB,
+  BOT_CATEGORIES,
 } from "./database";
 
 // MAPEAMENTO ESTÁTICO COMO FALLBACK GARANTIDO
@@ -189,6 +191,28 @@ export async function handleOnboardingCallback(bot: TelegramBot, query: any) {
   if (!state) return;
 
   console.log(`📝 Step ${state.step}: ${data}`);
+
+  // Seleção de CATEGORIA (Nível 1 do seletor 2-níveis)
+  if (data.startsWith("cat:onb_:") && state.step === 1) {
+    const categoryKey = data.replace("cat:onb_:", "");
+    await bot.answerCallbackQuery(query.id);
+
+    if (categoryKey === "BACK") {
+      const keyboard = await generateConcursosKeyboard("onb_");
+      await bot.editMessageText(
+        `*PERGUNTA 1/8* 🎯\n\nQual concurso você está estudando?`,
+        { chat_id: chatId, message_id: query.message?.message_id, parse_mode: "Markdown", reply_markup: keyboard }
+      );
+    } else {
+      const cat = BOT_CATEGORIES.find(c => c.key === categoryKey);
+      const keyboard = await generateConcursosByCategoryKeyboard(categoryKey, "onb_");
+      await bot.editMessageText(
+        `*PERGUNTA 1/8* 🎯\n\n${cat?.emoji || "📌"} *${cat?.label || categoryKey}*\n\nQual concurso específico?`,
+        { chat_id: chatId, message_id: query.message?.message_id, parse_mode: "Markdown", reply_markup: keyboard }
+      );
+    }
+    return;
+  }
 
   if (data.startsWith("onb_") && state.step === 1) {
     const examType = data.replace("onb_", "");
