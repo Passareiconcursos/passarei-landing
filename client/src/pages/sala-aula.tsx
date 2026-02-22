@@ -1759,11 +1759,35 @@ export default function SalaAula() {
 
                   {/* Card 3 — Simulados */}
                   {(() => {
-                    const weeklyAvailable = weeklyStatus?.available === true;
-                    const weeklyCooldown = weeklyStatus?.reason === "cooldown";
+                    const total = stats?.totalQuestionsAnswered ?? 0;
+                    const questoesInsuficientes = total < 15;
+                    const weeklyAvailable = !questoesInsuficientes && weeklyStatus?.available === true;
+                    const weeklyCooldown = !questoesInsuficientes && weeklyStatus?.reason === "cooldown";
                     return (
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="h-full">
-                        {weeklyAvailable ? (
+                        {questoesInsuficientes ? (
+                          /* ── BLOQUEADO — questões insuficientes (igual SM2) ── */
+                          <Card className="h-full border-2 bg-emerald-900/10 border-emerald-900/20 active:scale-[0.98] transition-transform cursor-pointer"
+                            onClick={() => toast({ title: "Simulado indisponível", description: `Responda mais ${15 - total} questões para desbloquear os Simulados Semanais.` })}>
+                            <CardContent className="p-4 flex flex-col gap-2">
+                              <Trophy className="h-7 w-7 text-emerald-800/25" />
+                              <div>
+                                <Badge variant="outline" className="text-[8px] font-bold tracking-widest uppercase text-emerald-800/50 border-emerald-800/25 px-1.5 py-0 mb-1.5">
+                                  MAPA EM CONSTRUÇÃO
+                                </Badge>
+                                <p className="text-sm font-semibold leading-tight text-foreground/50">Simulados</p>
+                              </div>
+                              <div className="space-y-1.5 mt-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-medium tabular-nums text-emerald-900/40">{total}/15 questões</span>
+                                  <span className="text-[10px] text-emerald-900/30">{Math.round(total / 15 * 100)}%</span>
+                                </div>
+                                <Progress value={Math.round(total / 15 * 100)} className="h-1 bg-emerald-900/10 [&>div]:bg-emerald-700/40" />
+                                <p className="text-[9px] text-muted-foreground/60 leading-snug">Atinja sua cota de estudos para desbloquear</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ) : weeklyAvailable ? (
                           /* ── PROVA LIBERADA — brilho verde ── */
                           <motion.div
                             className="rounded-lg h-full"
@@ -1805,7 +1829,7 @@ export default function SalaAula() {
                             </CardContent>
                           </Card>
                         ) : (
-                          /* ── ESTADO NEUTRO ── */
+                          /* ── ESTADO NEUTRO (sem target ou carregando) ── */
                           <Card className="h-full cursor-pointer hover:shadow-md hover:border-violet-300 transition-all active:scale-95"
                             onClick={() => { setShowDashboard(false); setStudyMode("simulado"); fetchSimulados(); }}>
                             <CardContent className="p-4 flex flex-col gap-2">
