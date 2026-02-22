@@ -270,6 +270,27 @@ export default function SalaAula() {
     available: boolean; reason: string; nextAvailableAt?: string;
   } | null>(null);
 
+  // ── Modo Prova (Simulado Semanal imersivo) ──────────────
+  const [weeklyExamMode, setWeeklyExamMode] = useState(false);
+  const [weeklyExamUserSimId, setWeeklyExamUserSimId] = useState<string | null>(null);
+  const [weeklyExamTotal, setWeeklyExamTotal] = useState(10);
+  const [weeklyExamStartedAt, setWeeklyExamStartedAt] = useState(0);
+  const [weeklyExamQuestion, setWeeklyExamQuestion] = useState<any>(null);
+  const [weeklyExamQNum, setWeeklyExamQNum] = useState(1);
+  const [weeklyExamAnswered, setWeeklyExamAnswered] = useState<number | null>(null);
+  const [weeklyExamCorrectIdx, setWeeklyExamCorrectIdx] = useState<number | null>(null);
+  const [weeklyExamCorrect, setWeeklyExamCorrect] = useState(0);
+  const [weeklyExamWrongQs, setWeeklyExamWrongQs] = useState<{ question: any; correctAnswer: number; userAnswer: number }[]>([]);
+  const [weeklyExamResult, setWeeklyExamResult] = useState<{
+    score: number; correctAnswers: number; wrongAnswers: number;
+    timeSpent: number; passed: boolean; timedOut?: boolean;
+  } | null>(null);
+  const [weeklyExamShowExit, setWeeklyExamShowExit] = useState(false);
+  const [weeklyExamShowFinish, setWeeklyExamShowFinish] = useState(false);
+  const [weeklyExamLoading, setWeeklyExamLoading] = useState(false);
+  const [weeklyExamTimeLeft, setWeeklyExamTimeLeft] = useState(3600);
+  const [weeklyExamShowReview, setWeeklyExamShowReview] = useState(false);
+
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const headers = {
@@ -321,6 +342,13 @@ export default function SalaAula() {
     fetchWeeklyStatus();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.id, student?.targetConcursoId]);
+
+  // Cronômetro regressivo do Modo Prova
+  useEffect(() => {
+    if (!weeklyExamMode || weeklyExamResult || weeklyExamTimeLeft <= 0) return;
+    const t = setTimeout(() => setWeeklyExamTimeLeft(s => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [weeklyExamMode, weeklyExamResult, weeklyExamTimeLeft]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -462,6 +490,120 @@ export default function SalaAula() {
       const data = await res.json();
       setWeeklyStatus(data);
     } catch { /* silent */ }
+  };
+
+  // ── Modo Prova — funções ──────────────────────────────
+
+  const startWeeklyExam = async () => {
+    setWeeklyExamLoading(true);
+    try {
+      const res = await fetch("/api/sala/simulados/weekly/start", { method: "POST", headers });
+      const data = await res.json();
+      if (!data.success) {
+        toast({ variant: "destructive", title: data.error || "Erro ao iniciar simulado semanal" });
+        return;
+      }
+      setWeeklyExamUserSimId(data.userSimuladoId);
+      setWeeklyExamTotal(data.totalQuestions ?? 10);
+      setWeeklyExamStartedAt(Date.now());
+      setWeeklyExamTimeLeft((data.durationMinutes ?? 60) * 60);
+      setWeeklyExamCorrect(0);
+      setWeeklyExamWrongQs([]);
+      setWeeklyExamResult(null);
+      setWeeklyExamQNum(1);
+      setWeeklyExamShowReview(false);
+      setWeeklyExamShowExit(false);
+      setWeeklyExamShowFinish(false);
+      // Buscar primeira questão
+      const qRes = await fetch(`/api/sala/simulados/question/${data.userSimuladoId}`, { headers });
+      const qData = await qRes.json();
+      if (qData.question) {
+        setWeeklyExamQuestion(qData.question);
+        setWeeklyExamAnswered(null);
+        setWeeklyExamCorrectIdx(null);
+      }
+      setWeeklyExamMode(true);
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao iniciar simulado semanal" });
+    } finally {
+      setWeeklyExamLoading(false);
+    }
+  };
+
+  const submitWeeklyExamAnswer = async (optionIndex: number) => {
+    if (!weeklyExamUserSimId || !weeklyExamQuestion || weeklyExamAnswered !== null) return;
+    setWeeklyExamAnswered(optionIndex);
+    try {
+      const res = await fetch("/api/sala/simulados/answer", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          userSimuladoId: weeklyExamUserSimId,
+          questionId: weeklyExamQuestion.id,
+          simuladoQuestionId: weeklyExamQuestion.simuladoQuestionId,
+          answer: optionIndex,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) return;
+
+      setWeeklyExamCorrectIdx(data.correctAnswer ?? -1);
+      if (!data.correct) {
+        setWeeklyExamWrongQs(prev => [...prev, {
+          question: weeklyExamQuestion,
+          correctAnswer: data.correctAnswer ?? -1,
+          userAnswer: optionIndex,
+        }]);
+      } else {
+        setWeeklyExamCorrect(prev => prev + 1);
+      }
+
+      if (data.finished && data.result) {
+        setWeeklyExamResult({
+          score: data.result.score,
+          correctAnswers: data.result.correctAnswers,
+          wrongAnswers: data.result.wrongAnswers,
+          timeSpent: Math.round((Date.now() - weeklyExamStartedAt) / 60000),
+          passed: data.result.passed,
+        });
+        fetchWeeklyStatus();
+        return;
+      }
+
+      // Avançar para próxima questão após mostrar gabarito
+      const simId = weeklyExamUserSimId;
+      setTimeout(async () => {
+        setWeeklyExamQNum(n => n + 1);
+        setWeeklyExamAnswered(null);
+        setWeeklyExamCorrectIdx(null);
+        const qRes = await fetch(`/api/sala/simulados/question/${simId}`, { headers });
+        const qData = await qRes.json();
+        if (qData.question) setWeeklyExamQuestion(qData.question);
+      }, 1300);
+    } catch { /* silent */ }
+  };
+
+  const finishWeeklyExam = () => {
+    const elapsed = Math.round((Date.now() - weeklyExamStartedAt) / 60000);
+    setWeeklyExamResult({
+      score: weeklyExamTotal > 0 ? Math.round(weeklyExamCorrect / weeklyExamTotal * 100) : 0,
+      correctAnswers: weeklyExamCorrect,
+      wrongAnswers: weeklyExamWrongQs.length,
+      timeSpent: elapsed,
+      passed: weeklyExamTotal > 0 && weeklyExamCorrect / weeklyExamTotal >= 0.6,
+    });
+    setWeeklyExamShowFinish(false);
+    fetchWeeklyStatus();
+  };
+
+  const exitWeeklyExam = () => {
+    setWeeklyExamMode(false);
+    setWeeklyExamUserSimId(null);
+    setWeeklyExamQuestion(null);
+    setWeeklyExamResult(null);
+    setWeeklyExamShowExit(false);
+    setWeeklyExamShowFinish(false);
+    setWeeklyExamShowReview(false);
   };
 
   const startWeeklySimulado = async () => {
@@ -1064,6 +1206,9 @@ export default function SalaAula() {
   // RENDER
   // ============================================
 
+  const formatExamTime = (s: number) =>
+    `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+
   return (
     <SalaLayout>
       {/* Dialog de seleção de concurso-alvo */}
@@ -1233,6 +1378,202 @@ export default function SalaAula() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* ═══════════════════════════════════════════
+          MODO PROVA — Full-screen exam overlay
+          ═══════════════════════════════════════════ */}
+      {weeklyExamMode && (
+        <div className="fixed inset-0 z-[60] bg-background flex flex-col">
+
+          {/* ── EXIT CONFIRMATION ── */}
+          {weeklyExamShowExit && (
+            <div className="absolute inset-0 z-10 bg-black/60 flex items-center justify-center p-4">
+              <div className="bg-background rounded-xl shadow-2xl p-6 max-w-sm w-full space-y-4">
+                <h3 className="text-base font-semibold">Sair da prova?</h3>
+                <p className="text-sm text-muted-foreground">Seu progresso será perdido e o simulado semanal ficará indisponível por 7 dias.</p>
+                <div className="flex gap-3 justify-end">
+                  <Button variant="outline" size="sm" onClick={() => setWeeklyExamShowExit(false)}>Continuar prova</Button>
+                  <Button variant="destructive" size="sm" onClick={exitWeeklyExam}>Sair mesmo assim</Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── FINISH CONFIRMATION ── */}
+          {weeklyExamShowFinish && (
+            <div className="absolute inset-0 z-10 bg-black/60 flex items-center justify-center p-4">
+              <div className="bg-background rounded-xl shadow-2xl p-6 max-w-sm w-full space-y-4">
+                <h3 className="text-base font-semibold">Finalizar prova?</h3>
+                <p className="text-sm text-muted-foreground">
+                  Você respondeu {weeklyExamQNum - 1} de {weeklyExamTotal} questões. Deseja encerrar e ver o resultado?
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <Button variant="outline" size="sm" onClick={() => setWeeklyExamShowFinish(false)}>Continuar</Button>
+                  <Button size="sm" onClick={finishWeeklyExam}>Finalizar</Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {weeklyExamResult ? (
+            /* ── RESULT SCREEN ── */
+            <div className="flex flex-col h-full">
+              {/* Result top bar */}
+              <div className="flex items-center justify-between px-4 h-12 border-b shrink-0">
+                <span className="text-sm font-semibold">Resultado</span>
+                <Button variant="ghost" size="sm" className="text-xs" onClick={exitWeeklyExam}>Fechar</Button>
+              </div>
+
+              <ScrollArea className="flex-1">
+                <div className="max-w-md mx-auto px-4 py-8 space-y-6">
+                  {/* Score circle */}
+                  <div className="flex flex-col items-center gap-2">
+                    <div className={`w-28 h-28 rounded-full flex flex-col items-center justify-center border-4 ${weeklyExamResult.passed ? "border-green-500 text-green-600" : "border-red-400 text-red-500"}`}>
+                      <span className="text-3xl font-bold">{weeklyExamResult.score}%</span>
+                      <span className="text-[10px] uppercase tracking-widest font-semibold">{weeklyExamResult.passed ? "Aprovado" : "Reprovado"}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Simulado Semanal — {new Date().toLocaleDateString("pt-BR")}</p>
+                  </div>
+
+                  {/* Stats grid */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-green-500/10 rounded-lg p-3 text-center">
+                      <p className="text-xl font-bold text-green-600">{weeklyExamResult.correctAnswers}</p>
+                      <p className="text-[11px] text-muted-foreground">Acertos</p>
+                    </div>
+                    <div className="bg-red-500/10 rounded-lg p-3 text-center">
+                      <p className="text-xl font-bold text-red-500">{weeklyExamResult.wrongAnswers}</p>
+                      <p className="text-[11px] text-muted-foreground">Erros</p>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <p className="text-xl font-bold">{weeklyExamResult.timeSpent}m</p>
+                      <p className="text-[11px] text-muted-foreground">Tempo</p>
+                    </div>
+                  </div>
+
+                  {weeklyExamResult.timedOut && (
+                    <p className="text-center text-sm text-orange-500 font-medium">⏰ Tempo esgotado</p>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex flex-col gap-3">
+                    {weeklyExamWrongQs.length > 0 && (
+                      <Button variant="outline" className="w-full" onClick={() => setWeeklyExamShowReview(true)}>
+                        Revisar {weeklyExamWrongQs.length} erro{weeklyExamWrongQs.length !== 1 ? "s" : ""}
+                      </Button>
+                    )}
+                    <Button className="w-full" onClick={exitWeeklyExam}>Voltar ao Painel</Button>
+                  </div>
+
+                  {/* Review errors */}
+                  {weeklyExamShowReview && weeklyExamWrongQs.length > 0 && (
+                    <div className="space-y-4 pt-2">
+                      <h3 className="text-sm font-semibold border-t pt-4">Revisão de Erros</h3>
+                      {weeklyExamWrongQs.map((item, idx) => (
+                        <div key={idx} className="rounded-lg border p-4 space-y-3">
+                          <p className="text-sm font-medium">{idx + 1}. {item.question?.statement}</p>
+                          <div className="space-y-1.5">
+                            {(item.question?.options as string[] || []).map((opt: string, oIdx: number) => (
+                              <div key={oIdx} className={`flex items-start gap-2 text-xs rounded-md px-3 py-2 ${
+                                oIdx === item.correctAnswer ? "bg-green-500/15 text-green-700 font-medium" :
+                                oIdx === item.userAnswer ? "bg-red-500/10 text-red-500 line-through" : "text-muted-foreground"
+                              }`}>
+                                <span className="font-semibold shrink-0">{["A","B","C","D"][oIdx]}.</span>
+                                <span>{opt}</span>
+                              </div>
+                            ))}
+                          </div>
+                          {item.question?.explanation && (
+                            <p className="text-xs text-muted-foreground border-t pt-2">{item.question.explanation}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          ) : (
+            /* ── EXAM IN PROGRESS ── */
+            <div className="flex flex-col h-full">
+              {/* Exam top bar */}
+              <div className="flex items-center gap-3 px-4 h-12 border-b bg-background shrink-0">
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => setWeeklyExamShowExit(true)}>
+                  <X className="h-4 w-4" />
+                </Button>
+                {/* Progress bar */}
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[11px] text-muted-foreground">Questão {weeklyExamQNum} de {weeklyExamTotal}</span>
+                  </div>
+                  <Progress value={(weeklyExamQNum - 1) / weeklyExamTotal * 100} className="h-1.5" />
+                </div>
+                {/* Timer */}
+                <div className={`flex items-center gap-1 font-mono text-sm font-semibold shrink-0 ${weeklyExamTimeLeft < 300 ? "text-red-500" : "text-foreground"}`}>
+                  <Clock className="h-3.5 w-3.5" />
+                  {formatExamTime(weeklyExamTimeLeft)}
+                </div>
+              </div>
+
+              {/* Question area */}
+              <ScrollArea className="flex-1">
+                <div className="max-w-xl mx-auto px-4 py-6 space-y-5">
+                  {weeklyExamQuestion ? (
+                    <>
+                      <p className="text-sm font-medium leading-relaxed">{weeklyExamQuestion.statement}</p>
+                      <div className="space-y-2.5">
+                        {(weeklyExamQuestion.options as string[] || []).map((opt: string, idx: number) => {
+                          const isAnswered = weeklyExamAnswered !== null;
+                          const isSelected = weeklyExamAnswered === idx;
+                          const isCorrect = weeklyExamCorrectIdx === idx;
+                          return (
+                            <button
+                              key={idx}
+                              disabled={isAnswered}
+                              onClick={() => submitWeeklyExamAnswer(idx)}
+                              className={`w-full text-left flex items-start gap-3 rounded-lg border px-4 py-3 text-sm transition-all ${
+                                !isAnswered ? "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.99] cursor-pointer" :
+                                isCorrect ? "border-green-500 bg-green-500/10 text-green-700 cursor-default" :
+                                isSelected ? "border-red-400 bg-red-500/10 text-red-600 cursor-default" :
+                                "opacity-50 cursor-default"
+                              }`}
+                            >
+                              <span className="font-semibold shrink-0 mt-0.5">{["A","B","C","D"][idx]}.</span>
+                              <span className="leading-snug">{opt}</span>
+                              {isAnswered && isCorrect && <span className="ml-auto shrink-0 text-green-600">✓</span>}
+                              {isAnswered && isSelected && !isCorrect && <span className="ml-auto shrink-0 text-red-500">✗</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-center py-20">
+                      <div className="text-center space-y-2">
+                        <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                        <p className="text-sm text-muted-foreground">Carregando questão...</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+
+              {/* Bottom action bar */}
+              <div className="border-t px-4 py-3 bg-background shrink-0 flex items-center justify-between gap-3">
+                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground"
+                  onClick={() => setWeeklyExamShowExit(true)}>
+                  Sair
+                </Button>
+                <Button variant="outline" size="sm" className="text-xs"
+                  onClick={() => setWeeklyExamShowFinish(true)}>
+                  Finalizar Prova
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {showDashboard ? (
         /* ═══════════════════════════════════════════
@@ -1450,7 +1791,7 @@ export default function SalaAula() {
                             transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
                           >
                             <Card className="h-full cursor-pointer border-2 border-green-300/60 hover:border-green-400 hover:shadow-md transition-all active:scale-95"
-                              onClick={() => { setShowDashboard(false); setStudyMode("simulado"); fetchSimulados(); }}>
+                              onClick={() => { if (!weeklyExamLoading) startWeeklyExam(); }}>
                               <CardContent className="p-4 flex flex-col gap-2">
                                 <Trophy className="h-7 w-7 text-green-600" />
                                 <div>
