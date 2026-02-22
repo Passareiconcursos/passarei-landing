@@ -253,6 +253,9 @@ export default function SalaAula() {
   const [remaining, setRemaining] = useState<number | undefined>();
   const [showConcursoSelector, setShowConcursoSelector] = useState(false);
   const [showRaioX, setShowRaioX] = useState(false);
+  const [lastStudiedSubjectId, setLastStudiedSubjectId] = useState<string | null>(
+    () => localStorage.getItem("passarei_last_subject") ?? null
+  );
   const [concursosList, setConcursosList] = useState<ConcursoItem[]>([]);
   const [targetConcurso, setTargetConcurso] = useState<{ id: string; nome: string; banca: string } | null>(null);
   const [showDashboard, setShowDashboard] = useState(true);
@@ -794,6 +797,8 @@ export default function SalaAula() {
 
   const handleSubjectClick = (subjectId: string) => {
     setSelectedSubject(subjectId);
+    setLastStudiedSubjectId(subjectId);
+    localStorage.setItem("passarei_last_subject", subjectId);
     setShowMobileSidebar(false);
     if (studyMode === "plano") {
       fetchSequentialContent(subjectId);
@@ -1345,16 +1350,32 @@ export default function SalaAula() {
                 <div className="grid grid-cols-2 gap-3">
 
                   {/* Card 1 — Continuar Estudo (sempre ativo) */}
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                    <Card className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all active:scale-95 h-full"
-                      onClick={() => { setShowDashboard(false); setStudyMode("plano"); }}>
-                      <CardContent className="p-4 flex flex-col gap-2">
-                        <BookOpen className="h-7 w-7 text-primary" />
-                        <p className="text-sm font-semibold leading-tight">Continuar Estudo</p>
-                        <p className="text-[11px] text-muted-foreground">Seguir pelo edital</p>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
+                  {(() => {
+                    const resumeSubject = lastStudiedSubjectId
+                      ? subjects.find(s => s.id === lastStudiedSubjectId) ?? null
+                      : null;
+                    return (
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                        <Card className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all active:scale-95 h-full"
+                          onClick={() => {
+                            setShowDashboard(false);
+                            setStudyMode("plano");
+                            if (resumeSubject) {
+                              setSelectedSubject(resumeSubject.id);
+                              fetchSequentialContent(resumeSubject.id);
+                            }
+                          }}>
+                          <CardContent className="p-4 flex flex-col gap-2">
+                            <BookOpen className="h-7 w-7 text-primary" />
+                            <p className="text-sm font-semibold leading-tight">Continuar Estudo</p>
+                            <p className="text-[11px] text-muted-foreground truncate">
+                              {resumeSubject ? `Retomar: ${resumeSubject.name}` : "Seguir pelo edital"}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })()}
 
                   {/* Card 2 — Reforço SM2 */}
                   {(() => {
