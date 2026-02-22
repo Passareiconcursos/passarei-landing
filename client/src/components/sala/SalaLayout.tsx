@@ -37,9 +37,6 @@ export function SalaLayout({ children }: SalaLayoutProps) {
     return null;
   }
 
-  // Format exam/cargo display
-  const examLabel = student.examType || "";
-  const cargoLabel = student.cargo ? ` — ${student.cargo}` : "";
   const firstName = student.name?.split(" ")[0] || "Aluno";
 
   return (
@@ -56,11 +53,6 @@ export function SalaLayout({ children }: SalaLayoutProps) {
             <div className="hidden md:block h-6 w-px bg-border" />
             <div className="hidden md:block text-sm">
               <span className="font-medium">{firstName}</span>
-              {examLabel && (
-                <span className="text-muted-foreground ml-1">
-                  — Estuda para {examLabel}{cargoLabel}
-                </span>
-              )}
             </div>
           </div>
 
@@ -85,7 +77,7 @@ export function SalaLayout({ children }: SalaLayoutProps) {
 
         {/* Mobile: Student info bar */}
         <div className="md:hidden border-t px-4 py-1.5 text-xs text-muted-foreground">
-          {firstName} — {examLabel}{cargoLabel}
+          {firstName}
         </div>
       </header>
 

@@ -164,8 +164,8 @@ function groupConcursos(list: ConcursoItem[]): Record<string, ConcursoItem[]> {
   for (const c of list) {
     const s = c.sigla;
     if (
-      s.startsWith("PF") || s === "PRF" || s === "GP" ||
-      ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL", "RFB"].includes(s)
+      s.startsWith("PF") || s.startsWith("PRF") || s.startsWith("RFB") || s === "GP" ||
+      ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL"].includes(s)
     ) {
       groups[BLOCO_A].push(c);
     } else if (SIGLAS_BLOCO_B.has(s)) {

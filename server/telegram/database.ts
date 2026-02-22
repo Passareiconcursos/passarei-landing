@@ -1451,8 +1451,8 @@ export const BOT_CATEGORIES: { key: string; label: string; emoji: string; siglaM
   {
     key: "BLOCO_A", label: "Polícias Federais", emoji: "🛡️",
     siglaMatch: (s) =>
-      s.startsWith("PF") || s === "PRF" || s === "GP" ||
-      ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL", "RFB"].includes(s),
+      s.startsWith("PF") || s.startsWith("PRF") || s.startsWith("RFB") || s === "GP" ||
+      ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL"].includes(s),
   },
   {
     key: "BLOCO_B", label: "Defesa | Forças Armadas", emoji: "⚔️",

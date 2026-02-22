@@ -33,6 +33,7 @@ export async function runAutoMigrations() {
   await run("userConcurso",      migrateUserConcursoColumn);
   await run("simuladoType",      migrateSimuladoTypeColumn);
   await run("cleanupPFF",        cleanupPFFConcurso);
+  await run("cleanupRedundant",  cleanupRedundantConcursos);
 
   console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
@@ -917,16 +918,6 @@ async function migrateConcursosTables() {
         { name: "Legislação Específica PM", weight: 2, questions: 15, topics: [] },
         { name: "Informática", weight: 1, questions: 5, topics: [] },
       ] },
-    { nome: "Polícia Militar de São Paulo - Soldado", sigla: "PM_SP", esfera: "ESTADUAL", exam_type: "PM",
-      banca: "VUNESP", cargo_padrao: "Soldado PM SP", estado: "SP",
-      materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Matemática", weight: 1, questions: 10, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
-        { name: "Legislação Específica PM", weight: 2, questions: 15, topics: [] },
-        { name: "Informática", weight: 1, questions: 5, topics: [] },
-      ] },
     // ── CORPO DE BOMBEIROS MILITAR ────────────────────────────────────────────
     { nome: "Corpo de Bombeiros Militar - Oficial (CFO)", sigla: "CBM_CFO", esfera: "ESTADUAL", exam_type: "CBM",
       banca: "VUNESP", cargo_padrao: "Oficial CBM", estado: null,
@@ -991,15 +982,6 @@ async function migrateConcursosTables() {
         { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
         { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
         { name: "Criminologia", weight: 1, questions: 5, topics: [] },
-      ] },
-    { nome: "Polícia Civil SP - Investigador", sigla: "PC_SP", esfera: "ESTADUAL", exam_type: "PC",
-      banca: "VUNESP", cargo_padrao: "Investigador de Polícia SP", estado: "SP",
-      materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Direito Penal", weight: 2, questions: 15, topics: [] },
-        { name: "Direito Processual Penal", weight: 2, questions: 15, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
       ] },
     { nome: "Polícia Civil - Escrivão", sigla: "PC_ESC", esfera: "ESTADUAL", exam_type: "PC",
       banca: "VUNESP", cargo_padrao: "Escrivão de Polícia Civil", estado: null,
@@ -1173,5 +1155,38 @@ async function cleanupPFFConcurso() {
   `) as any[];
   if (deleted.length > 0) {
     console.log(`  🗑️ Concurso PFF (Polícia Ferroviária Federal) removido do banco`);
+  }
+}
+
+async function cleanupRedundantConcursos() {
+  // 1. Renomear PF genérico para "Polícia Federal - Agente" (evita botão sem cargo ao lado dos específicos)
+  await db.execute(sql`
+    UPDATE concursos SET nome = 'Polícia Federal - Agente'
+    WHERE sigla = 'PF' AND nome = 'Polícia Federal'
+  `);
+
+  // 2. Remover registros genéricos que convivem com sub-variantes específicas (causam botões duplicados)
+  //    PM, CBM, PC genéricos → substituídos por PM_CFO, PM_SD, CBM_CFO, CBM_SD, PC_AGT etc.
+  // 3. Remover variantes por estado (SP) — não devem aparecer sem filtro de estado
+  // 4. Remover ENEM (não faz parte do escopo do produto)
+  const deleted = await db.execute(sql`
+    DELETE FROM concursos
+    WHERE sigla IN ('PM', 'CBM', 'PC', 'PM_SP', 'PC_SP', 'ENEM')
+    RETURNING sigla
+  `) as any[];
+  if (deleted.length > 0) {
+    const siglas = deleted.map((r: any) => r.sigla).join(', ');
+    console.log(`  🗑️ Concursos redundantes removidos do banco: ${siglas}`);
+  }
+
+  // 5. Remover aliases duplicados do Ministério da Defesa (manter apenas MIN_DEF)
+  const delMD = await db.execute(sql`
+    DELETE FROM concursos
+    WHERE sigla IN ('MD', 'MIN_DEFESA')
+    RETURNING sigla
+  `) as any[];
+  if (delMD.length > 0) {
+    const siglas = delMD.map((r: any) => r.sigla).join(', ');
+    console.log(`  🗑️ Aliases duplicados de Ministério da Defesa removidos: ${siglas}`);
   }
 }
