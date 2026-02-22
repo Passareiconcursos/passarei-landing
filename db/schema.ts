@@ -32,6 +32,7 @@ export const examTypeEnum = pgEnum("exam_type", [
   "PL_FEDERAL", // Polícia Legislativa Federal
   "PJ_CNJ", // Polícia Judicial CNJ
   "ABIN", // Agência Brasileira de Inteligência
+  "RECEITA_FEDERAL", // Receita Federal do Brasil (RFB)
 
   // Federais - Militares
   "EXERCITO", // Exército (ESPCEX, IME, ESA)

@@ -690,9 +690,56 @@ async function migrateConcursosTables() {
         { name: "Informática", weight: 1, questions: 5, topics: [] },
         { name: "Atualidades", weight: 1, questions: 5, topics: [] },
       ] },
+    // ── AGENTE ADMIN PRF — NÍVEL MÉDIO ───────────────────────────────────────
+    { nome: "PRF - Agente Administrativo", sigla: "PRF_ADMIN", esfera: "FEDERAL", exam_type: "PRF",
+      banca: "CEBRASPE", cargo_padrao: "Agente Administrativo PRF (Nível Médio)", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 2, questions: 20, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
+        { name: "Noções de Direito Administrativo", weight: 1, questions: 15, topics: [] },
+        { name: "Informática", weight: 2, questions: 20, topics: [] },
+        { name: "Atualidades", weight: 1, questions: 10, topics: [] },
+      ] },
+    // ── AGENTE ADMIN PF — NÍVEL MÉDIO ────────────────────────────────────────
+    { nome: "Polícia Federal - Agente Administrativo", sigla: "PF_ADMIN", esfera: "FEDERAL", exam_type: "PF",
+      banca: "CEBRASPE", cargo_padrao: "Agente Administrativo (Nível Médio)", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 2, questions: 20, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
+        { name: "Noções de Direito Administrativo", weight: 1, questions: 15, topics: [] },
+        { name: "Informática", weight: 2, questions: 20, topics: [] },
+        { name: "Atualidades", weight: 1, questions: 10, topics: [] },
+      ] },
+    // ── RECEITA FEDERAL (ESAF/CEBRASPE) ──────────────────────────────────────
+    { nome: "Receita Federal", sigla: "RFB", esfera: "FEDERAL", exam_type: "RECEITA_FEDERAL",
+      banca: "CEBRASPE", cargo_padrao: "Auditor-Fiscal da Receita Federal", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 10, topics: [] },
+        { name: "Inglês", weight: 1, questions: 5, topics: [] },
+        { name: "Raciocínio Lógico e Matemática Financeira", weight: 1, questions: 15, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Tributário", weight: 3, questions: 25, topics: [] },
+        { name: "Direito Aduaneiro", weight: 2, questions: 15, topics: [] },
+        { name: "Contabilidade Geral e Pública", weight: 2, questions: 15, topics: [] },
+        { name: "Administração Geral e Pública", weight: 1, questions: 10, topics: [] },
+        { name: "Tecnologia da Informação", weight: 1, questions: 10, topics: [] },
+        { name: "Auditoria Fiscal", weight: 2, questions: 15, topics: [] },
+      ] },
+    // ── RECEITA FEDERAL — INSPETOR ────────────────────────────────────────────
+    { nome: "Receita Federal - Inspetor", sigla: "RFB_INSP", esfera: "FEDERAL", exam_type: "RECEITA_FEDERAL",
+      banca: "CEBRASPE", cargo_padrao: "Inspetor da Receita Federal", estado: null,
+      materias: [
+        { name: "Língua Portuguesa", weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Direito Tributário", weight: 2, questions: 20, topics: [] },
+        { name: "Direito Aduaneiro", weight: 2, questions: 20, topics: [] },
+        { name: "Informática", weight: 1, questions: 10, topics: [] },
+        { name: "Atualidades e Conhecimentos Gerais", weight: 1, questions: 10, topics: [] },
+      ] },
     // ── POLÍCIA PENAL FEDERAL / DEPEN (CEBRASPE) ────────────────────────────
     { nome: "Polícia Penal Federal", sigla: "PPF", esfera: "FEDERAL", exam_type: "PP_FEDERAL",
-      banca: "CEBRASPE", cargo_padrao: "Agente de Polícia Penal Federal", estado: null,
+      banca: "CEBRASPE", cargo_padrao: "Policial Penal Federal", estado: null,
       materias: [
         { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
         { name: "Direito Constitucional", weight: 2, questions: 20, topics: [] },
@@ -977,8 +1024,8 @@ async function migrateConcursosTables() {
         { name: "Criminalística", weight: 1, questions: 5, topics: [] },
       ] },
     // ── POLÍCIA PENAL ESTADUAL ────────────────────────────────────────────────
-    { nome: "Polícia Penal Estadual - Agente Penitenciário", sigla: "PPE", esfera: "ESTADUAL", exam_type: "PP_ESTADUAL",
-      banca: "CEBRASPE", cargo_padrao: "Agente Penitenciário", estado: null,
+    { nome: "Polícia Penal Estadual", sigla: "PPE", esfera: "ESTADUAL", exam_type: "PP_ESTADUAL",
+      banca: "CEBRASPE", cargo_padrao: "ESPP: Aluno Policial Penal", estado: null,
       materias: [
         { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
         { name: "Direito Constitucional", weight: 1, questions: 15, topics: [] },
@@ -1077,8 +1124,12 @@ async function migrateConcursosTables() {
     seeded++;
   }
 
-  console.log(`  ✅ Tabelas concursos + edital_vinculos OK (${seeded} concursos pré-seeded do PDF)`);
-  console.log("     Incluídos: PF/PRF/PPF/PFF/PLF/CNJ, ABIN/ANAC/CPNU, Exército/Marinha/FAB, PM/PC/CBM, PP Estadual, Guardas");
+  console.log(`  ✅ Tabelas concursos + edital_vinculos OK (${seeded} concursos pré-seeded)`);
+  console.log("     Bloco A: PF/PF_ADMIN/PRF/PRF_ADMIN/PLF/PPF/RFB/GP");
+  console.log("     Bloco B: Exército(ESPCEX/ESA/IME)/Marinha(CN/EN/FUZNAVAIS)/FAB(ITA/EPCAR/EAGS)/MIN_DEF");
+  console.log("     Bloco C: ABIN/ANAC/CPNU");
+  console.log("     Bloco D: PJ_CNJ");
+  console.log("     Bloco E: PM/PC/CBM/PPE/PLE/PC_CIENT/GM/GP_municipal");
 }
 
 async function migrateUserConcursoColumn() {

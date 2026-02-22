@@ -141,77 +141,57 @@ interface ConcursoItem {
   cargo_padrao: string;
 }
 
-// Agrupamento client-side dos concursos — 9 grupos oficiais
+// Agrupamento client-side dos concursos — 5 Blocos oficiais
 // Constantes usadas como chave em groupConcursos E getAreaIcon (evita mismatch de encoding)
-const GROUP_FED     = "Carreiras Federais";
-const GROUP_EXER    = "Exército";
-const GROUP_MARINHA = "Marinha";
-const GROUP_FAB     = "Aeronáutica";
-const GROUP_PM      = "Polícia Militar";
-const GROUP_PC      = "Polícia Civil";
-const GROUP_CBM     = "Corpo de Bombeiros";
-const GROUP_GUARDAS = "Guardas";
-const GROUP_INTEL   = "Inteligência";
+const BLOCO_A = "Polícias Federais";
+const BLOCO_B = "Defesa | Forças Armadas";
+const BLOCO_C = "Inteligência | Administrativo";
+const BLOCO_D = "Poder Judiciário | CNJ";
+const BLOCO_E = "Estados e Municípios";
 
-// Siglas fixas por grupo — inclui tanto siglas-código quanto siglas-nome-completo do DB
-const SIGLAS_EXER    = new Set(["ESPCEX", "IME", "ESA", "EXERCITO"]);
-const SIGLAS_MARINHA = new Set(["CN", "EN", "FUZNAVAIS", "MARINHA"]);
-const SIGLAS_FAB     = new Set(["ITA", "EPCAR", "EAGS", "FAB", "MIN_DEF", "MD", "AERONAUTICA"]);
-const SIGLAS_INTEL   = new Set(["ABIN", "ANAC", "CPNU"]);
-const SIGLAS_GUARDAS = new Set(["GM", "GP", "PPE", "PP_ESTADUAL", "PL_ESTADUAL"]);
+// Siglas fixas por bloco — inclui tanto siglas-código quanto siglas-nome-completo do DB
+const SIGLAS_BLOCO_B = new Set([
+  "ESPCEX", "IME", "ESA", "EXERCITO",
+  "CN", "EN", "FUZNAVAIS", "MARINHA",
+  "ITA", "EPCAR", "EAGS", "FAB", "AERONAUTICA", "MIN_DEF", "MD", "MIN_DEFESA",
+]);
+const SIGLAS_BLOCO_C = new Set(["ABIN", "ANAC", "CPNU"]);
 
 function groupConcursos(list: ConcursoItem[]): Record<string, ConcursoItem[]> {
   const groups: Record<string, ConcursoItem[]> = {
-    [GROUP_FED]: [], [GROUP_EXER]: [], [GROUP_MARINHA]: [], [GROUP_FAB]: [],
-    [GROUP_PM]:  [], [GROUP_PC]:   [], [GROUP_CBM]:     [],
-    [GROUP_GUARDAS]: [], [GROUP_INTEL]: [],
+    [BLOCO_A]: [], [BLOCO_B]: [], [BLOCO_C]: [], [BLOCO_D]: [], [BLOCO_E]: [],
   };
   for (const c of list) {
     const s = c.sigla;
     if (
-      s.startsWith("PF") || s === "PRF" ||
-      ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL", "PJ_CNJ"].includes(s) ||
-      s.startsWith("PJ")
+      s.startsWith("PF") || s === "PRF" || s === "GP" ||
+      ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL", "RFB"].includes(s)
     ) {
-      groups[GROUP_FED].push(c);
-    } else if (SIGLAS_EXER.has(s)) {
-      groups[GROUP_EXER].push(c);
-    } else if (SIGLAS_MARINHA.has(s)) {
-      groups[GROUP_MARINHA].push(c);
-    } else if (SIGLAS_FAB.has(s)) {
-      groups[GROUP_FAB].push(c);
-    } else if (s.startsWith("PM") || s === "PM") {
-      groups[GROUP_PM].push(c);
-    } else if (s.startsWith("PC") || s === "PC" || s === "PC_CIENT") {
-      groups[GROUP_PC].push(c);
-    } else if (s.startsWith("CBM") || s === "CBM") {
-      groups[GROUP_CBM].push(c);
-    } else if (SIGLAS_GUARDAS.has(s)) {
-      groups[GROUP_GUARDAS].push(c);
-    } else if (SIGLAS_INTEL.has(s)) {
-      groups[GROUP_INTEL].push(c);
+      groups[BLOCO_A].push(c);
+    } else if (SIGLAS_BLOCO_B.has(s)) {
+      groups[BLOCO_B].push(c);
+    } else if (SIGLAS_BLOCO_C.has(s)) {
+      groups[BLOCO_C].push(c);
+    } else if (s.startsWith("PJ")) {
+      groups[BLOCO_D].push(c);
     } else {
-      // fallback: colocar em Guardas para não perder nenhum concurso
-      groups[GROUP_GUARDAS].push(c);
+      // Bloco E: PM, PC, CBM, PP_ESTADUAL, PL_ESTADUAL, GM e demais estaduais/municipais
+      groups[BLOCO_E].push(c);
     }
   }
   return groups;
 }
 
-// Ícones institucionais por área de concurso (chaves = constantes GROUP_*)
+// Ícones por bloco (chaves = constantes BLOCO_*)
 function getAreaIcon(grupo: string) {
   const icons: Record<string, JSX.Element> = {
-    [GROUP_FED]:     <ShieldCheck size={36} className="text-blue-600" />,
-    [GROUP_EXER]:    <Crosshair   size={36} className="text-green-700" />,
-    [GROUP_MARINHA]: <Anchor      size={36} className="text-blue-700" />,
-    [GROUP_FAB]:     <Plane       size={36} className="text-sky-500" />,
-    [GROUP_PM]:      <Shield      size={36} className="text-indigo-500" />,
-    [GROUP_PC]:      <Shield      size={36} className="text-slate-600" />,
-    [GROUP_CBM]:     <Flame       size={36} className="text-red-500" />,
-    [GROUP_GUARDAS]: <MapPin      size={36} className="text-slate-500" />,
-    [GROUP_INTEL]:   <Building2   size={36} className="text-sky-500" />,
+    [BLOCO_A]: <ShieldCheck size={36} className="text-blue-600" />,
+    [BLOCO_B]: <Crosshair   size={36} className="text-green-700" />,
+    [BLOCO_C]: <Building2   size={36} className="text-sky-500" />,
+    [BLOCO_D]: <Scale       size={36} className="text-violet-600" />,
+    [BLOCO_E]: <Shield      size={36} className="text-slate-500" />,
   };
-  return icons[grupo] || <MapPin size={36} className="text-muted-foreground" />;
+  return icons[grupo] || <Shield size={36} className="text-muted-foreground" />;
 }
 
 // ============================================

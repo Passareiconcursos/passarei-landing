@@ -129,24 +129,40 @@ async function getCargoIdByCodigo(
 
 const onboardingStates = new Map<string, OnboardingState>();
 
+// Fallback local de cargos por sigla — usado se getCargosFromDB falhar
 const CARGOS: any = {
-  PC: [
-    "Delegado",
-    "Escrivão",
-    "Investigador",
-    "Agente de Polícia",
-    "Perito Criminal",
-    "Papiloscopista",
-  ],
-  PM: ["Soldado", "Aspirante a Oficial"],
-  PF: ["Agente", "Escrivão", "Delegado", "Perito Criminal"],
-  PRF: ["Policial Rodoviário Federal"],
-  CBM: ["Soldado", "Aspirante a Oficial"],
-  GM: ["Guarda Municipal"],
-  PP_ESTADUAL: ["Agente Penitenciário"],
-  PP_FEDERAL: ["Agente Federal Penitenciário"],
+  // Bloco A — Polícias Federais
+  PF:          ["Agente", "Escrivão", "Papiloscopista", "Perito Criminal Federal", "Delegado", "Agente Admin (Nível Médio)"],
+  PRF:         ["Policial Rodoviário Federal", "Agente Admin (Nível Médio)"],
+  PLF:         ["Policial Legislativo Federal"],
+  PPF:         ["Policial Penal Federal"],
+  PP_FEDERAL:  ["Policial Penal Federal"],   // alias exam_type
+  RFB:         ["Auditor-Fiscal", "Inspetor"],
+  GP:          ["Guarda Portuário"],
+  // Bloco B — Defesa | Forças Armadas
+  ESPCEX:      ["Aluno"],
+  ESA:         ["Aluno Sargento"],
+  IME:         ["Aluno Engenheiro"],
+  CN:          ["Aluno"],
+  EN:          ["Aspirante"],
+  FUZNAVAIS:   ["Aluno Recruta"],
+  ITA:         ["Iteano"],
+  EPCAR:       ["Cadete do Ar"],
+  EAGS:        ["Aluno"],
+  MIN_DEF:     ["Administrativos/Geral"],
+  // Bloco C — Inteligência | Administrativo
+  ABIN:        ["Oficial de Inteligência", "Oficial Técnico de Inteligência", "Agente de Inteligência", "Agente Técnico de Inteligência"],
+  ANAC:        ["Agente de Segurança Aeroportuária"],
+  CPNU:        ["Conforme editais do Bloco"],
+  // Bloco D — Poder Judiciário | CNJ
+  PJ_CNJ:      ["Inspetor da Polícia Judicial", "Agente da Polícia Judicial"],
+  // Bloco E — Estados e Municípios
+  PM:          ["CFO: Cadete", "CFSD: Aluno Soldado"],
+  PC:          ["Delegado", "Escrivão", "Investigador", "Papiloscopista", "Perito Criminal"],
+  CBM:         ["CFO: Cadete", "CFSD: Aluno Soldado"],
+  PP_ESTADUAL: ["ESPP: Aluno Policial Penal"],
   PL_ESTADUAL: ["Agente de Polícia Legislativa"],
-  PL_FEDERAL: ["Policial Legislativo Federal"],
+  GM:          ["Guarda Municipal"],
 };
 
 export async function startOnboarding(

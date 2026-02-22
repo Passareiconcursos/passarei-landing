@@ -1277,32 +1277,74 @@ export async function recordQuestionAttempt(
 // CONCURSOS E CARGOS - BUSCAR DO BANCO
 // ============================================
 
-// Fallback para concursos (usado se banco falhar)
+// Fallback para concursos (usado se banco falhar) — 5 Blocos
 const CONCURSOS_FALLBACK = [
-  { sigla: "PF", nome: "Polícia Federal", esfera: "FEDERAL" },
-  { sigla: "PRF", nome: "Polícia Rodoviária Federal", esfera: "FEDERAL" },
-  { sigla: "PM", nome: "Polícia Militar", esfera: "ESTADUAL" },
-  { sigla: "PC", nome: "Polícia Civil", esfera: "ESTADUAL" },
-  { sigla: "CBM", nome: "Corpo de Bombeiros Militar", esfera: "ESTADUAL" },
-  { sigla: "GM", nome: "Guarda Municipal", esfera: "MUNICIPAL" },
-  { sigla: "PP_ESTADUAL", nome: "Polícia Penal Estadual", esfera: "ESTADUAL" },
-  { sigla: "PP_FEDERAL", nome: "Polícia Penal Federal", esfera: "FEDERAL" },
-  { sigla: "PL_ESTADUAL", nome: "Polícia Legislativa Estadual", esfera: "ESTADUAL" },
-  { sigla: "PL_FEDERAL", nome: "Polícia Legislativa Federal", esfera: "FEDERAL" },
+  // Bloco A — Polícias Federais
+  { sigla: "PF",          nome: "Polícia Federal",              esfera: "FEDERAL"   },
+  { sigla: "PRF",         nome: "Polícia Rodoviária Federal",   esfera: "FEDERAL"   },
+  { sigla: "PLF",         nome: "Polícia Legislativa Federal",  esfera: "FEDERAL"   },
+  { sigla: "PPF",         nome: "Polícia Penal Federal",        esfera: "FEDERAL"   },
+  { sigla: "RFB",         nome: "Receita Federal",              esfera: "FEDERAL"   },
+  { sigla: "GP",          nome: "Guarda Portuária",             esfera: "FEDERAL"   },
+  // Bloco B — Defesa | Forças Armadas
+  { sigla: "ESPCEX",      nome: "EsPCEx — Exército",            esfera: "FEDERAL"   },
+  { sigla: "ESA",         nome: "ESA — Exército",               esfera: "FEDERAL"   },
+  { sigla: "IME",         nome: "IME — Exército",               esfera: "FEDERAL"   },
+  { sigla: "CN",          nome: "Colégio Naval — Marinha",      esfera: "FEDERAL"   },
+  { sigla: "EN",          nome: "Escola Naval — Marinha",       esfera: "FEDERAL"   },
+  { sigla: "FUZNAVAIS",   nome: "Fuzileiros Navais — Marinha",  esfera: "FEDERAL"   },
+  { sigla: "ITA",         nome: "ITA — Força Aérea",            esfera: "FEDERAL"   },
+  { sigla: "EPCAR",       nome: "EPCAR — Força Aérea",          esfera: "FEDERAL"   },
+  { sigla: "EAGS",        nome: "Esc. Especialistas — FAB",     esfera: "FEDERAL"   },
+  { sigla: "MIN_DEF",     nome: "Ministério da Defesa",         esfera: "FEDERAL"   },
+  // Bloco C — Inteligência | Administrativo
+  { sigla: "ABIN",        nome: "ABIN",                         esfera: "FEDERAL"   },
+  { sigla: "ANAC",        nome: "ANAC",                         esfera: "FEDERAL"   },
+  { sigla: "CPNU",        nome: "Concurso Nacional Unificado",  esfera: "FEDERAL"   },
+  // Bloco D — Poder Judiciário | CNJ
+  { sigla: "PJ_CNJ",      nome: "Polícia Judicial CNJ",         esfera: "FEDERAL"   },
+  // Bloco E — Estados e Municípios
+  { sigla: "PM",          nome: "Polícia Militar",              esfera: "ESTADUAL"  },
+  { sigla: "PC",          nome: "Polícia Civil",                esfera: "ESTADUAL"  },
+  { sigla: "CBM",         nome: "Corpo de Bombeiros Militar",   esfera: "ESTADUAL"  },
+  { sigla: "PP_ESTADUAL", nome: "Polícia Penal Estadual",       esfera: "ESTADUAL"  },
+  { sigla: "PL_ESTADUAL", nome: "Polícia Legislativa Estadual", esfera: "ESTADUAL"  },
+  { sigla: "GM",          nome: "Guarda Municipal",             esfera: "MUNICIPAL" },
 ];
 
-// Fallback para cargos (usado se banco falhar)
+// Fallback para cargos (usado se banco falhar) — por sigla do concurso
 const CARGOS_FALLBACK: Record<string, string[]> = {
-  PF: ["Agente", "Escrivão", "Delegado", "Perito Criminal"],
-  PRF: ["Policial Rodoviário Federal"],
-  PM: ["Soldado", "Aspirante a Oficial"],
-  PC: ["Delegado", "Escrivão", "Investigador", "Agente de Polícia", "Perito Criminal"],
-  CBM: ["Soldado", "Aspirante a Oficial"],
-  GM: ["Guarda Municipal"],
-  PP_ESTADUAL: ["Agente Penitenciário"],
-  PP_FEDERAL: ["Agente Federal Penitenciário"],
+  // Bloco A — Polícias Federais
+  PF:          ["Agente", "Escrivão", "Papiloscopista", "Perito Criminal Federal", "Delegado", "Agente Admin (Nível Médio)"],
+  PRF:         ["Policial Rodoviário Federal", "Agente Admin (Nível Médio)"],
+  PLF:         ["Policial Legislativo Federal"],
+  PPF:         ["Policial Penal Federal"],
+  RFB:         ["Auditor-Fiscal", "Inspetor"],
+  GP:          ["Guarda Portuário"],
+  // Bloco B — Defesa | Forças Armadas
+  ESPCEX:      ["Aluno"],
+  ESA:         ["Aluno Sargento"],
+  IME:         ["Aluno Engenheiro"],
+  CN:          ["Aluno"],
+  EN:          ["Aspirante"],
+  FUZNAVAIS:   ["Aluno Recruta"],
+  ITA:         ["Iteano"],
+  EPCAR:       ["Cadete do Ar"],
+  EAGS:        ["Aluno"],
+  MIN_DEF:     ["Administrativos/Geral"],
+  // Bloco C — Inteligência | Administrativo
+  ABIN:        ["Oficial de Inteligência", "Oficial Técnico de Inteligência", "Agente de Inteligência", "Agente Técnico de Inteligência"],
+  ANAC:        ["Agente de Segurança Aeroportuária"],
+  CPNU:        ["Conforme editais do Bloco"],
+  // Bloco D — Poder Judiciário | CNJ
+  PJ_CNJ:      ["Inspetor da Polícia Judicial", "Agente da Polícia Judicial"],
+  // Bloco E — Estados e Municípios
+  PM:          ["CFO: Cadete", "CFSD: Aluno Soldado"],
+  PC:          ["Delegado", "Escrivão", "Investigador", "Papiloscopista", "Perito Criminal"],
+  CBM:         ["CFO: Cadete", "CFSD: Aluno Soldado"],
+  PP_ESTADUAL: ["ESPP: Aluno Policial Penal"],
   PL_ESTADUAL: ["Agente de Polícia Legislativa"],
-  PL_FEDERAL: ["Policial Legislativo Federal"],
+  GM:          ["Guarda Municipal"],
 };
 
 /**
@@ -1397,52 +1439,38 @@ export async function getMateriasFromDB(
   }
 }
 
-// Categorias hierárquicas de concursos para o bot — 9 grupos oficiais
-const SIGLAS_EXER_BOT    = new Set(["ESPCEX", "IME", "ESA", "EXERCITO"]);
-const SIGLAS_MARINHA_BOT = new Set(["CN", "EN", "FUZNAVAIS", "MARINHA"]);
-const SIGLAS_FAB_BOT     = new Set(["ITA", "EPCAR", "EAGS", "FAB", "MIN_DEF", "MD", "AERONAUTICA"]);
-const SIGLAS_INTEL_BOT   = new Set(["ABIN", "ANAC", "CPNU"]);
-const SIGLAS_GUARDAS_BOT = new Set(["GM", "GP", "PPE", "PP_ESTADUAL", "PL_ESTADUAL"]);
+// Blocos hierárquicos de concursos — 5 Blocos oficiais (paridade site/bot)
+const SIGLAS_BLOCO_B_BOT = new Set([
+  "ESPCEX", "IME", "ESA", "EXERCITO",
+  "CN", "EN", "FUZNAVAIS", "MARINHA",
+  "ITA", "EPCAR", "EAGS", "FAB", "AERONAUTICA", "MIN_DEF", "MD", "MIN_DEFESA",
+]);
+const SIGLAS_BLOCO_C_BOT = new Set(["ABIN", "ANAC", "CPNU"]);
 
 export const BOT_CATEGORIES: { key: string; label: string; emoji: string; siglaMatch: (s: string) => boolean }[] = [
   {
-    key: "FED", label: "Carreiras Federais", emoji: "🛡️",
+    key: "BLOCO_A", label: "Polícias Federais", emoji: "🛡️",
     siglaMatch: (s) =>
-      s.startsWith("PF") || s === "PRF" ||
-      ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL", "PJ_CNJ"].includes(s) ||
-      s.startsWith("PJ"),
+      s.startsWith("PF") || s === "PRF" || s === "GP" ||
+      ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL", "RFB"].includes(s),
   },
   {
-    key: "EXER", label: "Exercito", emoji: "⚔️",
-    siglaMatch: (s) => SIGLAS_EXER_BOT.has(s),
+    key: "BLOCO_B", label: "Defesa | Forças Armadas", emoji: "⚔️",
+    siglaMatch: (s) => SIGLAS_BLOCO_B_BOT.has(s),
   },
   {
-    key: "MARINHA", label: "Marinha", emoji: "⚓",
-    siglaMatch: (s) => SIGLAS_MARINHA_BOT.has(s),
+    key: "BLOCO_C", label: "Inteligência | Administrativo", emoji: "🔍",
+    siglaMatch: (s) => SIGLAS_BLOCO_C_BOT.has(s),
   },
   {
-    key: "FAB", label: "Aeronautica", emoji: "✈️",
-    siglaMatch: (s) => SIGLAS_FAB_BOT.has(s),
+    key: "BLOCO_D", label: "Poder Judiciário | CNJ", emoji: "⚖️",
+    siglaMatch: (s) => s.startsWith("PJ"),
   },
   {
-    key: "PM", label: "Policia Militar", emoji: "🚔",
-    siglaMatch: (s) => s.startsWith("PM") || s === "PM",
-  },
-  {
-    key: "PC", label: "Policia Civil", emoji: "🕵️",
-    siglaMatch: (s) => s.startsWith("PC") || s === "PC" || s === "PC_CIENT",
-  },
-  {
-    key: "CBM", label: "Corpo de Bombeiros", emoji: "🚒",
-    siglaMatch: (s) => s.startsWith("CBM") || s === "CBM",
-  },
-  {
-    key: "GUARDAS", label: "Guardas", emoji: "🛡️",
-    siglaMatch: (s) => SIGLAS_GUARDAS_BOT.has(s),
-  },
-  {
-    key: "INTEL", label: "Inteligencia / Administracao", emoji: "🔍",
-    siglaMatch: (s) => SIGLAS_INTEL_BOT.has(s),
+    key: "BLOCO_E", label: "Estados e Municípios", emoji: "🏛️",
+    siglaMatch: (s) =>
+      s.startsWith("PM") || s.startsWith("PC") || s.startsWith("CBM") ||
+      ["PP_ESTADUAL", "PL_ESTADUAL", "GM"].includes(s),
   },
 ];
 
@@ -1460,10 +1488,10 @@ function groupConcursosByCategory(
     }
   }
 
-  // Catch-all: anything unassigned goes to GUARDAS
+  // Catch-all: anything unassigned goes to BLOCO_E (Estados e Municípios)
   const remaining = concursos.filter(c => !assigned.has(c.sigla));
   if (remaining.length > 0) {
-    groups["GUARDAS"] = [...(groups["GUARDAS"] || []), ...remaining];
+    groups["BLOCO_E"] = [...(groups["BLOCO_E"] || []), ...remaining];
   }
 
   return groups;
