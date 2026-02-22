@@ -1081,16 +1081,26 @@ export function registerSalaRoutes(app: Express) {
   // ============================================
 
   // GET /api/sala/edital/progress — calcula % de conclusão do edital alvo
+  // Métrica: conteúdos vistos (lastStudyContentIds) ÷ total do edital
   app.get("/api/sala/edital/progress", requireStudentAuth, async (req, res) => {
     try {
       const student = (req as any).student as StudentJWTPayload;
 
+      // 1. Buscar target_concurso_id + lastStudyContentIds em uma única query
       const userRows = await db.execute(sql`
-        SELECT target_concurso_id FROM "User" WHERE id = ${student.userId} LIMIT 1
+        SELECT target_concurso_id, "lastStudyContentIds"
+        FROM "User" WHERE id = ${student.userId} LIMIT 1
       `) as any[];
       const targetId = userRows[0]?.target_concurso_id;
       if (!targetId) return res.json({ success: true, percentage: 0, studiedCount: 0, totalCount: 0, subjects: [] });
 
+      // 2. Extrair array de IDs de conteúdo já vistos pelo aluno
+      const rawIds = userRows[0]?.lastStudyContentIds;
+      const studiedIds: string[] = Array.isArray(rawIds)
+        ? rawIds
+        : (typeof rawIds === "string" && rawIds ? JSON.parse(rawIds) : []);
+
+      // 3. Buscar lista de matérias do concurso-alvo
       const concursoRows = await db.execute(sql`
         SELECT lista_materias_json FROM concursos WHERE id = ${targetId} LIMIT 1
       `) as any[];
@@ -1111,21 +1121,24 @@ export function registerSalaRoutes(app: Express) {
         if (!subjectRows[0]) continue;
         const sid = subjectRows[0].id;
 
+        // Total de conteúdos ativos na matéria
         const totalRows = await db.execute(sql`
           SELECT COUNT(*)::int AS total FROM "Content"
           WHERE "subjectId" = ${sid} AND "isActive" = true
         `) as any[];
-
-        const studiedRows = await db.execute(sql`
-          SELECT COUNT(DISTINCT q."contentId")::int AS studied
-          FROM "QuestionAttempt" qa
-          JOIN "Question" q ON q.id = qa."questionId"
-          JOIN "Content" c ON c.id = q."contentId"
-          WHERE qa."userId" = ${student.userId} AND c."subjectId" = ${sid} AND c."isActive" = true
-        `) as any[];
-
         const total = parseInt(totalRows[0]?.total ?? "0", 10);
-        const studied = parseInt(studiedRows[0]?.studied ?? "0", 10);
+
+        // Conteúdos VISTOS pelo aluno nesta matéria (via lastStudyContentIds)
+        let studied = 0;
+        if (studiedIds.length > 0) {
+          const studiedRows = await db.execute(sql`
+            SELECT COUNT(*)::int AS studied FROM "Content"
+            WHERE "subjectId" = ${sid} AND "isActive" = true
+              AND id = ANY(${studiedIds})
+          `) as any[];
+          studied = parseInt(studiedRows[0]?.studied ?? "0", 10);
+        }
+
         totalStudied += studied;
         totalAll += total;
         subjects.push({
@@ -1640,7 +1653,7 @@ export function registerSalaRoutes(app: Express) {
         WHERE is_active = true
         ORDER BY esfera, nome
       `) as any[];
-      return res.json(rows);
+      return res.json({ concursos: rows });
     } catch (err: any) {
       console.error("❌ [Edital Concursos]", err?.message ?? err);
       return res.status(500).json({ error: "Erro ao listar concursos" });

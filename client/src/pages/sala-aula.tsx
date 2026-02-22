@@ -212,6 +212,7 @@ export default function SalaAula() {
     percentage: number; studiedCount: number; totalCount: number;
     subjects: { name: string; studiedCount: number; totalCount: number; percentage: number }[];
   } | null>(null);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(false);
   const [weeklyStatus, setWeeklyStatus] = useState<{
     available: boolean; reason: string; nextAvailableAt?: string;
   } | null>(null);
@@ -392,11 +393,14 @@ export default function SalaAula() {
   };
 
   const fetchEditalProgress = async () => {
+    setIsLoadingProgress(true);
     try {
       const res = await fetch("/api/sala/edital/progress", { headers });
       const data = await res.json();
       if (data.success) setEditalProgress(data);
-    } catch { /* silent */ }
+    } catch { /* silent */ } finally {
+      setIsLoadingProgress(false);
+    }
   };
 
   const fetchWeeklyStatus = async () => {
@@ -757,6 +761,12 @@ export default function SalaAula() {
   };
 
   const selectConcurso = async (concursoId: string | null) => {
+    // Atualização otimista: fecha modal e atualiza UI imediatamente
+    const found = concursosList.find(c => c.id === concursoId);
+    setTargetConcurso(found ? { id: found.id, nome: found.nome, banca: found.banca } : null);
+    setShowConcursoSelector(false);
+    setEditalProgress(null); // Limpa progresso antigo enquanto calcula o novo
+
     try {
       const res = await fetch("/api/sala/profile/concurso", {
         method: "PUT",
@@ -766,14 +776,16 @@ export default function SalaAula() {
       const data = await res.json();
       if (data.success) {
         updateProfile(data.profile);
-        const found = concursosList.find(c => c.id === concursoId);
-        setTargetConcurso(found ? { id: found.id, nome: found.nome, banca: found.banca } : null);
-        setShowConcursoSelector(false);
         fetchEditalProgress();
         fetchWeeklyStatus();
+      } else {
+        // Reverter em caso de erro
+        toast({ variant: "destructive", title: "Erro ao salvar concurso" });
+        setTargetConcurso(null);
       }
     } catch {
       toast({ variant: "destructive", title: "Erro ao salvar concurso" });
+      setTargetConcurso(null);
     }
   };
 
@@ -1089,13 +1101,15 @@ export default function SalaAula() {
             {/* Concurso / Logo */}
             <div className="flex-1 min-w-0">
               {targetConcurso ? (
-                <button onClick={() => setShowConcursoSelector(true)} className="text-left w-full">
+                <button onClick={() => setShowConcursoSelector(true)} className="text-left w-full group">
                   <p className="text-xs font-semibold truncate leading-tight">{targetConcurso.nome}</p>
-                  <p className="text-[10px] text-muted-foreground leading-tight">{targetConcurso.banca}</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight group-hover:text-primary/60 transition-colors">
+                    {targetConcurso.banca} · <span className="underline underline-offset-2">trocar</span>
+                  </p>
                 </button>
               ) : (
-                <button onClick={() => setShowConcursoSelector(true)} className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Target className="h-3 w-3" /> Definir concurso-alvo
+                <button onClick={() => setShowConcursoSelector(true)} className="text-xs text-primary flex items-center gap-1 font-medium">
+                  <Target className="h-3 w-3" /> Trocar concurso-alvo
                 </button>
               )}
             </div>
@@ -1120,14 +1134,27 @@ export default function SalaAula() {
                 <Card className="border-primary/20 bg-primary/5">
                   <CardContent className="pt-4 pb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <h2 className="text-sm font-semibold">Progresso do Edital</h2>
-                      <span className="text-lg font-bold text-primary">{editalProgress?.percentage ?? 0}%</span>
+                      <h2 className="text-sm font-semibold">
+                        {targetConcurso ? targetConcurso.nome : "Progresso do Edital"}
+                      </h2>
+                      {isLoadingProgress ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      ) : (
+                        <span className="text-lg font-bold text-primary">{editalProgress?.percentage ?? 0}%</span>
+                      )}
                     </div>
-                    <Progress value={editalProgress?.percentage ?? 0} className="h-2 mb-1" />
+                    <Progress
+                      value={isLoadingProgress ? undefined : (editalProgress?.percentage ?? 0)}
+                      className={cn("h-2 mb-1", isLoadingProgress && "animate-pulse")}
+                    />
                     <p className="text-xs text-muted-foreground">
-                      {editalProgress && editalProgress.totalCount > 0
+                      {isLoadingProgress
+                        ? "Calculando progresso..."
+                        : !targetConcurso
+                        ? "Toque acima para trocar seu concurso-alvo"
+                        : editalProgress && editalProgress.totalCount > 0
                         ? `${editalProgress.studiedCount} de ${editalProgress.totalCount} tópicos estudados`
-                        : "Selecione seu concurso-alvo para ver o progresso"}
+                        : "Nenhum tópico deste edital estudado ainda"}
                     </p>
                   </CardContent>
                 </Card>
