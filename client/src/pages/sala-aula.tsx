@@ -141,43 +141,58 @@ interface ConcursoItem {
   cargo_padrao: string;
 }
 
-// Agrupamento client-side dos concursos — 5 grupos oficiais
-// Nomes simples sem travessão para evitar problemas de encoding
-const GROUP_FEDERAIS = "Policiais Federais";
-const GROUP_DEFESA   = "Defesa / Forcas Armadas";
-const GROUP_INTEL    = "Inteligencia / Administracao";
-const GROUP_JUDIC    = "Poder Judiciario / CNJ";
-const GROUP_ESTADUAL = "Estaduais / Municipais";
+// Agrupamento client-side dos concursos — 9 grupos oficiais
+// Constantes usadas como chave em groupConcursos E getAreaIcon (evita mismatch de encoding)
+const GROUP_FED     = "Carreiras Federais";
+const GROUP_EXER    = "Exército";
+const GROUP_MARINHA = "Marinha";
+const GROUP_FAB     = "Aeronáutica";
+const GROUP_PM      = "Polícia Militar";
+const GROUP_PC      = "Polícia Civil";
+const GROUP_CBM     = "Corpo de Bombeiros";
+const GROUP_GUARDAS = "Guardas";
+const GROUP_INTEL   = "Inteligência";
+
+// Siglas fixas por grupo (exclusivas — sem catch-all ambíguo)
+const SIGLAS_EXER    = new Set(["ESPCEX", "IME", "ESA"]);
+const SIGLAS_MARINHA = new Set(["CN", "EN", "FUZNAVAIS"]);
+const SIGLAS_FAB     = new Set(["ITA", "EPCAR", "EAGS", "FAB", "MIN_DEF", "MD"]);
+const SIGLAS_INTEL   = new Set(["ABIN", "ANAC", "CPNU"]);
+const SIGLAS_GUARDAS = new Set(["GM", "GP", "PPE", "PP_ESTADUAL", "PL_ESTADUAL"]);
 
 function groupConcursos(list: ConcursoItem[]): Record<string, ConcursoItem[]> {
   const groups: Record<string, ConcursoItem[]> = {
-    [GROUP_FEDERAIS]: [],
-    [GROUP_DEFESA]:   [],
-    [GROUP_INTEL]:    [],
-    [GROUP_JUDIC]:    [],
-    [GROUP_ESTADUAL]: [],
+    [GROUP_FED]: [], [GROUP_EXER]: [], [GROUP_MARINHA]: [], [GROUP_FAB]: [],
+    [GROUP_PM]:  [], [GROUP_PC]:   [], [GROUP_CBM]:     [],
+    [GROUP_GUARDAS]: [], [GROUP_INTEL]: [],
   };
-  const DEFESA_SIGLAS = new Set([
-    "ESPCEX", "IME", "ESA",           // Exército
-    "CN", "EN", "FUZNAVAIS", "GP",    // Marinha
-    "ITA", "EPCAR", "EAGS", "FAB",    // Aeronáutica
-    "MIN_DEF", "MD",                  // MD
-  ]);
   for (const c of list) {
     const s = c.sigla;
     if (
       (s.startsWith("PF") && s !== "PFF") || s === "PRF" || s === "PFF" ||
-      ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL"].includes(s)
+      ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL", "PJ_CNJ"].includes(s) ||
+      s.startsWith("PJ")
     ) {
-      groups[GROUP_FEDERAIS].push(c);
-    } else if (DEFESA_SIGLAS.has(s)) {
-      groups[GROUP_DEFESA].push(c);
-    } else if (["ABIN", "ANAC", "CPNU"].includes(s)) {
+      groups[GROUP_FED].push(c);
+    } else if (SIGLAS_EXER.has(s)) {
+      groups[GROUP_EXER].push(c);
+    } else if (SIGLAS_MARINHA.has(s)) {
+      groups[GROUP_MARINHA].push(c);
+    } else if (SIGLAS_FAB.has(s)) {
+      groups[GROUP_FAB].push(c);
+    } else if (s.startsWith("PM") || s === "PM") {
+      groups[GROUP_PM].push(c);
+    } else if (s.startsWith("PC") || s === "PC" || s === "PC_CIENT") {
+      groups[GROUP_PC].push(c);
+    } else if (s.startsWith("CBM") || s === "CBM") {
+      groups[GROUP_CBM].push(c);
+    } else if (SIGLAS_GUARDAS.has(s)) {
+      groups[GROUP_GUARDAS].push(c);
+    } else if (SIGLAS_INTEL.has(s)) {
       groups[GROUP_INTEL].push(c);
-    } else if (s === "PJ_CNJ" || s.startsWith("PJ")) {
-      groups[GROUP_JUDIC].push(c);
     } else {
-      groups[GROUP_ESTADUAL].push(c);
+      // fallback: colocar em Guardas para não perder nenhum concurso
+      groups[GROUP_GUARDAS].push(c);
     }
   }
   return groups;
@@ -186,11 +201,15 @@ function groupConcursos(list: ConcursoItem[]): Record<string, ConcursoItem[]> {
 // Ícones institucionais por área de concurso (chaves = constantes GROUP_*)
 function getAreaIcon(grupo: string) {
   const icons: Record<string, JSX.Element> = {
-    [GROUP_FEDERAIS]: <ShieldCheck size={36} className="text-blue-600" />,
-    [GROUP_DEFESA]:   <Crosshair   size={36} className="text-green-700" />,
-    [GROUP_INTEL]:    <Building2   size={36} className="text-sky-500" />,
-    [GROUP_JUDIC]:    <Scale       size={36} className="text-violet-500" />,
-    [GROUP_ESTADUAL]: <Shield      size={36} className="text-slate-500" />,
+    [GROUP_FED]:     <ShieldCheck size={36} className="text-blue-600" />,
+    [GROUP_EXER]:    <Crosshair   size={36} className="text-green-700" />,
+    [GROUP_MARINHA]: <Anchor      size={36} className="text-blue-700" />,
+    [GROUP_FAB]:     <Plane       size={36} className="text-sky-500" />,
+    [GROUP_PM]:      <Shield      size={36} className="text-indigo-500" />,
+    [GROUP_PC]:      <Shield      size={36} className="text-slate-600" />,
+    [GROUP_CBM]:     <Flame       size={36} className="text-red-500" />,
+    [GROUP_GUARDAS]: <MapPin      size={36} className="text-slate-500" />,
+    [GROUP_INTEL]:   <Building2   size={36} className="text-sky-500" />,
   };
   return icons[grupo] || <MapPin size={36} className="text-muted-foreground" />;
 }
@@ -1080,7 +1099,7 @@ export default function SalaAula() {
               </div>
             ) : (
               /* Nível 2 — Lista de Editais da Área */
-              <div className="space-y-1 pr-1 pb-2 overflow-y-auto max-h-[40vh]">
+              <div className="space-y-1 pr-1 pb-2 overflow-y-auto max-h-[400px]">
                 {(groupConcursos(concursosList)[selectedArea] || []).map(c => (
                   <button
                     key={c.id}
@@ -1154,20 +1173,11 @@ export default function SalaAula() {
               </SheetContent>
             </Sheet>
 
-            {/* Concurso / Logo */}
+            {/* Saudação */}
             <div className="flex-1 min-w-0">
-              {targetConcurso ? (
-                <button onClick={() => setShowConcursoSelector(true)} className="text-left w-full group">
-                  <p className="text-xs font-semibold truncate leading-tight">{targetConcurso.nome}</p>
-                  <p className="text-[10px] text-muted-foreground leading-tight group-hover:text-primary/60 transition-colors">
-                    {targetConcurso.banca} · <span className="underline underline-offset-2">trocar</span>
-                  </p>
-                </button>
-              ) : (
-                <button onClick={() => setShowConcursoSelector(true)} className="text-xs text-primary flex items-center gap-1 font-medium">
-                  <Target className="h-3 w-3" /> Trocar concurso-alvo
-                </button>
-              )}
+              <p className="text-sm font-semibold truncate leading-tight">
+                Bem-vindo(a), {student?.name?.split(" ")[0] || "Aluno"}!
+              </p>
             </div>
 
             {/* Streak + Level */}
@@ -1187,16 +1197,26 @@ export default function SalaAula() {
 
               {/* HERO: Progresso do Edital */}
               <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-                <Card className="border-primary/20 bg-primary/5">
+                <Card
+                  className="border-primary/20 bg-primary/5 cursor-pointer hover:border-primary/40 transition-colors active:scale-[0.99]"
+                  onClick={() => setShowConcursoSelector(true)}
+                >
                   <CardContent className="pt-4 pb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <h2 className="text-sm font-semibold">
-                        {targetConcurso ? targetConcurso.nome : "Progresso do Edital"}
-                      </h2>
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-sm font-semibold truncate">
+                          {targetConcurso ? targetConcurso.nome : "Concurso-alvo"}
+                        </h2>
+                        {targetConcurso && (
+                          <p className="text-[10px] text-primary/60 leading-tight">
+                            {targetConcurso.banca} · <span className="underline underline-offset-2">trocar</span>
+                          </p>
+                        )}
+                      </div>
                       {isLoadingProgress ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
                       ) : (
-                        <span className="text-lg font-bold text-primary">{editalProgress?.percentage ?? 0}%</span>
+                        <span className="text-lg font-bold text-primary shrink-0 ml-2">{editalProgress?.percentage ?? 0}%</span>
                       )}
                     </div>
                     <Progress
@@ -1207,7 +1227,7 @@ export default function SalaAula() {
                       {isLoadingProgress
                         ? "Calculando progresso..."
                         : !targetConcurso
-                        ? "Toque acima para trocar seu concurso-alvo"
+                        ? "Toque aqui para definir seu concurso-alvo"
                         : editalProgress && editalProgress.totalCount > 0
                         ? `${editalProgress.studiedCount} de ${editalProgress.totalCount} tópicos estudados`
                         : "Nenhum tópico deste edital estudado ainda"}
