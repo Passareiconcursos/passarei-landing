@@ -73,7 +73,7 @@ export function Pricing() {
   ];
 
   return (
-    <section id="planos" className="py-20 bg-white">
+    <section id="planos" className="py-14 bg-white">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <div className="inline-block mb-4">

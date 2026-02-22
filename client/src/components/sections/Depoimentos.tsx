@@ -42,7 +42,7 @@ export function Depoimentos() {
   ];
 
   return (
-    <section className="py-16 md:py-24 bg-gradient-to-b from-white to-green-50">
+    <section className="py-12 md:py-16 bg-gradient-to-b from-white to-green-50">
       <div className="max-w-7xl mx-auto px-4 md:px-6">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">

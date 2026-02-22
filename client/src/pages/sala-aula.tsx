@@ -153,10 +153,10 @@ const GROUP_CBM     = "Corpo de Bombeiros";
 const GROUP_GUARDAS = "Guardas";
 const GROUP_INTEL   = "Inteligência";
 
-// Siglas fixas por grupo (exclusivas — sem catch-all ambíguo)
-const SIGLAS_EXER    = new Set(["ESPCEX", "IME", "ESA"]);
-const SIGLAS_MARINHA = new Set(["CN", "EN", "FUZNAVAIS"]);
-const SIGLAS_FAB     = new Set(["ITA", "EPCAR", "EAGS", "FAB", "MIN_DEF", "MD"]);
+// Siglas fixas por grupo — inclui tanto siglas-código quanto siglas-nome-completo do DB
+const SIGLAS_EXER    = new Set(["ESPCEX", "IME", "ESA", "EXERCITO"]);
+const SIGLAS_MARINHA = new Set(["CN", "EN", "FUZNAVAIS", "MARINHA"]);
+const SIGLAS_FAB     = new Set(["ITA", "EPCAR", "EAGS", "FAB", "MIN_DEF", "MD", "AERONAUTICA"]);
 const SIGLAS_INTEL   = new Set(["ABIN", "ANAC", "CPNU"]);
 const SIGLAS_GUARDAS = new Set(["GM", "GP", "PPE", "PP_ESTADUAL", "PL_ESTADUAL"]);
 

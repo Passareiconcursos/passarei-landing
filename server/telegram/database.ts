@@ -1398,9 +1398,9 @@ export async function getMateriasFromDB(
 }
 
 // Categorias hierárquicas de concursos para o bot — 9 grupos oficiais
-const SIGLAS_EXER_BOT    = new Set(["ESPCEX", "IME", "ESA"]);
-const SIGLAS_MARINHA_BOT = new Set(["CN", "EN", "FUZNAVAIS"]);
-const SIGLAS_FAB_BOT     = new Set(["ITA", "EPCAR", "EAGS", "FAB", "MIN_DEF", "MD"]);
+const SIGLAS_EXER_BOT    = new Set(["ESPCEX", "IME", "ESA", "EXERCITO"]);
+const SIGLAS_MARINHA_BOT = new Set(["CN", "EN", "FUZNAVAIS", "MARINHA"]);
+const SIGLAS_FAB_BOT     = new Set(["ITA", "EPCAR", "EAGS", "FAB", "MIN_DEF", "MD", "AERONAUTICA"]);
 const SIGLAS_INTEL_BOT   = new Set(["ABIN", "ANAC", "CPNU"]);
 const SIGLAS_GUARDAS_BOT = new Set(["GM", "GP", "PPE", "PP_ESTADUAL", "PL_ESTADUAL"]);
 
