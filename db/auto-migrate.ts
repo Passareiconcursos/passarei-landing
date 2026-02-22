@@ -32,6 +32,7 @@ export async function runAutoMigrations() {
   await run("concursosTables",   migrateConcursosTables);
   await run("userConcurso",      migrateUserConcursoColumn);
   await run("simuladoType",      migrateSimuladoTypeColumn);
+  await run("cleanupPFF",        cleanupPFFConcurso);
 
   console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
@@ -700,18 +701,6 @@ async function migrateConcursosTables() {
         { name: "Direito Administrativo", weight: 1, questions: 15, topics: [] },
         { name: "Legislação de Execução Penal", weight: 2, questions: 10, topics: [] },
       ] },
-    // ── POLÍCIA FERROVIÁRIA FEDERAL (estimado — sem edital recente) ──────────
-    { nome: "Polícia Ferroviária Federal", sigla: "PFF", esfera: "FEDERAL", exam_type: "PF_FERROVIARIA",
-      banca: "CEBRASPE", cargo_padrao: "Agente Ferroviário", estado: null,
-      materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 15, topics: [] },
-        { name: "Direito Administrativo", weight: 1, questions: 15, topics: [] },
-        { name: "Direito Penal", weight: 1, questions: 10, topics: [] },
-        { name: "Legislação Ferroviária", weight: 2, questions: 15, topics: [] },
-        { name: "Informática", weight: 1, questions: 5, topics: [] },
-      ] },
     // ── POLÍCIA LEGISLATIVA FEDERAL / CÂMARA (CEBRASPE) ─────────────────────
     { nome: "Polícia Legislativa Federal", sigla: "PLF", esfera: "FEDERAL", exam_type: "PL_FEDERAL",
       banca: "CEBRASPE", cargo_padrao: "Policial Legislativo Federal", estado: null,
@@ -1123,5 +1112,15 @@ async function migrateGamificationColumns() {
       ADD COLUMN IF NOT EXISTS last_streak_date VARCHAR(10)
     `);
     console.log("  ✅ Colunas streak_days, best_streak, last_streak_date adicionadas");
+  }
+}
+
+async function cleanupPFFConcurso() {
+  // Remove Polícia Ferroviária Federal — concurso extinto/sem previsão de edital
+  const deleted = await db.execute(sql`
+    DELETE FROM concursos WHERE sigla = 'PFF' RETURNING id
+  `) as any[];
+  if (deleted.length > 0) {
+    console.log(`  🗑️ Concurso PFF (Polícia Ferroviária Federal) removido do banco`);
   }
 }

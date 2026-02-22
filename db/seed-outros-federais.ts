@@ -8,40 +8,8 @@ async function seedOutrosFederais() {
   console.log("🏛️ Adicionando outros concursos federais...\n");
 
   try {
-    // ============ POLÍCIA FERROVIÁRIA FEDERAL ============
-    console.log("1️⃣ Criando Polícia Ferroviária Federal...");
-    const pffResult = await sql`
-      INSERT INTO concursos (nome, sigla, descricao, esfera, exam_type, is_active, ordem)
-      VALUES (
-        'Polícia Ferroviária Federal',
-        'PFF',
-        'Polícia responsável pelo patrulhamento ostensivo das ferrovias federais',
-        'FEDERAL',
-        'PF_FERROVIARIA',
-        true,
-        14
-      )
-      ON CONFLICT (sigla) DO NOTHING
-      RETURNING id
-    `;
-
-    if (pffResult.length > 0) {
-      const pffId = pffResult[0].id;
-      console.log("   ✅ PFF criada");
-
-      await sql`
-        INSERT INTO cargos (concurso_id, nome, codigo, escolaridade, is_active, ordem)
-        VALUES
-          (${pffId}, 'Policial Ferroviário Federal', 'POLICIAL_FERROVIARIO', 'MEDIO', true, 1)
-        ON CONFLICT DO NOTHING
-      `;
-      console.log("   ✅ Cargo da PFF criado");
-    } else {
-      console.log("   ⚠️ PFF já existe");
-    }
-
     // ============ POLÍCIA JUDICIAL (CNJ) ============
-    console.log("\n2️⃣ Criando Polícia Judicial do CNJ...");
+    console.log("1️⃣ Criando Polícia Judicial do CNJ...");
     const pjResult = await sql`
       INSERT INTO concursos (nome, sigla, descricao, esfera, exam_type, is_active, ordem)
       VALUES (

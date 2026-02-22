@@ -169,7 +169,7 @@ function groupConcursos(list: ConcursoItem[]): Record<string, ConcursoItem[]> {
   for (const c of list) {
     const s = c.sigla;
     if (
-      (s.startsWith("PF") && s !== "PFF") || s === "PRF" || s === "PFF" ||
+      s.startsWith("PF") || s === "PRF" ||
       ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL", "PJ_CNJ"].includes(s) ||
       s.startsWith("PJ")
     ) {

@@ -49,7 +49,6 @@ const ICONS: Record<string, string> = {
   FAB: "✈️",
   ANAC: "🛫",
   CPNU: "📋",
-  PFF: "🚂",
   PJ_CNJ: "⚖️",
   MD: "🎖️",
   PC_CIENT: "🔬",

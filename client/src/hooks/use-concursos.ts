@@ -300,7 +300,6 @@ export function formatConcursoForChat(concurso: Concurso): {
     FAB: "✈️",
     ANAC: "🛫",
     CPNU: "📋",
-    PFF: "🚂",
     PJ_CNJ: "⚖️",
     MD: "🎖️",
     PC_CIENT: "🔬",

@@ -1408,7 +1408,7 @@ export const BOT_CATEGORIES: { key: string; label: string; emoji: string; siglaM
   {
     key: "FED", label: "Carreiras Federais", emoji: "🛡️",
     siglaMatch: (s) =>
-      (s.startsWith("PF") && s !== "PFF") || s === "PRF" || s === "PFF" ||
+      s.startsWith("PF") || s === "PRF" ||
       ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL", "PJ_CNJ"].includes(s) ||
       s.startsWith("PJ"),
   },

@@ -31,7 +31,6 @@ const EXAM_TYPES = [
   { value: "PP_FEDERAL", label: "Polícia Penal Federal" },
   { value: "PP_ESTADUAL", label: "Polícia Penal Estadual" },
   { value: "PL_FEDERAL", label: "Polícia Legislativa Federal" },
-  { value: "PF_FERROVIARIA", label: "Polícia Ferroviária Federal" },
   { value: "PJ_CNJ", label: "Polícia Judicial CNJ" },
   { value: "ABIN", label: "ABIN" },
   { value: "EXERCITO", label: "Exército" },

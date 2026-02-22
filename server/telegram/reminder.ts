@@ -46,7 +46,6 @@ const ARTIGO_CONCURSO: Record<string, string> = {
   PP: "a",
   PP_FEDERAL: "a",
   PL_FEDERAL: "a",
-  PF_FERROVIARIA: "a",
   PJ_CNJ: "a",
   ABIN: "a",
   EXERCITO: "o",

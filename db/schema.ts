@@ -30,7 +30,6 @@ export const examTypeEnum = pgEnum("exam_type", [
   "PRF", // Polícia Rodoviária Federal
   "PP_FEDERAL", // Polícia Penal Federal
   "PL_FEDERAL", // Polícia Legislativa Federal
-  "PF_FERROVIARIA", // Polícia Ferroviária Federal
   "PJ_CNJ", // Polícia Judicial CNJ
   "ABIN", // Agência Brasileira de Inteligência
 
