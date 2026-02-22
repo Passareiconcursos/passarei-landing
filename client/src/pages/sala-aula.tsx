@@ -141,55 +141,56 @@ interface ConcursoItem {
   cargo_padrao: string;
 }
 
-// Agrupamento client-side dos concursos por órgão
+// Agrupamento client-side dos concursos — 5 grupos oficiais
+// Nomes simples sem travessão para evitar problemas de encoding
+const GROUP_FEDERAIS = "Policiais Federais";
+const GROUP_DEFESA   = "Defesa / Forcas Armadas";
+const GROUP_INTEL    = "Inteligencia / Administracao";
+const GROUP_JUDIC    = "Poder Judiciario / CNJ";
+const GROUP_ESTADUAL = "Estaduais / Municipais";
+
 function groupConcursos(list: ConcursoItem[]): Record<string, ConcursoItem[]> {
   const groups: Record<string, ConcursoItem[]> = {
-    "Polícia Federal": [],
-    "Polícia Rodoviária Federal": [],
-    "Polícia Penal / Ferroviária / Legislativa Federal": [],
-    "Poder Judiciário / CNJ": [],
-    "ABIN / ANAC / CPNU": [],
-    "Forças Armadas — Exército": [],
-    "Forças Armadas — Marinha": [],
-    "Forças Armadas — Aeronáutica / FAB": [],
-    "Polícia Militar": [],
-    "Corpo de Bombeiros": [],
-    "Polícia Civil": [],
-    "Outros Estaduais / Municipais": [],
+    [GROUP_FEDERAIS]: [],
+    [GROUP_DEFESA]:   [],
+    [GROUP_INTEL]:    [],
+    [GROUP_JUDIC]:    [],
+    [GROUP_ESTADUAL]: [],
   };
+  const DEFESA_SIGLAS = new Set([
+    "ESPCEX", "IME", "ESA",           // Exército
+    "CN", "EN", "FUZNAVAIS", "GP",    // Marinha
+    "ITA", "EPCAR", "EAGS", "FAB",    // Aeronáutica
+    "MIN_DEF", "MD",                  // MD
+  ]);
   for (const c of list) {
     const s = c.sigla;
-    if (s.startsWith("PF")) groups["Polícia Federal"].push(c);
-    else if (s === "PRF") groups["Polícia Rodoviária Federal"].push(c);
-    else if (["PPF", "PFF", "PLF"].includes(s)) groups["Polícia Penal / Ferroviária / Legislativa Federal"].push(c);
-    else if (s === "PJ_CNJ") groups["Poder Judiciário / CNJ"].push(c);
-    else if (["ABIN", "ANAC", "CPNU"].includes(s)) groups["ABIN / ANAC / CPNU"].push(c);
-    else if (["ESPCEX", "IME", "ESA"].includes(s)) groups["Forças Armadas — Exército"].push(c);
-    else if (["CN", "EN", "FUZNAVAIS"].includes(s)) groups["Forças Armadas — Marinha"].push(c);
-    else if (["ITA", "EPCAR", "EAGS"].includes(s)) groups["Forças Armadas — Aeronáutica / FAB"].push(c);
-    else if (s.startsWith("PM")) groups["Polícia Militar"].push(c);
-    else if (s.startsWith("CBM")) groups["Corpo de Bombeiros"].push(c);
-    else if (s.startsWith("PC")) groups["Polícia Civil"].push(c);
-    else groups["Outros Estaduais / Municipais"].push(c);
+    if (
+      (s.startsWith("PF") && s !== "PFF") || s === "PRF" || s === "PFF" ||
+      ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL"].includes(s)
+    ) {
+      groups[GROUP_FEDERAIS].push(c);
+    } else if (DEFESA_SIGLAS.has(s)) {
+      groups[GROUP_DEFESA].push(c);
+    } else if (["ABIN", "ANAC", "CPNU"].includes(s)) {
+      groups[GROUP_INTEL].push(c);
+    } else if (s === "PJ_CNJ" || s.startsWith("PJ")) {
+      groups[GROUP_JUDIC].push(c);
+    } else {
+      groups[GROUP_ESTADUAL].push(c);
+    }
   }
   return groups;
 }
 
-// Ícones institucionais por área de concurso
+// Ícones institucionais por área de concurso (chaves = constantes GROUP_*)
 function getAreaIcon(grupo: string) {
   const icons: Record<string, JSX.Element> = {
-    "Polícia Federal": <ShieldCheck size={36} className="text-blue-500" />,
-    "Polícia Rodoviária Federal": <ShieldCheck size={36} className="text-green-500" />,
-    "Polícia Penal / Ferroviária / Legislativa Federal": <FileBadge size={36} className="text-amber-500" />,
-    "Poder Judiciário / CNJ": <Scale size={36} className="text-violet-500" />,
-    "ABIN / ANAC / CPNU": <Building2 size={36} className="text-sky-500" />,
-    "Forças Armadas — Exército": <Crosshair size={36} className="text-green-600" />,
-    "Forças Armadas — Marinha": <Anchor size={36} className="text-blue-700" />,
-    "Forças Armadas — Aeronáutica / FAB": <Plane size={36} className="text-sky-600" />,
-    "Polícia Militar": <Shield size={36} className="text-indigo-500" />,
-    "Corpo de Bombeiros": <Flame size={36} className="text-red-500" />,
-    "Polícia Civil": <Shield size={36} className="text-slate-500" />,
-    "Outros Estaduais / Municipais": <MapPin size={36} className="text-muted-foreground" />,
+    [GROUP_FEDERAIS]: <ShieldCheck size={36} className="text-blue-600" />,
+    [GROUP_DEFESA]:   <Crosshair   size={36} className="text-green-700" />,
+    [GROUP_INTEL]:    <Building2   size={36} className="text-sky-500" />,
+    [GROUP_JUDIC]:    <Scale       size={36} className="text-violet-500" />,
+    [GROUP_ESTADUAL]: <Shield      size={36} className="text-slate-500" />,
   };
   return icons[grupo] || <MapPin size={36} className="text-muted-foreground" />;
 }
@@ -1052,10 +1053,12 @@ export default function SalaAula() {
                 >
                   <ChevronLeft className="h-4 w-4" /> Voltar
                 </button>
-              ) : "Seu Concurso-Alvo"}
+              ) : `Bem-vindo(a), ${student?.name?.split(" ")[0] || ""}!`}
             </DialogTitle>
             <DialogDescription>
-              {selectedArea ? selectedArea : "Escolha o órgão e depois o cargo."}
+              {selectedArea
+                ? "Selecione o concurso específico."
+                : "Escolha sua área de atuação para começar."}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-1">
@@ -1077,7 +1080,7 @@ export default function SalaAula() {
               </div>
             ) : (
               /* Nível 2 — Lista de Editais da Área */
-              <div className="space-y-1 pr-1 pb-2">
+              <div className="space-y-1 pr-1 pb-2 overflow-y-auto max-h-[40vh]">
                 {(groupConcursos(concursosList)[selectedArea] || []).map(c => (
                   <button
                     key={c.id}

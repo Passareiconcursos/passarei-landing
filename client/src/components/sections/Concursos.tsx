@@ -1,5 +1,4 @@
-import { useMemo } from "react";
-import { useConcursos, type Concurso } from "../../hooks/use-concursos";
+import { useConcursos } from "../../hooks/use-concursos";
 
 // Fallback para caso a API falhe
 const CONCURSOS_FALLBACK = [
@@ -60,24 +59,10 @@ const ICONS: Record<string, string> = {
 export function Concursos() {
   const { concursos: apiConcursos, loading, error } = useConcursos();
 
-  // Formata concursos da API para o formato de exibição
-  const concursos = useMemo(() => {
-    if (apiConcursos.length > 0) {
-      // Limita a 10 para exibição na landing page
-      return apiConcursos.slice(0, 10).map((c: Concurso) => ({
-        icon: ICONS[c.sigla] || "📌",
-        name: c.nome,
-        sigla: c.sigla,
-        nivel:
-          c.esfera === "FEDERAL"
-            ? "Federal"
-            : c.esfera === "ESTADUAL"
-              ? "Estadual"
-              : "Municipal",
-      }));
-    }
-    return CONCURSOS_FALLBACK;
-  }, [apiConcursos]);
+  // Sempre usa o fallback curado para exibição visual na landing page.
+  // Sub-instituições militares (CN, EAGS, ESPCEX, etc.) são omitidas intencionalmente
+  // para manter a lista representativa. O total real vem da API.
+  const concursos = CONCURSOS_FALLBACK;
 
   const totalConcursos = apiConcursos.length > 0 ? apiConcursos.length : 10;
 

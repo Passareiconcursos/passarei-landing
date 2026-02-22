@@ -1397,20 +1397,36 @@ export async function getMateriasFromDB(
   }
 }
 
-// Categorias hierárquicas de concursos para o bot
+// Categorias hierárquicas de concursos para o bot — 5 grupos oficiais
+const DEFESA_SIGLAS_BOT = new Set([
+  "ESPCEX", "IME", "ESA",          // Exército
+  "CN", "EN", "FUZNAVAIS", "GP",   // Marinha
+  "ITA", "EPCAR", "EAGS", "FAB",   // Aeronáutica
+  "MIN_DEF", "MD",                 // MD
+]);
 export const BOT_CATEGORIES: { key: string; label: string; emoji: string; siglaMatch: (s: string) => boolean }[] = [
-  { key: "PF",          label: "Polícia Federal",                    emoji: "🛡️",  siglaMatch: (s) => s.startsWith("PF") },
-  { key: "PRF",         label: "Polícia Rodoviária Federal",         emoji: "🚓",  siglaMatch: (s) => s === "PRF" },
-  { key: "PM",          label: "Polícia Militar",                    emoji: "🚔",  siglaMatch: (s) => s.startsWith("PM") },
-  { key: "PC",          label: "Polícia Civil",                      emoji: "🕵️", siglaMatch: (s) => s.startsWith("PC") },
-  { key: "CBM",         label: "Corpo de Bombeiros",                 emoji: "🚒",  siglaMatch: (s) => s.startsWith("CBM") },
-  { key: "JUDICIARIO",  label: "Poder Judiciário / CNJ",             emoji: "⚖️",  siglaMatch: (s) => s.startsWith("PJ") },
-  { key: "EXERCITO",    label: "Forças Armadas — Exército",          emoji: "⚔️",  siglaMatch: (s) => ["ESPCEX", "IME", "ESA", "EXERCITO"].includes(s) },
-  { key: "MARINHA",     label: "Forças Armadas — Marinha",           emoji: "⚓",  siglaMatch: (s) => ["CN", "EN", "FUZNAVAIS", "MARINHA", "GP"].includes(s) },
-  { key: "FAB",         label: "Forças Armadas — Aeronáutica",       emoji: "✈️",  siglaMatch: (s) => ["ITA", "EPCAR", "EAGS", "FAB"].includes(s) },
-  { key: "INTELIGENCIA",label: "Inteligência / ABIN / CPNU",         emoji: "🔍",  siglaMatch: (s) => ["ABIN", "ANAC", "CPNU"].includes(s) },
-  { key: "PENAL_LEG",   label: "Polícia Penal / Legislativa",        emoji: "🔐",  siglaMatch: (s) => s.startsWith("PP_") || s.startsWith("PL_") || ["PPF", "PLF", "PFF", "PPE"].includes(s) },
-  { key: "OUTROS",      label: "Outros Concursos",                   emoji: "📍",  siglaMatch: () => true },
+  {
+    key: "FEDERAIS", label: "Policiais Federais", emoji: "🛡️",
+    siglaMatch: (s) =>
+      (s.startsWith("PF") && s !== "PFF") || s === "PRF" || s === "PFF" ||
+      ["PPF", "PP_FEDERAL", "PLF", "PL_FEDERAL"].includes(s),
+  },
+  {
+    key: "DEFESA", label: "Defesa / Forcas Armadas", emoji: "⚔️",
+    siglaMatch: (s) => DEFESA_SIGLAS_BOT.has(s),
+  },
+  {
+    key: "INTEL", label: "Inteligencia / Administracao", emoji: "🔍",
+    siglaMatch: (s) => ["ABIN", "ANAC", "CPNU"].includes(s),
+  },
+  {
+    key: "JUDICIARIO", label: "Poder Judiciario / CNJ", emoji: "⚖️",
+    siglaMatch: (s) => s === "PJ_CNJ" || s.startsWith("PJ"),
+  },
+  {
+    key: "ESTADUAIS", label: "Estaduais / Municipais", emoji: "🚔",
+    siglaMatch: () => true, // catch-all
+  },
 ];
 
 function groupConcursosByCategory(
@@ -1419,8 +1435,9 @@ function groupConcursosByCategory(
   const groups: Record<string, { sigla: string; nome: string; esfera: string }[]> = {};
   const assigned = new Set<string>();
 
+  // Process non-catch-all categories first
   for (const cat of BOT_CATEGORIES) {
-    if (cat.key === "OUTROS") continue;
+    if (cat.key === "ESTADUAIS") continue; // catch-all processed last
     const matching = concursos.filter(c => !assigned.has(c.sigla) && cat.siglaMatch(c.sigla));
     if (matching.length > 0) {
       groups[cat.key] = matching;
@@ -1428,8 +1445,9 @@ function groupConcursosByCategory(
     }
   }
 
-  const outros = concursos.filter(c => !assigned.has(c.sigla));
-  if (outros.length > 0) groups["OUTROS"] = outros;
+  // Catch-all: everything unassigned goes to ESTADUAIS
+  const estaduais = concursos.filter(c => !assigned.has(c.sigla));
+  if (estaduais.length > 0) groups["ESTADUAIS"] = estaduais;
 
   return groups;
 }
