@@ -252,6 +252,7 @@ export default function SalaAula() {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [remaining, setRemaining] = useState<number | undefined>();
   const [showConcursoSelector, setShowConcursoSelector] = useState(false);
+  const [showRaioX, setShowRaioX] = useState(false);
   const [concursosList, setConcursosList] = useState<ConcursoItem[]>([]);
   const [targetConcurso, setTargetConcurso] = useState<{ id: string; nome: string; banca: string } | null>(null);
   const [showDashboard, setShowDashboard] = useState(true);
@@ -1126,6 +1127,108 @@ export default function SalaAula() {
         </DialogContent>
       </Dialog>
 
+      {/* ══════════════════════════════════════════
+          RAIO-X DE PERFORMANCE
+          ══════════════════════════════════════════ */}
+      <Dialog open={showRaioX} onOpenChange={setShowRaioX}>
+        <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-sky-500" /> Raio-X de Performance
+            </DialogTitle>
+            <DialogDescription>
+              {targetConcurso ? `${targetConcurso.nome} · ${targetConcurso.banca}` : "Desempenho geral"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1">
+            <div className="space-y-5 pb-2 pr-1">
+
+              {/* ── Métricas gerais ── */}
+              {(() => {
+                const totalBySubject = stats?.bySubject.reduce((a, s) => a + s.total, 0) ?? 0;
+                const correctBySubject = stats?.bySubject.reduce((a, s) => a + s.correct, 0) ?? 0;
+                const globalRate = totalBySubject > 0 ? Math.round(correctBySubject / totalBySubject * 100) : 0;
+                return (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 py-3 px-2 text-center">
+                      <span className="text-xl font-bold tabular-nums">{stats?.totalQuestionsAnswered ?? 0}</span>
+                      <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">Total de Questões</span>
+                      <span className="text-[9px] text-muted-foreground/60">Web + Bot</span>
+                    </div>
+                    <div className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 py-3 px-2 text-center">
+                      <span className={cn("text-xl font-bold tabular-nums", globalRate >= 70 ? "text-green-600" : globalRate >= 50 ? "text-yellow-600" : "text-red-500")}>
+                        {globalRate}%
+                      </span>
+                      <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">Taxa de Acerto</span>
+                      <span className="text-[9px] text-muted-foreground/60">{correctBySubject}/{totalBySubject}</span>
+                    </div>
+                    <div className="flex flex-col items-center justify-center rounded-xl border bg-muted/30 py-3 px-2 text-center">
+                      {gamification ? (
+                        <>
+                          <span className="text-xl font-bold tabular-nums text-primary">#{gamification.rank}</span>
+                          <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">Ranking</span>
+                          <span className="text-[9px] text-muted-foreground/60">{gamification.xp} XP</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-xl font-bold text-muted-foreground">—</span>
+                          <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">Ranking</span>
+                          <span className="text-[9px] text-muted-foreground/60">sem dados</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* ── Desempenho por Matéria ── */}
+              {stats && stats.bySubject.length > 0 ? (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                    Desempenho por Matéria
+                  </p>
+                  <div className="space-y-2.5">
+                    {[...stats.bySubject]
+                      .sort((a, b) => b.percentage - a.percentage)
+                      .map((s) => (
+                        <div key={s.subject}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium truncate flex-1 pr-2">{s.subject}</span>
+                            <span className={cn(
+                              "text-xs font-semibold tabular-nums shrink-0",
+                              s.percentage >= 70 ? "text-green-600" : s.percentage >= 50 ? "text-yellow-600" : "text-red-500"
+                            )}>
+                              {s.percentage}%
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Progress
+                              value={s.percentage}
+                              className={cn("h-1.5 flex-1",
+                                s.percentage >= 70 ? "[&>div]:bg-green-500" :
+                                s.percentage >= 50 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-red-500"
+                              )}
+                            />
+                            <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 w-14 text-right">
+                              {s.correct}/{s.total} certas
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma questão respondida ainda. Comece a estudar para ver seu desempenho!
+                </p>
+              )}
+
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
       {showDashboard ? (
         /* ═══════════════════════════════════════════
            DASHBOARD VIEW
@@ -1374,10 +1477,10 @@ export default function SalaAula() {
                     );
                   })()}
 
-                  {/* Card 4 — Desempenho */}
+                  {/* Card 4 — Desempenho → abre Raio-X */}
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
                     <Card className="cursor-pointer hover:shadow-md hover:border-sky-300 transition-all active:scale-95 h-full"
-                      onClick={() => setShowDashboard(false)}>
+                      onClick={() => setShowRaioX(true)}>
                       <CardContent className="p-4 flex flex-col gap-2">
                         <BarChart3 className="h-7 w-7 text-sky-500" />
                         <p className="text-sm font-semibold leading-tight">Desempenho</p>
