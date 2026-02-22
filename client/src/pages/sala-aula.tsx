@@ -1261,7 +1261,13 @@ export default function SalaAula() {
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="h-full">
                         {locked ? (
                           /* ── BLOQUEADO ── */
-                          <Card className="h-full cursor-not-allowed border-2 bg-emerald-900/10 border-emerald-900/20">
+                          <Card
+                            className="h-full cursor-pointer border-2 bg-emerald-900/10 border-emerald-900/20 active:scale-[0.98] transition-transform"
+                            onClick={() => toast({
+                              title: "Base de dados insuficiente",
+                              description: `Responda mais ${15 - total} questões para desbloquear seu Mapa de Calor e Reforço Inteligente.`,
+                            })}
+                          >
                             <CardContent className="p-4 flex flex-col gap-2">
                               <RotateCcw className="h-7 w-7 text-emerald-800/25" />
                               <div>
