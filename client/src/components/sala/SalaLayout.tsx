@@ -54,7 +54,7 @@ export function SalaLayout({ children }: SalaLayoutProps) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <Button variant="outline" size="sm" className="gap-1.5">
+              <Button variant="outline" size="sm" className="gap-1.5 border-[#2AABEE] text-[#2AABEE] hover:bg-[#2AABEE]/10 hover:text-[#2AABEE]">
                 <Send className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Telegram</span>
               </Button>
