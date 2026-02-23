@@ -1158,7 +1158,7 @@ export default function SalaAula() {
                 <>
                   {/* Plano de Aula: Jornada por fases (Núcleo Duro primeiro, demais bloqueadas) */}
                   <p className="text-[11px] text-muted-foreground px-3 pt-3 pb-1 leading-snug">
-                    Núcleo Duro desbloqueado. Demais matérias seguem na ordem.
+                    As matérias serão desbloqueadas conforme o seu progresso.
                   </p>
                   <Separator className="my-1" />
                   <div className="py-1">
