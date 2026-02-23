@@ -2,12 +2,7 @@ import { ReactNode } from "react";
 import { useStudentAuth } from "@/contexts/StudentAuthContext";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import {
-  GraduationCap,
-  LogOut,
-  Send,
-  Loader2,
-} from "lucide-react";
+import { GraduationCap, LogOut, Send, Loader2 } from "lucide-react";
 
 interface SalaLayoutProps {
   children: ReactNode;
@@ -37,8 +32,6 @@ export function SalaLayout({ children }: SalaLayoutProps) {
     return null;
   }
 
-  const firstName = student.name?.split(" ")[0] || "Aluno";
-
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
@@ -48,7 +41,9 @@ export function SalaLayout({ children }: SalaLayoutProps) {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <GraduationCap className="h-6 w-6 text-primary" />
-              <span className="font-bold text-lg hidden sm:inline">Passarei</span>
+              <span className="font-bold text-lg hidden sm:inline">
+                Passarei
+              </span>
             </div>
             <div className="hidden md:block h-6 w-px bg-border" />
             <div className="hidden md:block text-sm">
@@ -68,7 +63,12 @@ export function SalaLayout({ children }: SalaLayoutProps) {
                 <span className="hidden sm:inline">Telegram</span>
               </Button>
             </a>
-            <Button variant="ghost" size="sm" onClick={logout} className="gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={logout}
+              className="gap-1.5"
+            >
               <LogOut className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Sair</span>
             </Button>
@@ -82,9 +82,7 @@ export function SalaLayout({ children }: SalaLayoutProps) {
       </header>
 
       {/* Main content */}
-      <main className="flex-1">
-        {children}
-      </main>
+      <main className="flex-1">{children}</main>
     </div>
   );
 }
