@@ -981,41 +981,6 @@ export default function SalaAula() {
           </Button>
         </div>
       )}
-      {/* Mode toggle */}
-          <div className="p-2 border-b">
-            <div className="flex rounded-lg bg-muted p-1">
-              <button
-                onClick={() => setStudyMode("plano")}
-                className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors ${
-                  studyMode === "plano"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Plano
-              </button>
-              <button
-                onClick={() => setStudyMode("livre")}
-                className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors ${
-                  studyMode === "livre"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Livre
-              </button>
-              <button
-                onClick={() => { setStudyMode("simulado"); fetchSimulados(); }}
-                className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors ${
-                  studyMode === "simulado"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Simulados
-              </button>
-            </div>
-          </div>
 
           <ScrollArea className="h-[calc(100%-3.25rem)]">
             <div className="p-2 space-y-1">
@@ -1861,6 +1826,69 @@ export default function SalaAula() {
                 </div>
               </div>
 
+              {/* Card 5 — Redação (hero full-width) */}
+              {(() => {
+                const essayRemaining = essayStatus?.freeRemaining ?? 0;
+                const essayCredits = essayStatus?.credits ?? 0;
+                const essayAvailable = essayRemaining > 0 || essayCredits > 0;
+                const essayTotal = 2;
+                // Próximo reset: dia 01 do mês seguinte
+                const nextReset = new Date();
+                nextReset.setMonth(nextReset.getMonth() + 1);
+                nextReset.setDate(1);
+                const nextResetLabel = nextReset.toLocaleDateString("pt-BR", { month: "long" });
+                return (
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                    {essayAvailable ? (
+                      <Card className="w-full cursor-pointer border-2 border-violet-300/60 hover:border-violet-400 hover:shadow-md transition-all active:scale-[0.99]"
+                        onClick={() => { setShowDashboard(false); setShowEssayForm(true); }}>
+                        <CardContent className="p-4 flex items-center gap-4">
+                          <PenLine className="h-7 w-7 text-violet-600 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <Badge className="text-[8px] font-bold tracking-widest uppercase bg-violet-500 hover:bg-violet-500 px-1.5 py-0">
+                                DISPONÍVEL
+                              </Badge>
+                              <p className="text-sm font-semibold">Redação</p>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                              Correções disponíveis: {essayRemaining}/{essayTotal} este mês
+                            </p>
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            {Array.from({ length: essayTotal }).map((_, i) => (
+                              <div key={i} className={`h-2 w-6 rounded-full ${i < essayRemaining ? "bg-violet-500" : "bg-muted"}`} />
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <Card className="w-full border-2 bg-emerald-900/10 border-emerald-900/20 cursor-default">
+                        <CardContent className="p-4 flex items-center gap-4">
+                          <PenLine className="h-7 w-7 text-emerald-800/25 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <Badge variant="outline" className="text-[8px] font-bold tracking-widest uppercase text-emerald-800/50 border-emerald-800/25 px-1.5 py-0">
+                                LIMITE ATINGIDO
+                              </Badge>
+                              <p className="text-sm font-semibold text-foreground/50">Redação</p>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground/60">
+                              Disponível em 01 de {nextResetLabel}
+                            </p>
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            {Array.from({ length: essayTotal }).map((_, i) => (
+                              <div key={i} className="h-2 w-6 rounded-full bg-muted" />
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </motion.div>
+                );
+              })()}
+
               {/* MEU EDITAL */}
               {targetConcurso && editalProgress?.subjects && editalProgress.subjects.length > 0 && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
@@ -2125,15 +2153,6 @@ export default function SalaAula() {
                       </span>
                     </Button>
                   )}
-                  <Button
-                    onClick={() => { setShowEssayForm(!showEssayForm); }}
-                    variant="outline"
-                    size="sm"
-                    disabled={isSubmittingEssay}
-                  >
-                    {isSubmittingEssay ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <PenLine className="mr-1 h-3 w-3" />}
-                    Redação
-                  </Button>
                   {remaining != null && (
                     <span className="text-xs text-muted-foreground self-center ml-auto">
                       {remaining} questões restantes hoje
