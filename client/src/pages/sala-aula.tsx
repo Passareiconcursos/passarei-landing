@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { useStudentAuth } from "@/contexts/StudentAuthContext";
 import { SalaLayout } from "@/components/sala/SalaLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -7,8 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -203,6 +202,7 @@ function getAreaIcon(grupo: string) {
 export default function SalaAula() {
   const { token, student, updateProfile, logout } = useStudentAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   // State
   const [studyMode, setStudyMode] = useState<"plano" | "livre" | "simulado">("plano");
@@ -222,10 +222,6 @@ export default function SalaAula() {
   const [sm2DueCount, setSm2DueCount] = useState(0);
   const [sm2Items, setSm2Items] = useState<{ reviewId: string; contentId: string; title: string; body: string; subjectName: string; totalReviews: number }[]>([]);
   const [sm2ActiveIndex, setSm2ActiveIndex] = useState<number | null>(null);
-  const [showEssayForm, setShowEssayForm] = useState(false);
-  const [essayTheme, setEssayTheme] = useState("");
-  const [essayText, setEssayText] = useState("");
-  const [isSubmittingEssay, setIsSubmittingEssay] = useState(false);
   const [essayStatus, setEssayStatus] = useState<{ freeRemaining: number; credits: number; plan: string } | null>(null);
   const [gamification, setGamification] = useState<GamificationData | null>(null);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
@@ -695,37 +691,6 @@ export default function SalaAula() {
       }
     } catch {
       toast({ variant: "destructive", title: "Erro ao registrar revisão" });
-    }
-  };
-
-  const submitEssay = async () => {
-    if (!essayTheme.trim() || !essayText.trim()) return;
-    setIsSubmittingEssay(true);
-    setShowEssayForm(false);
-    addMessage("system", { text: `Enviando redação para correção: "${essayTheme}"...` });
-    try {
-      const res = await fetch("/api/sala/essays/submit", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ theme: essayTheme, text: essayText }),
-      });
-      const data = await res.json();
-      if (data.requiresUpgrade) {
-        addMessage("system", { text: data.error || "Você precisa de um plano superior para enviar redações." });
-        return;
-      }
-      if (!data.success || !data.correction) {
-        addMessage("system", { text: "Não foi possível corrigir a redação agora. Tente novamente." });
-        return;
-      }
-      addMessage("essay-result", { theme: essayTheme, ...data.correction });
-      setEssayTheme("");
-      setEssayText("");
-      fetchEssayStatus();
-    } catch {
-      toast({ variant: "destructive", title: "Erro ao enviar redação" });
-    } finally {
-      setIsSubmittingEssay(false);
     }
   };
 
@@ -1938,7 +1903,7 @@ export default function SalaAula() {
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                     {essayAvailable ? (
                       <Card className="w-full cursor-pointer border-2 border-violet-300/60 hover:border-violet-400 hover:shadow-md transition-all active:scale-[0.99]"
-                        onClick={() => { setShowDashboard(false); setShowEssayForm(true); }}>
+                        onClick={() => setLocation("/sala/redacao")}>
                         <CardContent className="p-4 flex items-center gap-4">
                           <PenLine className="h-7 w-7 text-violet-600 shrink-0" />
                           <div className="flex-1 min-w-0">
@@ -2037,44 +2002,56 @@ export default function SalaAula() {
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setShowDashboard(true)}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            {!showEssayForm && (
-              <Sheet open={showMobileSidebar} onOpenChange={setShowMobileSidebar}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                    <Menu className="h-4 w-4" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-72 p-0">
-                  <SheetHeader className="px-4 py-3 border-b">
-                    <SheetTitle className="text-sm">Matérias</SheetTitle>
-                  </SheetHeader>
-                  {renderSidebarContent()}
-                </SheetContent>
-              </Sheet>
-            )}
+            <Sheet open={showMobileSidebar} onOpenChange={setShowMobileSidebar}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0">
+                <SheetHeader className="px-4 py-3 border-b">
+                  <SheetTitle className="text-sm">Matérias</SheetTitle>
+                </SheetHeader>
+                {renderSidebarContent()}
+              </SheetContent>
+            </Sheet>
 
             <span className="flex-1 text-xs font-medium truncate">
-              {showEssayForm ? "Redação" : studyMode === "simulado" ? "Simulados" : studyMode === "livre" ? "Estudo Livre" : "Continuar Estudo"}
+              {studyMode === "simulado" ? "Simulados" : studyMode === "livre" ? "Estudo Livre" : "Continuar Estudo"}
             </span>
 
             {gamification && (
-              <div className="flex items-center gap-2 shrink-0 text-xs">
-                <span className="flex items-center gap-0.5">
-                  <Flame className="h-3 w-3 text-orange-500" />{gamification.streak}
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Streak */}
+                <span className="flex items-center gap-0.5 text-xs font-medium text-orange-500">
+                  <Flame className="h-3 w-3" />{gamification.streak}
                 </span>
-                {remaining != null && <span className="text-muted-foreground">{remaining}q</span>}
+                {/* Level badge */}
+                <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-semibold">
+                  Nv {gamification.level}
+                </Badge>
+                {/* XP mini-bar */}
+                {gamification.xpForNextLevel > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Zap className="h-3 w-3 text-yellow-500 shrink-0" />
+                    <div className="w-10 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-yellow-400"
+                        style={{ width: `${Math.min(100, Math.round(gamification.xpInCurrentLevel / gamification.xpForNextLevel * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
       {/* Main layout — ajustado para descontar a top bar mobile */}
       <div className="flex h-[calc(100vh-3.5rem-2.5rem)] md:h-[calc(100vh-3.5rem)]">
-        {/* LEFT: Subject Sidebar — apenas desktop, oculta no modo Redação */}
-        {!showEssayForm && (
-          <aside className="hidden md:flex md:flex-col w-64 border-r bg-background shrink-0">
-            {renderSidebarContent()}
-          </aside>
-        )}
+        {/* LEFT: Subject Sidebar */}
+        <aside className="hidden md:flex md:flex-col w-64 border-r bg-background shrink-0">
+          {renderSidebarContent()}
+        </aside>
 
         {/* CENTER: Chat Panel */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -2147,7 +2124,7 @@ export default function SalaAula() {
           <ScrollArea className="flex-1 p-4">
             <div className="max-w-2xl mx-auto space-y-4">
               <AnimatePresence mode="popLayout">
-                {!showEssayForm && messages.map((msg) => (
+                {messages.map((msg) => (
                   <motion.div
                     key={msg.id}
                     initial={{ opacity: 0, y: 10 }}
@@ -2183,62 +2160,6 @@ export default function SalaAula() {
                 />
               )}
 
-              {/* Inline essay form */}
-              {showEssayForm && !activeSimulado && (
-                <Card className="border-l-4 border-l-violet-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <PenLine className="h-4 w-4 text-violet-600" /> Redação
-                    </CardTitle>
-                    {essayStatus && (
-                      <p className="text-xs text-muted-foreground">
-                        {essayStatus.freeRemaining > 0
-                          ? `${essayStatus.freeRemaining} redação${essayStatus.freeRemaining > 1 ? "ões" : ""} grátis este mês`
-                          : essayStatus.credits >= 1.99
-                          ? `Saldo: R$ ${essayStatus.credits.toFixed(2)}`
-                          : "Sem créditos disponíveis"}
-                      </p>
-                    )}
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Tema da redação</label>
-                      <Input
-                        placeholder="Ex: Segurança pública e a atuação policial..."
-                        value={essayTheme}
-                        onChange={(e) => setEssayTheme(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Sua redação</label>
-                      <Textarea
-                        placeholder="Escreva sua redação aqui (mínimo 50 palavras)..."
-                        rows={8}
-                        value={essayText}
-                        onChange={(e) => setEssayText(e.target.value)}
-                        className="resize-none"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {essayText.trim() ? essayText.trim().split(/\s+/).length : 0} palavras
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={submitEssay}
-                        disabled={!essayTheme.trim() || essayText.trim().split(/\s+/).length < 50}
-                        size="sm"
-                        className="bg-violet-600 hover:bg-violet-700"
-                      >
-                        Enviar para correção
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setShowEssayForm(false)}>
-                        Cancelar
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
               {/* Typing indicator */}
               {isTyping && (
                 <div className="flex items-center px-1 py-1">
@@ -2255,7 +2176,7 @@ export default function SalaAula() {
               )}
 
               {/* Quick reply buttons — após última mensagem de conteúdo */}
-              {!showEssayForm && !isTyping && !activeSimulado &&
+              {!isTyping && !activeSimulado &&
                 messages.length > 0 &&
                 messages[messages.length - 1]?.type === "content" &&
                 !currentQuestion && answeredIndex === null && (
@@ -2283,7 +2204,7 @@ export default function SalaAula() {
           </ScrollArea>
 
           {/* Action bar — oculta no modo Redação */}
-          {!showEssayForm && <div className="border-t p-3 bg-background">
+          <div className="border-t p-3 bg-background">
             <div className="max-w-2xl mx-auto flex gap-2 flex-wrap">
               {/* Simulado mode: next question after answering */}
               {activeSimulado ? (
@@ -2360,7 +2281,6 @@ export default function SalaAula() {
               )}
             </div>
           </div>
-          }
           </>
           )}
         </div>

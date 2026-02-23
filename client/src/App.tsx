@@ -26,6 +26,7 @@ import EducContent from "@/pages/educ-content";
 import SalaLogin from "@/pages/sala-login";
 import SalaOnboarding from "@/pages/sala-onboarding";
 import SalaAula from "@/pages/sala-aula";
+import SalaRedacao from "@/pages/sala-redacao";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -52,6 +53,7 @@ function Router() {
       <Route path="/sala/login" component={SalaLogin} />
       <Route path="/sala/onboarding" component={SalaOnboarding} />
       <Route path="/sala/aula" component={SalaAula} />
+      <Route path="/sala/redacao" component={SalaRedacao} />
       <Route path="/checkout" component={Checkout} />
       <Route component={NotFound} />
     </Switch>
