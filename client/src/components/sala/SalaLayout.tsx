@@ -2,12 +2,7 @@ import { ReactNode } from "react";
 import { useStudentAuth } from "@/contexts/StudentAuthContext";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import {
-  GraduationCap,
-  LogOut,
-  Send,
-  Loader2,
-} from "lucide-react";
+import { LogOut, Send, Loader2 } from "lucide-react";
 
 interface SalaLayoutProps {
   children: ReactNode;
@@ -42,12 +37,14 @@ export function SalaLayout({ children }: SalaLayoutProps) {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-14 items-center justify-between px-4 md:px-6">
-          {/* Left: Logo + Student info */}
+          {/* Left: Logo oficial */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <GraduationCap className="h-6 w-6 text-primary" />
-              <span className="font-bold text-lg hidden sm:inline">Passarei</span>
-            </div>
+            <img
+              src="/logo.png"
+              alt="Passarei"
+              className="h-8 w-auto"
+              loading="eager"
+            />
           </div>
 
           {/* Right: Actions */}
@@ -68,7 +65,6 @@ export function SalaLayout({ children }: SalaLayoutProps) {
             </Button>
           </div>
         </div>
-
       </header>
 
       {/* Main content */}
