@@ -45,10 +45,6 @@ export function SalaLayout({ children }: SalaLayoutProps) {
                 Passarei
               </span>
             </div>
-            <div className="hidden md:block h-6 w-px bg-border" />
-            <div className="hidden md:block text-sm">
-              <span className="font-medium">{firstName}</span>
-            </div>
           </div>
 
           {/* Right: Actions */}
@@ -75,10 +71,6 @@ export function SalaLayout({ children }: SalaLayoutProps) {
           </div>
         </div>
 
-        {/* Mobile: Student info bar */}
-        <div className="md:hidden border-t px-4 py-1.5 text-xs text-muted-foreground">
-          {firstName}
-        </div>
       </header>
 
       {/* Main content */}
