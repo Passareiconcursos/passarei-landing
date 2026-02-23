@@ -13,7 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
   BookOpen,
@@ -49,7 +49,9 @@ import {
   Shield,
   Crosshair,
   MapPin,
+  Lock,
 } from "lucide-react";
+import { sortByNucleoDuro, isNucleoDuro } from "@/lib/pedagogia";
 
 // ============================================
 // TYPES
@@ -250,6 +252,14 @@ export default function SalaAula() {
     available: boolean; reason: string; nextAvailableAt?: string;
   } | null>(null);
 
+  // ── Jornada / Palco ──────────────────────────────────────
+  const [showStudyPalco, setShowStudyPalco] = useState(true);
+  const [nextMissionPreview, setNextMissionPreview] = useState<{ subjectName: string; contentTitle: string } | null>(null);
+  const [isFetchingPreview, setIsFetchingPreview] = useState(false);
+  const [celebrateCorrect, setCelebrateCorrect] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [hasPersistedSession, setHasPersistedSession] = useState(false);
+
   // ── Modo Prova (Simulado Semanal imersivo) ──────────────
   const [weeklyExamMode, setWeeklyExamMode] = useState(false);
   const [weeklyExamUserSimId, setWeeklyExamUserSimId] = useState<string | null>(null);
@@ -351,6 +361,34 @@ export default function SalaAula() {
     return () => clearInterval(interval);
   }, [activeSimulado]);
 
+  // Salvar sessão de estudo no sessionStorage
+  useEffect(() => {
+    if (messages.length > 0 && !showDashboard && studyMode === "plano") {
+      sessionStorage.setItem("passarei_sala_messages", JSON.stringify(messages.slice(-30)));
+      sessionStorage.setItem("passarei_sala_subject", selectedSubject || "");
+    }
+  }, [messages]);
+
+  // Detectar sessão persistida ao montar
+  useEffect(() => {
+    const saved = sessionStorage.getItem("passarei_sala_messages");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) setHasPersistedSession(true);
+      } catch {}
+    }
+  }, []);
+
+  // Buscar preview da próxima missão quando palco aparece
+  useEffect(() => {
+    if (showStudyPalco && !showDashboard && studyMode === "plano" && !hasPersistedSession && studyPlan.length > 0) {
+      const ndSubject = studyPlan.find(s => isNucleoDuro(s.subjectName) && s.percentage < 100);
+      fetchNextMissionPreview(ndSubject?.subjectId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showStudyPalco, showDashboard, studyMode, hasPersistedSession, studyPlan.length]);
+
   // ============================================
   // API CALLS
   // ============================================
@@ -390,6 +428,7 @@ export default function SalaAula() {
 
   const fetchSequentialContent = async (subjectId: string) => {
     setIsLoadingContent(true);
+    setIsTyping(true);
     setCurrentQuestion(null);
     setAnsweredIndex(null);
     setQuestionCorrectIndex(null);
@@ -398,6 +437,7 @@ export default function SalaAula() {
       const res = await fetch(`/api/sala/content/sequential?subjectId=${subjectId}`, { headers });
       const data = await res.json();
 
+      setIsTyping(false);
       if (data.success && data.content) {
         setCurrentContent(data.content);
         addMessage("content", data.content);
@@ -409,6 +449,7 @@ export default function SalaAula() {
         addMessage("system", { text: data.message || "Nenhum conteúdo disponível." });
       }
     } catch {
+      setIsTyping(false);
       toast({ variant: "destructive", title: "Erro ao carregar conteúdo" });
     } finally {
       setIsLoadingContent(false);
@@ -470,6 +511,20 @@ export default function SalaAula() {
       const data = await res.json();
       setWeeklyStatus(data);
     } catch { /* silent */ }
+  };
+
+  const fetchNextMissionPreview = async (subjectId?: string) => {
+    setIsFetchingPreview(true);
+    try {
+      const url = subjectId
+        ? `/api/sala/content/peek?subjectId=${encodeURIComponent(subjectId)}`
+        : "/api/sala/content/peek";
+      const res = await fetch(url, { headers });
+      const data = await res.json();
+      if (data.title) setNextMissionPreview({ subjectName: data.subjectName, contentTitle: data.title });
+    } catch { /* silent — preview é opcional */ } finally {
+      setIsFetchingPreview(false);
+    }
   };
 
   // ── Modo Prova — funções ──────────────────────────────
@@ -898,6 +953,10 @@ export default function SalaAula() {
           userAnswer: optionIndex,
           explanation: data.explanation,
         });
+        if (data.isCorrect) {
+          setCelebrateCorrect(true);
+          setTimeout(() => setCelebrateCorrect(false), 1400);
+        }
         fetchStats();
         fetchGamification(); // Refresh XP + streak
       }
@@ -934,6 +993,39 @@ export default function SalaAula() {
       fetchSequentialContent(selectedSubject);
     } else {
       fetchNextContent(selectedSubject);
+    }
+  };
+
+  const handleEstudarAgora = () => {
+    if (hasPersistedSession) {
+      const savedMessages = sessionStorage.getItem("passarei_sala_messages");
+      const savedSubject = sessionStorage.getItem("passarei_sala_subject");
+      if (savedMessages && savedSubject) {
+        try {
+          setMessages(JSON.parse(savedMessages));
+          setSelectedSubject(savedSubject);
+          setShowStudyPalco(false);
+          return;
+        } catch {}
+      }
+    }
+    // Fresh start: primeiro subject ND incompleto
+    const ndSubject = studyPlan
+      .filter(s => isNucleoDuro(s.subjectName) && s.percentage < 100)
+      .sort((a, b) => a.percentage - b.percentage)[0];
+    const subjectId = ndSubject?.subjectId ?? studyPlan[0]?.subjectId;
+    if (subjectId) {
+      setSelectedSubject(subjectId);
+      fetchSequentialContent(subjectId);
+    }
+    setShowStudyPalco(false);
+  };
+
+  const handleExplainDifferently = () => {
+    if (currentContent?.enrichment) {
+      addMessage("enrichment", { text: currentContent.enrichment });
+    } else {
+      addMessage("system", "Ainda não temos uma explicação alternativa para este tópico. Tente fazer uma questão ou avance para o próximo.");
     }
   };
 
@@ -1099,47 +1191,54 @@ export default function SalaAula() {
                 </>
               ) : (
                 <>
-                  {/* Plano de Aula: sequential progress */}
-                  <p className="px-3 py-1 text-xs text-muted-foreground">
-                    Estude na ordem recomendada. Matérias de foco aparecem primeiro.
+                  {/* Plano de Aula: Jornada por fases (Núcleo Duro primeiro, demais bloqueadas) */}
+                  <p className="text-[11px] text-muted-foreground px-3 pt-3 pb-1 leading-snug">
+                    Núcleo Duro desbloqueado. Demais matérias seguem na ordem.
                   </p>
-
-                  <Separator className="my-2" />
-
-                  {[...studyPlan]
-                    .sort((a, b) => (a.isDifficulty === b.isDifficulty ? 0 : a.isDifficulty ? -1 : 1))
-                    .map((s) => (
-                    <button
-                      key={s.subjectId}
-                      onClick={() => { setSelectedSubject(s.subjectId); setShowMobileSidebar(false); fetchSequentialContent(s.subjectId); }}
-                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                        selectedSubject === s.subjectId
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "hover:bg-muted"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="truncate">{s.subjectName}</span>
-                        {s.isDifficulty && (
-                          <Badge variant="destructive" className="text-[10px] px-1 py-0">foco</Badge>
-                        )}
-                      </div>
-                      {/* Progress bar */}
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="flex-1 bg-muted rounded-full h-1.5">
-                          <div
-                            className={`h-1.5 rounded-full transition-all ${
-                              s.percentage === 100 ? "bg-green-500" : "bg-primary"
-                            }`}
-                            style={{ width: `${Math.max(s.percentage, 2)}%` }}
-                          />
-                        </div>
-                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                          {s.studiedContent}/{s.totalContent}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                  <Separator className="my-1" />
+                  <div className="py-1">
+                    {sortByNucleoDuro(studyPlan.map(s => ({ ...s, name: s.subjectName }))).map((s) => {
+                      const isND = isNucleoDuro(s.name);
+                      const pct = s.percentage ?? 0;
+                      const level = pct < 25 ? "Nível 1: Iniciante"
+                        : pct < 50 ? "Nível 2: Intermediário"
+                        : pct < 75 ? "Nível 3: Avançado"
+                        : "Nível 4: Especialista";
+                      return (
+                        <button
+                          key={s.subjectId}
+                          onClick={() => {
+                            if (!isND) {
+                              toast({ title: "Matéria bloqueada", description: "Complete o Núcleo Duro primeiro para desbloquear esta matéria." });
+                              return;
+                            }
+                            setSelectedSubject(s.subjectId);
+                            setShowMobileSidebar(false);
+                            fetchSequentialContent(s.subjectId);
+                            setShowStudyPalco(false);
+                          }}
+                          className={cn(
+                            "w-full text-left px-3 py-2 transition-colors",
+                            selectedSubject === s.subjectId ? "bg-accent" : "hover:bg-accent/50",
+                            !isND && "opacity-40"
+                          )}
+                        >
+                          <div className="flex items-start gap-2">
+                            {isND
+                              ? <BookOpen className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+                              : <Lock className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate">{s.subjectName}</p>
+                              <p className="text-[10px] text-muted-foreground">{isND ? level : "Bloqueada"}</p>
+                            </div>
+                          </div>
+                          {isND && (
+                            <Progress value={pct} className="h-0.5 mt-1.5 ml-5 mr-1" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </>
               )}
             </div>
@@ -1646,10 +1745,8 @@ export default function SalaAula() {
                           onClick={() => {
                             setShowDashboard(false);
                             setStudyMode("plano");
-                            if (resumeSubject) {
-                              setSelectedSubject(resumeSubject.id);
-                              fetchSequentialContent(resumeSubject.id);
-                            }
+                            setShowStudyPalco(true);
+                            setNextMissionPreview(null);
                           }}>
                           <CardContent className="p-4 flex flex-col gap-2">
                             <BookOpen className="h-7 w-7 text-primary" />
@@ -1981,6 +2078,55 @@ export default function SalaAula() {
 
         {/* CENTER: Chat Panel */}
         <div className="flex-1 flex flex-col min-w-0">
+
+          {/* ── PALCO CENTRAL ── aparece antes do chat quando studyMode=plano */}
+          {showStudyPalco && studyMode === "plano" ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35 }}
+                className="space-y-5 w-full max-w-xs"
+              >
+                <div className="text-4xl select-none">📚</div>
+                <Button
+                  size="lg"
+                  className="w-full text-base font-bold py-7 rounded-2xl shadow-md bg-green-600 hover:bg-green-700 text-white"
+                  onClick={handleEstudarAgora}
+                >
+                  {hasPersistedSession ? "CONTINUAR DE ONDE PAROU" : "ESTUDAR AGORA"}
+                </Button>
+                {!hasPersistedSession && (
+                  <p className="text-xs text-muted-foreground leading-snug min-h-[2rem]">
+                    {isFetchingPreview ? (
+                      <span className="animate-pulse">Buscando próxima missão...</span>
+                    ) : nextMissionPreview ? (
+                      <>Sua próxima missão:{" "}
+                        <span className="font-medium text-foreground">
+                          {nextMissionPreview.subjectName} — {nextMissionPreview.contentTitle}
+                        </span>
+                      </>
+                    ) : null}
+                  </p>
+                )}
+                {hasPersistedSession && (
+                  <button
+                    className="text-[11px] text-muted-foreground underline underline-offset-2"
+                    onClick={() => {
+                      sessionStorage.removeItem("passarei_sala_messages");
+                      sessionStorage.removeItem("passarei_sala_subject");
+                      setHasPersistedSession(false);
+                      setNextMissionPreview(null);
+                    }}
+                  >
+                    Começar uma nova sessão
+                  </button>
+                )}
+              </motion.div>
+            </div>
+          ) : (
+          <>
+
           {/* Active simulado banner */}
           {activeSimulado && (
             <div className="flex items-center justify-between px-4 py-2 bg-blue-50 border-b border-blue-200 text-sm">
@@ -2000,9 +2146,18 @@ export default function SalaAula() {
 
           <ScrollArea className="flex-1 p-4">
             <div className="max-w-2xl mx-auto space-y-4">
-              {!showEssayForm && messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} onAnswer={submitAnswer} answeredIndex={answeredIndex} correctIndex={questionCorrectIndex} />
-              ))}
+              <AnimatePresence mode="popLayout">
+                {!showEssayForm && messages.map((msg) => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.22, ease: "easeOut" }}
+                  >
+                    <MessageBubble message={msg} onAnswer={submitAnswer} answeredIndex={answeredIndex} correctIndex={questionCorrectIndex} />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
 
               {(isLoadingContent || isLoadingQuestion || isLoadingSimulado) && (
                 <div className="flex items-center gap-2 text-muted-foreground py-4">
@@ -2082,6 +2237,45 @@ export default function SalaAula() {
                     </div>
                   </CardContent>
                 </Card>
+              )}
+
+              {/* Typing indicator */}
+              {isTyping && (
+                <div className="flex items-center px-1 py-1">
+                  <div className="bg-muted rounded-2xl px-3 py-2.5 flex gap-1.5">
+                    {[0, 150, 300].map((delay) => (
+                      <span
+                        key={delay}
+                        className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce"
+                        style={{ animationDelay: `${delay}ms` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick reply buttons — após última mensagem de conteúdo */}
+              {!showEssayForm && !isTyping && !activeSimulado &&
+                messages.length > 0 &&
+                messages[messages.length - 1]?.type === "content" &&
+                !currentQuestion && answeredIndex === null && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <Button variant="outline" size="sm"
+                    className="text-xs h-7 rounded-full border-dashed"
+                    onClick={() => handleNextContent()}>
+                    Entendi, avançar →
+                  </Button>
+                  <Button variant="outline" size="sm"
+                    className="text-xs h-7 rounded-full border-dashed"
+                    onClick={handleExplainDifferently}>
+                    Explicar de outro jeito
+                  </Button>
+                  <Button variant="outline" size="sm"
+                    className="text-xs h-7 rounded-full border-dashed"
+                    onClick={fetchQuestion}>
+                    Quero responder uma questão
+                  </Button>
+                </div>
               )}
 
               <div ref={chatEndRef} />
@@ -2167,6 +2361,8 @@ export default function SalaAula() {
             </div>
           </div>
           }
+          </>
+          )}
         </div>
 
         {/* RIGHT: Stats Panel */}
@@ -2311,6 +2507,28 @@ export default function SalaAula() {
       </div>
         </>
       )}
+
+      {/* Celebração de acerto */}
+      <AnimatePresence>
+        {celebrateCorrect && (
+          <motion.div
+            key="celebrate"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center"
+          >
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: [1, 1.25, 1], opacity: [0, 1, 0.8] }}
+              transition={{ duration: 0.5 }}
+              className="rounded-full bg-green-500/15 p-10"
+            >
+              <CheckCircle2 className="h-14 w-14 text-green-500" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </SalaLayout>
   );
 }

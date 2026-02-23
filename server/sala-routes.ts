@@ -236,6 +236,43 @@ export function registerSalaRoutes(app: Express) {
     }
   });
 
+  // GET /api/sala/content/peek - Preview do próximo conteúdo (somente leitura, sem salvar progresso)
+  app.get("/api/sala/content/peek", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const subjectId = req.query.subjectId as string | undefined;
+
+      const progress = await getStudyProgress(student.userId, "userId");
+      const usedIds: string[] = progress.lastStudyContentIds || [];
+
+      const usedClause = usedIds.length > 0
+        ? sql`AND c.id NOT IN (${sql.join(usedIds.map((id: string) => sql`${id}`), sql`, `)})`
+        : sql``;
+      const subjectClause = subjectId
+        ? sql`AND c."subjectId" = ${subjectId}`
+        : sql``;
+
+      const rows = await db.execute(sql`
+        SELECT c.id, c.title, s.name AS "subjectName"
+        FROM "Content" c
+        JOIN "Subject" s ON c."subjectId" = s.id
+        WHERE c."isActive" = true
+          AND (c."reviewStatus" IS NULL OR c."reviewStatus" != 'REJEITADO')
+          ${usedClause}
+          ${subjectClause}
+        ORDER BY c."createdAt" ASC
+        LIMIT 1
+      `) as any[];
+
+      const row = rows[0];
+      if (!row) return res.json({ title: null, subjectName: null });
+      return res.json({ title: row.title, subjectName: row.subjectName });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao buscar preview de conteúdo:", error);
+      return res.status(500).json({ title: null, subjectName: null });
+    }
+  });
+
   // ============================================
   // CONTEÚDO / STUDY (Estudo Livre)
   // ============================================
