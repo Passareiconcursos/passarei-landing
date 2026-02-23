@@ -1940,22 +1940,24 @@ export default function SalaAula() {
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setShowDashboard(true)}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Sheet open={showMobileSidebar} onOpenChange={setShowMobileSidebar}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0">
-                <SheetHeader className="px-4 py-3 border-b">
-                  <SheetTitle className="text-sm">Matérias</SheetTitle>
-                </SheetHeader>
-                {renderSidebarContent()}
-              </SheetContent>
-            </Sheet>
+            {!showEssayForm && (
+              <Sheet open={showMobileSidebar} onOpenChange={setShowMobileSidebar}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                    <Menu className="h-4 w-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-72 p-0">
+                  <SheetHeader className="px-4 py-3 border-b">
+                    <SheetTitle className="text-sm">Matérias</SheetTitle>
+                  </SheetHeader>
+                  {renderSidebarContent()}
+                </SheetContent>
+              </Sheet>
+            )}
 
             <span className="flex-1 text-xs font-medium truncate">
-              {studyMode === "simulado" ? "Simulados" : studyMode === "livre" ? "Estudo Livre" : "Continuar Estudo"}
+              {showEssayForm ? "Redação" : studyMode === "simulado" ? "Simulados" : studyMode === "livre" ? "Estudo Livre" : "Continuar Estudo"}
             </span>
 
             {gamification && (
@@ -1970,10 +1972,12 @@ export default function SalaAula() {
 
       {/* Main layout — ajustado para descontar a top bar mobile */}
       <div className="flex h-[calc(100vh-3.5rem-2.5rem)] md:h-[calc(100vh-3.5rem)]">
-        {/* LEFT: Subject Sidebar — apenas desktop */}
-        <aside className="hidden md:flex md:flex-col w-64 border-r bg-background shrink-0">
-          {renderSidebarContent()}
-        </aside>
+        {/* LEFT: Subject Sidebar — apenas desktop, oculta no modo Redação */}
+        {!showEssayForm && (
+          <aside className="hidden md:flex md:flex-col w-64 border-r bg-background shrink-0">
+            {renderSidebarContent()}
+          </aside>
+        )}
 
         {/* CENTER: Chat Panel */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -1996,7 +2000,7 @@ export default function SalaAula() {
 
           <ScrollArea className="flex-1 p-4">
             <div className="max-w-2xl mx-auto space-y-4">
-              {messages.map((msg) => (
+              {!showEssayForm && messages.map((msg) => (
                 <MessageBubble key={msg.id} message={msg} onAnswer={submitAnswer} answeredIndex={answeredIndex} correctIndex={questionCorrectIndex} />
               ))}
 
@@ -2084,8 +2088,8 @@ export default function SalaAula() {
             </div>
           </ScrollArea>
 
-          {/* Action bar */}
-          <div className="border-t p-3 bg-background">
+          {/* Action bar — oculta no modo Redação */}
+          {!showEssayForm && <div className="border-t p-3 bg-background">
             <div className="max-w-2xl mx-auto flex gap-2 flex-wrap">
               {/* Simulado mode: next question after answering */}
               {activeSimulado ? (
@@ -2162,6 +2166,7 @@ export default function SalaAula() {
               )}
             </div>
           </div>
+          }
         </div>
 
         {/* RIGHT: Stats Panel */}
