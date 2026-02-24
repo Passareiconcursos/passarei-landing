@@ -1435,6 +1435,7 @@ export function registerSalaRoutes(app: Express) {
       const examType = userResult[0]?.examType || "concurso policial";
       const wordCount = text.trim().split(/\s+/).length;
 
+      // Registrar tentativa SEM consumir crédito ainda
       const essayResult = await db.execute(sql`
         INSERT INTO "essays" ("user_id","theme","text","word_count","status","was_free","amount_paid","submitted_at","created_at","updated_at")
         VALUES (${student.userId},${theme},${text},${wordCount},'CORRECTING',${access.reason === "veterano_free"},${access.reason === "paid" ? PRICE_PER_ESSAY : 0},NOW(),NOW(),NOW())
@@ -1442,7 +1443,21 @@ export function registerSalaRoutes(app: Express) {
       `) as any[];
       const essayId = essayResult[0].id;
 
-      // Consume access
+      // Correção via IA ANTES de consumir crédito (transação atômica)
+      let correction = null;
+      try {
+        correction = await correctEssayWithAI(theme, text, examType);
+      } catch (_e) {
+        // IA falhou — marca erro, NÃO debita crédito
+        await db.execute(sql`UPDATE "essays" SET "status"='ERROR',"updated_at"=NOW() WHERE "id"=${essayId}`);
+        return res.status(500).json({
+          success: false,
+          creditsPreserved: true,
+          error: "Erro na análise técnica. Seus créditos estão preservados. Tente novamente em alguns minutos.",
+        });
+      }
+
+      // IA retornou com sucesso — agora consumir crédito
       const currentMonth = new Date().toISOString().slice(0, 7);
       if (access.reason === "veterano_free") {
         await db.execute(sql`UPDATE "User" SET "monthlyEssaysUsed"=COALESCE("monthlyEssaysUsed",0)+1,"lastEssayMonth"=${currentMonth},"totalEssaysSubmitted"=COALESCE("totalEssaysSubmitted",0)+1,"updatedAt"=NOW() WHERE id=${student.userId}`);
@@ -1450,30 +1465,22 @@ export function registerSalaRoutes(app: Express) {
         await db.execute(sql`UPDATE "User" SET "credits"=COALESCE("credits",0)-${PRICE_PER_ESSAY},"monthlyEssaysUsed"=COALESCE("monthlyEssaysUsed",0)+1,"lastEssayMonth"=${currentMonth},"totalEssaysSubmitted"=COALESCE("totalEssaysSubmitted",0)+1,"updatedAt"=NOW() WHERE id=${student.userId}`);
       }
 
-      // AI correction (synchronous)
-      let correction = null;
-      let status = "CORRECTED";
-      try {
-        correction = await correctEssayWithAI(theme, text, examType);
-        await db.execute(sql`
-          UPDATE "essays" SET
-            "status"='CORRECTED',
-            "score_1"=${correction.scores.comp1},"score_2"=${correction.scores.comp2},
-            "score_3"=${correction.scores.comp3},"score_4"=${correction.scores.comp4},
-            "score_5"=${correction.scores.comp5},"total_score"=${correction.scores.total},
-            "feedback"=${correction.feedback.general},
-            "feedback_comp_1"=${correction.feedback.comp1},"feedback_comp_2"=${correction.feedback.comp2},
-            "feedback_comp_3"=${correction.feedback.comp3},"feedback_comp_4"=${correction.feedback.comp4},
-            "feedback_comp_5"=${correction.feedback.comp5},
-            "corrected_at"=NOW(),"updated_at"=NOW()
-          WHERE "id"=${essayId}
-        `);
-      } catch (_e) {
-        status = "ERROR";
-        await db.execute(sql`UPDATE "essays" SET "status"='ERROR',"updated_at"=NOW() WHERE "id"=${essayId}`);
-      }
+      // Persistir resultado da IA
+      await db.execute(sql`
+        UPDATE "essays" SET
+          "status"='CORRECTED',
+          "score_1"=${correction.scores.comp1},"score_2"=${correction.scores.comp2},
+          "score_3"=${correction.scores.comp3},"score_4"=${correction.scores.comp4},
+          "score_5"=${correction.scores.comp5},"total_score"=${correction.scores.total},
+          "feedback"=${correction.feedback.general},
+          "feedback_comp_1"=${correction.feedback.comp1},"feedback_comp_2"=${correction.feedback.comp2},
+          "feedback_comp_3"=${correction.feedback.comp3},"feedback_comp_4"=${correction.feedback.comp4},
+          "feedback_comp_5"=${correction.feedback.comp5},
+          "corrected_at"=NOW(),"updated_at"=NOW()
+        WHERE "id"=${essayId}
+      `);
 
-      return res.json({ success: true, essayId, status, correction });
+      return res.json({ success: true, essayId, status: "CORRECTED", correction });
     } catch (error) {
       console.error("❌ [Sala] Erro ao submeter redação:", error);
       return res.status(500).json({ success: false, error: "Erro ao processar redação." });

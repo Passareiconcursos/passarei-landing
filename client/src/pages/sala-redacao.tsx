@@ -92,6 +92,14 @@ export default function SalaRedacao() {
         toast({ variant: "destructive", title: "Créditos insuficientes", description: data.error || "Você precisa de um plano superior para enviar redações." });
         return;
       }
+      if (data.creditsPreserved || (!data.success && !data.correction)) {
+        toast({
+          variant: "destructive",
+          title: "Erro na análise técnica",
+          description: "Seus créditos estão preservados. Tente novamente em alguns minutos.",
+        });
+        return;
+      }
       if (!data.success || !data.correction) {
         toast({ variant: "destructive", title: "Erro na correção", description: "Não foi possível corrigir a redação agora. Tente novamente." });
         return;

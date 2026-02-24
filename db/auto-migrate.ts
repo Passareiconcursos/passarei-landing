@@ -34,6 +34,7 @@ export async function runAutoMigrations() {
   await run("simuladoType",      migrateSimuladoTypeColumn);
   await run("cleanupPFF",        cleanupPFFConcurso);
   await run("cleanupRedundant",  cleanupRedundantConcursos);
+  await run("repairEssayCredits", repairEssayCredits);
 
   console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
@@ -1188,5 +1189,46 @@ async function cleanupRedundantConcursos() {
   if (delMD.length > 0) {
     const siglas = delMD.map((r: any) => r.sigla).join(', ');
     console.log(`  🗑️ Aliases duplicados de Ministério da Defesa removidos: ${siglas}`);
+  }
+}
+
+// ============================================
+// REPARO DE CRÉDITOS DE REDAÇÃO
+// Recalcula monthlyEssaysUsed baseado apenas nas redações com status=CORRECTED.
+// Corrige consumo indevido que ocorria antes da transação atômica ser implementada.
+// Idempotente — pode rodar múltiplas vezes sem efeito colateral.
+// ============================================
+async function repairEssayCredits() {
+  // Verifica se a tabela essays existe antes de tentar reparar
+  const tableExists = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables WHERE table_name = 'essays'
+    ) as exists
+  `) as any[];
+  if (!tableExists[0]?.exists) return;
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+
+  // Recalcular monthlyEssaysUsed para cada usuário no mês atual:
+  // conta apenas redações CORRECTED (sucesso real) — ERROR não debita crédito
+  // Conta todas as redações CORRECTED do mês (grátis + pagas)
+  // — exclui ERROR (falha IA, crédito não debitado)
+  // — exclui CORRECTING (em andamento, crédito ainda não debitado)
+  const updated = await db.execute(sql`
+    UPDATE "User" u
+    SET "monthlyEssaysUsed" = (
+      SELECT COUNT(*)::integer
+      FROM essays e
+      WHERE e.user_id = u.id
+        AND e.status = 'CORRECTED'
+        AND TO_CHAR(e.submitted_at, 'YYYY-MM') = ${currentMonth}
+    )
+    WHERE "lastEssayMonth" = ${currentMonth}
+      AND "monthlyEssaysUsed" > 0
+    RETURNING id, "monthlyEssaysUsed"
+  `) as any[];
+
+  if (updated.length > 0) {
+    console.log(`  ✅ [Essay Repair] ${updated.length} usuário(s) com créditos recalculados`);
   }
 }
