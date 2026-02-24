@@ -82,11 +82,11 @@ export function registerSalaRoutes(app: Express) {
       // Get all subjects with content count
       const subjectsResult = await db.execute(sql`
         SELECT
-          s.id, s.name, s.slug,
+          s.id, s.name,
           COUNT(c.id) as content_count
         FROM "Subject" s
         LEFT JOIN "Content" c ON c."subjectId" = s.id
-        GROUP BY s.id, s.name, s.slug
+        GROUP BY s.id, s.name
         HAVING COUNT(c.id) > 0
         ORDER BY s.name
       `) as any[];
@@ -95,7 +95,7 @@ export function registerSalaRoutes(app: Express) {
       const enriched = subjectsResult.map((s: any) => ({
         id: s.id,
         name: s.name,
-        slug: s.slug,
+        slug: s.name.toLowerCase().replace(/\s+/g, "-"),
         contentCount: Number(s.content_count),
         isDifficulty: progress.dificuldades?.includes(s.name) || false,
         isFacility: progress.facilidades?.includes(s.name) || false,
@@ -608,7 +608,7 @@ export function registerSalaRoutes(app: Express) {
 
       const u = userResult[0];
 
-      // Get per-subject stats
+      // Get per-subject stats — join via Question.subjectId (Content has no contentId on Question)
       const subjectStats = await db.execute(sql`
         SELECT
           s.name as subject_name,
@@ -616,8 +616,7 @@ export function registerSalaRoutes(app: Express) {
           COUNT(CASE WHEN qa."isCorrect" = true THEN 1 END) as correct
         FROM "QuestionAttempt" qa
         JOIN "Question" q ON qa."questionId" = q.id
-        JOIN "Content" c ON q."contentId" = c.id
-        JOIN "Subject" s ON c."subjectId" = s.id
+        JOIN "Subject" s ON q."subjectId" = s.id
         WHERE qa."userId" = ${student.userId}
         GROUP BY s.name
         ORDER BY total_questions DESC
@@ -935,7 +934,7 @@ export function registerSalaRoutes(app: Express) {
 
       // Get simulado_question at this position, then get an actual Question for that content
       const sqResult = await db.execute(sql`
-        SELECT sq."id" as sq_id, sq."content_id", c."title", c."body", c."textContent"
+        SELECT sq."id" as sq_id, sq."content_id", c."title", c."textContent" as body
         FROM "simulado_questions" sq
         JOIN "user_simulados" us ON us."simulado_id" = sq."simulado_id"
         JOIN "Content" c ON c."id" = sq."content_id"
@@ -1259,24 +1258,19 @@ export function registerSalaRoutes(app: Express) {
       }
       if (!subjectIds.length) return res.status(400).json({ success: false, error: "Nenhuma matéria encontrada para este edital." });
 
-      // 80% conteúdo inédito (sem tentativa do usuário)
+      // 80% conteúdo inédito — aleatório das matérias do edital
       const newContentRows = await db.execute(sql`
         SELECT c.id FROM "Content" c
         WHERE c."isActive" = true
           AND c."subjectId" = ANY(${subjectIds})
-          AND c.id NOT IN (
-            SELECT DISTINCT q."contentId" FROM "QuestionAttempt" qa
-            JOIN "Question" q ON q.id = qa."questionId"
-            WHERE qa."userId" = ${student.userId}
-          )
         ORDER BY RANDOM() LIMIT 8
       `) as any[];
 
-      // 20% revisão de erros
+      // 20% revisão de erros — conteúdo das matérias onde o aluno errou questões
       const errorContentRows = await db.execute(sql`
-        SELECT DISTINCT q."contentId" AS id FROM "QuestionAttempt" qa
+        SELECT DISTINCT c.id FROM "QuestionAttempt" qa
         JOIN "Question" q ON q.id = qa."questionId"
-        JOIN "Content" c ON c.id = q."contentId"
+        JOIN "Content" c ON c."subjectId" = q."subjectId"
         WHERE qa."userId" = ${student.userId} AND qa."isCorrect" = false
           AND c."subjectId" = ANY(${subjectIds}) AND c."isActive" = true
         ORDER BY RANDOM() LIMIT 2
@@ -1556,8 +1550,7 @@ export function registerSalaRoutes(app: Express) {
           r."times_incorrect",
           r."total_reviews",
           c."title",
-          c."body",
-          c."textContent",
+          c."textContent" as body,
           s."name" as subject_name
         FROM "sm2_reviews" r
         JOIN "Content" c ON c."id" = r."content_id"

@@ -296,10 +296,6 @@ export default function SalaAula() {
     fetchEssayStatus();
     fetchSm2Due();
     fetchGamification();
-    // Welcome message
-    addMessage("system", {
-      text: `Olá, ${student?.name?.split(" ")[0]}! Escolha uma matéria ao lado ou clique em "Próximo conteúdo" para começar.`,
-    });
   }, []);
 
   // Verificar concurso-alvo ao montar (ou quando student muda)
@@ -1998,7 +1994,7 @@ export default function SalaAula() {
            ═══════════════════════════════════════════ */
         <>
           {/* Mobile top bar — study mode */}
-          <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b bg-background sticky top-0 z-30 h-10">
+          <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b bg-background sticky top-0 z-50 h-10">
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setShowDashboard(true)}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -2121,6 +2117,13 @@ export default function SalaAula() {
             </div>
           )}
 
+          {/* Chat fixed header */}
+          <div className="px-4 py-2 border-b bg-muted/40 shrink-0">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Jornada de Estudo Ativa
+            </p>
+          </div>
+
           <ScrollArea className="flex-1 p-4">
             <div className="max-w-2xl mx-auto space-y-4">
               <AnimatePresence mode="popLayout">
@@ -2229,35 +2232,6 @@ export default function SalaAula() {
                 </>
               ) : (
                 <>
-                  <Button
-                    onClick={handleNextContent}
-                    disabled={isLoadingContent}
-                    size="sm"
-                  >
-                    {isLoadingContent ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <ChevronRight className="mr-1 h-3 w-3" />}
-                    Próximo conteúdo
-                  </Button>
-                  {currentContent && answeredIndex === null && !currentQuestion && (
-                    <Button
-                      onClick={fetchQuestion}
-                      disabled={isLoadingQuestion}
-                      variant="secondary"
-                      size="sm"
-                    >
-                      {isLoadingQuestion ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Brain className="mr-1 h-3 w-3" />}
-                      Responder questão
-                    </Button>
-                  )}
-                  {answeredIndex !== null && !activeSimulado && (
-                    <Button
-                      onClick={fetchQuestion}
-                      disabled={isLoadingQuestion}
-                      variant="secondary"
-                      size="sm"
-                    >
-                      Próxima questão
-                    </Button>
-                  )}
                   {sm2DueCount > 0 && sm2ActiveIndex === null && (
                     <Button
                       onClick={startSm2Review}
