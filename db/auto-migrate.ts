@@ -35,6 +35,10 @@ export async function runAutoMigrations() {
   await run("cleanupPFF",        cleanupPFFConcurso);
   await run("cleanupRedundant",  cleanupRedundantConcursos);
   await run("repairEssayCredits", repairEssayCredits);
+  await run("phase5Integrity",   verifyPhase5Integrity);
+  await run("phase5Content",     migratePhase5ContentColumns);
+  await run("phase5Question",    migratePhase5QuestionColumns);
+  await run("phase5Subject",     migratePhase5SubjectColumns);
 
   console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
@@ -1231,4 +1235,142 @@ async function repairEssayCredits() {
   if (updated.length > 0) {
     console.log(`  ✅ [Essay Repair] ${updated.length} usuário(s) com créditos recalculados`);
   }
+}
+
+// ============================================
+// FASE 5 — VERIFICAÇÃO DE INTEGRIDADE
+// Garante que nenhuma referência a colunas obsoletas (s.slug, c.body,
+// q.contentId) exista nas tabelas de conteúdo antes da população.
+// ============================================
+async function verifyPhase5Integrity() {
+  // 1. Confirmar que "Subject" NÃO tem coluna slug
+  const slugCheck = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.columns
+      WHERE table_name = 'Subject' AND column_name = 'slug'
+    ) as exists
+  `) as any[];
+  if (slugCheck[0]?.exists) {
+    console.warn("  ⚠️ [Phase5 Integrity] Subject.slug encontrado — coluna obsoleta presente (não fatal)");
+  } else {
+    console.log("  ✅ [Phase5 Integrity] Subject.slug ausente — OK");
+  }
+
+  // 2. Confirmar que "Content" NÃO tem coluna body (usa textContent)
+  const bodyCheck = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.columns
+      WHERE table_name = 'Content' AND column_name = 'body'
+    ) as exists
+  `) as any[];
+  if (bodyCheck[0]?.exists) {
+    console.warn("  ⚠️ [Phase5 Integrity] Content.body encontrado — usar textContent nas queries");
+  } else {
+    console.log("  ✅ [Phase5 Integrity] Content.body ausente (usa textContent) — OK");
+  }
+
+  // 3. Confirmar que "Question" NÃO tem coluna contentId (relação via subjectId)
+  const contentIdCheck = await db.execute(sql`
+    SELECT EXISTS (
+      SELECT FROM information_schema.columns
+      WHERE table_name = 'Question' AND column_name = 'contentId'
+    ) as exists
+  `) as any[];
+  if (contentIdCheck[0]?.exists) {
+    console.warn("  ⚠️ [Phase5 Integrity] Question.contentId encontrado — coluna obsoleta presente");
+  } else {
+    console.log("  ✅ [Phase5 Integrity] Question.contentId ausente (relação via subjectId) — OK");
+  }
+
+  console.log("  ✅ [Phase5 Integrity] Verificação concluída");
+}
+
+// ============================================
+// FASE 5 — COLUNAS DE CONTEÚDO INTELIGENTE
+// Adiciona suporte a átomos de teoria enriquecidos na tabela "Content":
+//   mnemonic        — regra mnemônica curta (ex: "LIMPE")
+//   keyPoint        — ponto-chave do assunto (< 120 chars)
+//   practicalExample — exemplo prático concreto (< 200 chars)
+// ============================================
+async function migratePhase5ContentColumns() {
+  const cols = await db.execute(sql`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_name = 'Content'
+      AND column_name IN ('mnemonic', 'keyPoint', 'practicalExample')
+  `) as any[];
+  const existing = new Set(cols.map((c: any) => c.column_name));
+
+  if (existing.has('mnemonic') && existing.has('keyPoint') && existing.has('practicalExample')) {
+    return; // já migrado
+  }
+
+  console.log("  🔄 [Phase5] Adicionando colunas de enriquecimento em Content...");
+
+  if (!existing.has('mnemonic')) {
+    await db.execute(sql`ALTER TABLE "Content" ADD COLUMN IF NOT EXISTS "mnemonic" TEXT`);
+  }
+  if (!existing.has('keyPoint')) {
+    await db.execute(sql`ALTER TABLE "Content" ADD COLUMN IF NOT EXISTS "keyPoint" TEXT`);
+  }
+  if (!existing.has('practicalExample')) {
+    await db.execute(sql`ALTER TABLE "Content" ADD COLUMN IF NOT EXISTS "practicalExample" TEXT`);
+  }
+
+  console.log("  ✅ [Phase5] Content: mnemonic, keyPoint, practicalExample adicionados");
+}
+
+// ============================================
+// FASE 5 — COLUNAS DE FEEDBACK DINÂMICO
+// Adiciona dois tipos de explicação em "Question":
+//   explanationCorrect — reforço positivo exibido no acerto
+//   explanationWrong   — explicação pedagógica exibida no erro
+// (complementa wrongExplanations JSONB já existente por alternativa)
+// ============================================
+async function migratePhase5QuestionColumns() {
+  const cols = await db.execute(sql`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_name = 'Question'
+      AND column_name IN ('explanationCorrect', 'explanationWrong')
+  `) as any[];
+  const existing = new Set(cols.map((c: any) => c.column_name));
+
+  if (existing.has('explanationCorrect') && existing.has('explanationWrong')) {
+    return; // já migrado
+  }
+
+  console.log("  🔄 [Phase5] Adicionando colunas de feedback dinâmico em Question...");
+
+  if (!existing.has('explanationCorrect')) {
+    await db.execute(sql`ALTER TABLE "Question" ADD COLUMN IF NOT EXISTS "explanationCorrect" TEXT`);
+  }
+  if (!existing.has('explanationWrong')) {
+    await db.execute(sql`ALTER TABLE "Question" ADD COLUMN IF NOT EXISTS "explanationWrong" TEXT`);
+  }
+
+  console.log("  ✅ [Phase5] Question: explanationCorrect, explanationWrong adicionados");
+}
+
+// ============================================
+// FASE 5 — COLUNA DE SEQUENCIAMENTO
+// Adiciona minStudyRequirement em "Subject":
+//   minStudyRequirement — número mínimo de pílulas que o aluno deve
+//     completar antes de avançar para o próximo assunto (default: 1)
+// ============================================
+async function migratePhase5SubjectColumns() {
+  const cols = await db.execute(sql`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_name = 'Subject'
+      AND column_name = 'minStudyRequirement'
+  `) as any[];
+
+  if (cols.length > 0) {
+    return; // já migrado
+  }
+
+  console.log("  🔄 [Phase5] Adicionando minStudyRequirement em Subject...");
+  await db.execute(sql`
+    ALTER TABLE "Subject"
+    ADD COLUMN IF NOT EXISTS "minStudyRequirement" INTEGER NOT NULL DEFAULT 1
+  `);
+  console.log("  ✅ [Phase5] Subject: minStudyRequirement adicionado (default: 1)");
 }
