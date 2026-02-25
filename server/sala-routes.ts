@@ -466,16 +466,18 @@ export function registerSalaRoutes(app: Express) {
       } else {
         // Try "Question" (Prisma legacy) first
         const prismaQ = await db.execute(sql`
-          SELECT "correctOption", "statement", "explanationCorrect", "explanationWrong"
+          SELECT "correctOption", "statement", "explanation", "explanationCorrect", "explanationWrong"
           FROM "Question" WHERE id = ${questionId} LIMIT 1
         `) as any[];
 
         if (prismaQ.length > 0) {
           correctAnswer = prismaQ[0].correctOption;
           questionText = prismaQ[0].statement ?? "";
-          // Armazenar explicações do banco para usar como fallback
+          // Armazenar explicações do banco para usar na cadeia de fallback
           (req as any)._prismaExplanationCorrect = prismaQ[0].explanationCorrect ?? null;
           (req as any)._prismaExplanationWrong = prismaQ[0].explanationWrong ?? null;
+          // Explicação genérica como fallback adicional (questões sem explanationCorrect/Wrong)
+          (req as any)._prismaExplanationGeneric = prismaQ[0].explanation ?? null;
         } else {
           // Try questions (Drizzle) — correctAnswer is a letter (A/B/C/D)
           const drizzleQ = await db.execute(sql`
@@ -555,14 +557,15 @@ export function registerSalaRoutes(app: Express) {
         } catch (_e) { /* SM2 upsert is non-fatal */ }
       }
 
-      // Explicação: prioridade Prisma (seeds) > Drizzle (AI gerada) > IA on-the-fly
+      // Cadeia de explicação: específica (acerto/erro) > genérica > Drizzle > IA
       const prismaExpCorrect = (req as any)._prismaExplanationCorrect ?? null;
       const prismaExpWrong = (req as any)._prismaExplanationWrong ?? null;
+      const prismaExpGeneric = (req as any)._prismaExplanationGeneric ?? null;
       const drizzleExplanation = (req as any)._drizzleExplanation ?? null;
-      // Seeds: explanation específica por acerto/erro
+      // 1ª opção: explanation específica do resultado (acerto/erro) — seeds Rodada 5+
       const seedExplanation = isCorrect ? prismaExpCorrect : prismaExpWrong;
-      // Fallback chain: seed > drizzle.explanation > IA
-      const dbExplanation = seedExplanation ?? drizzleExplanation;
+      // Fallback chain: específica > genérica (campo explanation) > drizzle > IA
+      const dbExplanation = seedExplanation ?? prismaExpGeneric ?? drizzleExplanation;
 
       let aiExplanation: string | null = null;
       if (!dbExplanation) {

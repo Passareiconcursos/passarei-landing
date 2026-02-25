@@ -137,10 +137,25 @@ export async function getQuestionForContent(
   try {
     const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
 
-    if (topicId) {
+    // Garantir topicId: se não veio no parâmetro, buscar no banco pelo contentId
+    let effectiveTopicId = topicId;
+    if (!effectiveTopicId && contentId) {
+      try {
+        const contentRows = await db.execute(sql`
+          SELECT "topicId" FROM "Content" WHERE id = ${contentId} LIMIT 1
+        `) as any[];
+        effectiveTopicId = contentRows[0]?.topicId ?? null;
+        if (effectiveTopicId) {
+          console.log(`🔍 [Question T3] topicId resolvido do DB: ${effectiveTopicId}`);
+        }
+      } catch (_e) { /* não bloqueia */ }
+    }
+
+    // T3a: questão vinculada ao tópico específico (maior precisão pedagógica)
+    if (effectiveTopicId) {
       const t3a = await db.execute(sql`
         SELECT q.* FROM "Question" q
-        WHERE q."topicId" = ${topicId}
+        WHERE q."topicId" = ${effectiveTopicId}
           AND q."isActive" = true
           ${reviewClause}
         ORDER BY q."timesUsed" ASC, RANDOM()
@@ -152,8 +167,10 @@ export async function getQuestionForContent(
         console.log(`✅ [Question T3a] Prisma por topicId: ${t3a[0].id}`);
         return t3a[0];
       }
+      console.log(`⚠️ [Question T3a] Nenhuma questão para topicId ${effectiveTopicId} — caindo para subjectId`);
     }
 
+    // T3b: fallback para qualquer questão da matéria (último recurso antes da IA)
     const bySubject = await getQuestionForSubject(subjectId, usedQuestionIds);
     if (bySubject) {
       console.log(`✅ [Question T3b] Prisma por subjectId: ${bySubject.id}`);
