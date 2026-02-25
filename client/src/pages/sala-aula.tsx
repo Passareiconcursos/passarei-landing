@@ -2150,7 +2150,18 @@ export default function SalaAula() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.22, ease: "easeOut" }}
                   >
-                    <MessageBubble message={msg} onAnswer={submitAnswer} answeredIndex={answeredIndex} correctIndex={questionCorrectIndex} />
+                    <MessageBubble
+                      message={msg}
+                      onAnswer={submitAnswer}
+                      answeredIndex={answeredIndex}
+                      correctIndex={questionCorrectIndex}
+                      onNextTopic={!activeSimulado ? () => {
+                        setCurrentQuestion(null);
+                        setAnsweredIndex(null);
+                        setQuestionCorrectIndex(null);
+                        handleNextContent();
+                      } : undefined}
+                    />
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -2217,8 +2228,8 @@ export default function SalaAula() {
             </div>
           )}
 
-          {/* Botão pós-questão — aparece imediatamente após o aluno responder */}
-          {!isTyping && !activeSimulado && answeredIndex !== null && (
+          {/* Botão pós-questão de simulado — apenas no modo simulado (card de answer já tem botão inline no modo plano) */}
+          {!isTyping && activeSimulado && answeredIndex !== null && (
             <div className="px-3 py-2 border-t flex flex-wrap gap-1.5 bg-background">
               <Button variant="outline" size="sm"
                 className="text-xs h-7 rounded-full border-dashed"
@@ -2228,7 +2239,7 @@ export default function SalaAula() {
                   setQuestionCorrectIndex(null);
                   handleNextContent();
                 }}>
-                Próximo tópico →
+                Próxima questão →
               </Button>
             </div>
           )}
@@ -2547,11 +2558,13 @@ function MessageBubble({
   onAnswer,
   answeredIndex,
   correctIndex,
+  onNextTopic,
 }: {
   message: ChatMessage;
   onAnswer: (index: number) => void;
   answeredIndex: number | null;
   correctIndex: number | null;
+  onNextTopic?: () => void;
 }) {
   const { type, data } = message;
 
@@ -2696,18 +2709,64 @@ function MessageBubble({
   }
 
   if (type === "answer") {
-    return (
-      <Card className={`border-l-4 w-full min-w-0 ${data.isCorrect ? "border-l-green-500 bg-green-50/50" : "border-l-red-500 bg-red-50/50"}`}>
-        <CardContent className="pt-4 px-3 sm:px-6">
-          <div className="flex items-center gap-2 mb-2">
-            {data.isCorrect ? (
-              <><CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" /> <span className="font-semibold text-green-700">Correto!</span></>
-            ) : (
-              <><XCircle className="h-5 w-5 text-red-600 shrink-0" /> <span className="font-semibold text-red-700">Incorreto</span></>
+    const FALLBACK_CORRECT = "Excelente! Continue assim — você está construindo o caminho para a aprovação.";
+    const FALLBACK_INCORRECT = "Não se preocupe. Releia o conteúdo acima e tente fixar o conceito antes de avançar.";
+    const explanation = data.explanation || (data.isCorrect ? FALLBACK_CORRECT : FALLBACK_INCORRECT);
+
+    if (data.isCorrect) {
+      return (
+        <Card className="border-l-4 border-l-green-500 bg-green-50/60 w-full min-w-0">
+          <CardContent className="pt-4 pb-4 px-3 sm:px-6 space-y-3">
+            {/* Header */}
+            <div className="flex items-center gap-2">
+              <Medal className="h-5 w-5 text-green-600 shrink-0" />
+              <span className="font-semibold text-green-700 text-sm">Análise Técnica do Acerto</span>
+            </div>
+            {/* Explicação */}
+            <p className="text-sm text-green-900/80 leading-relaxed break-words [overflow-wrap:break-word] [hyphens:auto]">
+              {explanation}
+            </p>
+            {/* Botão próximo inline */}
+            {onNextTopic && (
+              <div className="pt-1">
+                <Button
+                  size="sm"
+                  className="text-xs h-8 rounded-full bg-green-600 hover:bg-green-700 text-white gap-1.5"
+                  onClick={onNextTopic}
+                >
+                  <ChevronRight className="h-3.5 w-3.5" /> Próximo tópico
+                </Button>
+              </div>
             )}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Card className="border-l-4 border-l-red-500 bg-red-50/50 w-full min-w-0">
+        <CardContent className="pt-4 pb-4 px-3 sm:px-6 space-y-3">
+          {/* Header */}
+          <div className="flex items-center gap-2">
+            <XCircle className="h-5 w-5 text-red-600 shrink-0" />
+            <span className="font-semibold text-red-700 text-sm">Revise o Conceito</span>
           </div>
-          {data.explanation && (
-            <p className="text-sm text-muted-foreground break-words [overflow-wrap:break-word]">{data.explanation}</p>
+          {/* Explicação */}
+          <p className="text-sm text-red-900/75 leading-relaxed break-words [overflow-wrap:break-word] [hyphens:auto]">
+            {explanation}
+          </p>
+          {/* Botão próximo inline */}
+          {onNextTopic && (
+            <div className="pt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs h-8 rounded-full border-red-300 text-red-700 hover:bg-red-50 gap-1.5"
+                onClick={onNextTopic}
+              >
+                <ChevronRight className="h-3.5 w-3.5" /> Próximo tópico
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
