@@ -2178,33 +2178,33 @@ export default function SalaAula() {
                 </div>
               )}
 
-              {/* Quick reply buttons — após última mensagem de conteúdo */}
-              {!isTyping && !activeSimulado &&
-                messages.length > 0 &&
-                messages[messages.length - 1]?.type === "content" &&
-                !currentQuestion && answeredIndex === null && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  <Button variant="outline" size="sm"
-                    className="text-xs h-7 rounded-full border-dashed"
-                    onClick={() => handleNextContent()}>
-                    Entendi, avançar →
-                  </Button>
-                  <Button variant="outline" size="sm"
-                    className="text-xs h-7 rounded-full border-dashed"
-                    onClick={handleExplainDifferently}>
-                    Explicar de outro jeito
-                  </Button>
-                  <Button variant="outline" size="sm"
-                    className="text-xs h-7 rounded-full border-dashed"
-                    onClick={fetchQuestion}>
-                    Quero responder uma questão
-                  </Button>
-                </div>
-              )}
-
               <div ref={chatEndRef} />
             </div>
           </ScrollArea>
+
+          {/* Quick reply buttons — fixo acima da action bar, aparece após conteúdo/enrichment */}
+          {!isTyping && !activeSimulado &&
+            messages.length > 0 &&
+            (messages[messages.length - 1]?.type === "content" || messages[messages.length - 1]?.type === "enrichment") &&
+            !currentQuestion && answeredIndex === null && (
+            <div className="px-3 py-2 border-t flex flex-wrap gap-1.5 bg-background">
+              <Button variant="outline" size="sm"
+                className="text-xs h-7 rounded-full border-dashed"
+                onClick={() => handleNextContent()}>
+                Entendi, avançar →
+              </Button>
+              <Button variant="outline" size="sm"
+                className="text-xs h-7 rounded-full border-dashed"
+                onClick={handleExplainDifferently}>
+                Explicar de outro jeito
+              </Button>
+              <Button variant="outline" size="sm"
+                className="text-xs h-7 rounded-full border-dashed"
+                onClick={fetchQuestion}>
+                Quero responder uma questão
+              </Button>
+            </div>
+          )}
 
           {/* Action bar — oculta no modo Redação */}
           <div className="border-t p-3 bg-background">

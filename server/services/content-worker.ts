@@ -132,10 +132,11 @@ async function processMateria(materia: any, concurso: any): Promise<void> {
     }
   }
 
-  // Gerar questões para Content sem questão (até 5 por vez)
+  // Gerar questões para Content sem questão AI (até 5 por vez)
+  // Usa Drizzle `questions` (snake_case) pois "Question" Prisma não tem contentId
   const withoutQuestion = await db.execute(sql`
-    SELECT c.id, c.title, c.body FROM "Content" c
-    LEFT JOIN "Question" q ON q."contentId" = c.id
+    SELECT c.id, c.title, c."textContent" AS body FROM "Content" c
+    LEFT JOIN questions q ON q.content_id = c.id
     WHERE c."subjectId" = ${subjectId} AND c."isActive" = true AND q.id IS NULL
     LIMIT 5
   `) as any[];
@@ -175,12 +176,11 @@ Responda APENAS em JSON válido, sem markdown:
     if (!parsed.titulo || !parsed.conteudo) return null;
 
     const inserted = await db.execute(sql`
-      INSERT INTO "Content" (title, body, "subjectId", "examType", "isActive", "createdAt", "updatedAt")
+      INSERT INTO "Content" (title, "textContent", "subjectId", "isActive", "createdAt", "updatedAt")
       VALUES (
         ${parsed.titulo},
         ${parsed.conteudo},
         ${subjectId},
-        ${concurso.exam_type || "OUTRO"},
         true,
         NOW(), NOW()
       )
@@ -209,7 +209,7 @@ async function generateAndInsertQuestion(
     let body = bodyOverride;
     if (!body) {
       const contentRows = await db.execute(sql`
-        SELECT body FROM "Content" WHERE id = ${contentId} LIMIT 1
+        SELECT "textContent" AS body FROM "Content" WHERE id = ${contentId} LIMIT 1
       `) as any[];
       body = contentRows[0]?.body || title;
     }
@@ -244,16 +244,18 @@ Responda APENAS em JSON válido:
       return String(o).startsWith(prefix) ? String(o) : prefix + String(o);
     });
 
+    // Persistir na tabela Drizzle `questions` (snake_case) — alinhado com question-engine T4
+    const correctLetter = ["A", "B", "C", "D"][typeof q.correta === "number" ? q.correta : 0] ?? "A";
     await db.execute(sql`
-      INSERT INTO "Question" (
-        "contentId", "questionText",
-        "optionA", "optionB", "optionC", "optionD",
-        "correctAnswer", "explanation", "generatedByAI",
-        "createdAt", "updatedAt"
+      INSERT INTO questions (
+        content_id, question_text,
+        option_a, option_b, option_c, option_d,
+        correct_answer, explanation, generated_by_ai,
+        created_at, updated_at
       ) VALUES (
         ${contentId}, ${q.pergunta},
         ${opts[0] || ""}, ${opts[1] || ""}, ${opts[2] || ""}, ${opts[3] || ""},
-        ${typeof q.correta === "number" ? q.correta : 0},
+        ${correctLetter},
         ${q.explicacao || ""},
         true, NOW(), NOW()
       )
