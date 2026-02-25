@@ -155,14 +155,20 @@ async function generateAndInsertContent(
   try {
     const resp = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 700,
+      max_tokens: 1200,
       messages: [{
         role: "user",
         content: `Você é professor especialista em concursos policiais.
-Gere um tópico educacional objetivo sobre "${materiaName}" para o concurso "${concurso.nome}" (banca: ${concurso.banca}, cargo: ${concurso.cargo_padrao}).
+Gere um tópico educacional rico sobre "${materiaName}" para o concurso "${concurso.nome}" (banca: ${concurso.banca}, cargo: ${concurso.cargo_padrao}).
 
 Responda APENAS em JSON válido, sem markdown:
-{"titulo": "título específico do tópico", "conteudo": "Explicação em 2-4 parágrafos. PONTOS-CHAVE:\\n• ponto 1\\n• ponto 2\\n• ponto 3\\n\\nEXEMPLO:\\nDescrição de um caso real ou situação prática.\\n\\nDICA:\\nComo esse tema costuma cair em provas da banca ${concurso.banca}."}`,
+{
+  "titulo": "título específico do tópico",
+  "teoria": "Explicação teórica completa em 2-4 parágrafos. Seja denso e objetivo.",
+  "pontoChave": "1-2 frases resumindo o conceito mais importante para a prova. Ex: 'O agente X responde por Y quando Z.'",
+  "exemploPratico": "Um caso concreto ou situação real que ilustra o tema. Seja específico.",
+  "dicaOuro": "Mnemônico, pegadinha ou dica de prova da banca ${concurso.banca}. Algo que o candidato não pode esquecer."
+}`,
       }],
     });
 
@@ -173,16 +179,22 @@ Responda APENAS em JSON válido, sem markdown:
     const cleaned = raw.replace(/^```json?\s*/i, "").replace(/\s*```$/i, "").trim();
     const parsed = JSON.parse(cleaned);
 
-    if (!parsed.titulo || !parsed.conteudo) return null;
+    if (!parsed.titulo || !parsed.teoria) return null;
 
     const inserted = await db.execute(sql`
-      INSERT INTO "Content" (title, "textContent", "subjectId", "isActive", "createdAt", "updatedAt")
+      INSERT INTO "Content" (
+        title, "textContent", "subjectId", "isActive", "createdAt", "updatedAt",
+        "keyPoint", "practicalExample", "mnemonic"
+      )
       VALUES (
         ${parsed.titulo},
-        ${parsed.conteudo},
+        ${parsed.teoria},
         ${subjectId},
         true,
-        NOW(), NOW()
+        NOW(), NOW(),
+        ${parsed.pontoChave || null},
+        ${parsed.exemploPratico || null},
+        ${parsed.dicaOuro || null}
       )
       RETURNING id
     `) as any[];

@@ -68,6 +68,9 @@ interface ContentItem {
   subjectId: string;
   subjectName: string;
   topicId?: string;
+  keyPoint?: string | null;
+  practicalExample?: string | null;
+  mnemonic?: string | null;
   parsed: { definition?: string; keyPoints?: string[]; example?: string };
   enrichment?: { keyPoints: string; example: string; tip: string } | null;
 }
@@ -2571,7 +2574,8 @@ function MessageBubble({
           </div>
           <CardTitle className="text-lg break-words">{data.title}</CardTitle>
         </CardHeader>
-        <CardContent className="px-3 sm:px-6">
+        <CardContent className="px-3 sm:px-6 space-y-3">
+          {/* Teoria — corpo principal */}
           <div className="prose prose-sm max-w-none text-foreground break-words [overflow-wrap:break-word] [hyphens:auto]">
             {data.body?.split("\n").map((line: string, i: number) => (
               <p key={i} className={line.trim() === "" ? "h-2" : "break-words"}>
@@ -2579,6 +2583,36 @@ function MessageBubble({
               </p>
             ))}
           </div>
+          {/* Ponto-Chave */}
+          {data.keyPoint && (
+            <div className="rounded-lg bg-primary/8 border border-primary/20 px-3 py-2.5 flex items-start gap-2">
+              <Zap className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-primary mb-0.5">Ponto-Chave</p>
+                <p className="text-sm text-foreground break-words [overflow-wrap:break-word]">{data.keyPoint}</p>
+              </div>
+            </div>
+          )}
+          {/* Exemplo Prático */}
+          {data.practicalExample && (
+            <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2.5 flex items-start gap-2">
+              <BookOpen className="h-4 w-4 text-sky-600 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 mb-0.5">Exemplo Prático</p>
+                <p className="text-sm text-sky-900/80 break-words [overflow-wrap:break-word]">{data.practicalExample}</p>
+              </div>
+            </div>
+          )}
+          {/* Dica de Ouro / Mnemônico */}
+          {data.mnemonic && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 flex items-start gap-2">
+              <Lightbulb className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 mb-0.5">Dica de Ouro</p>
+                <p className="text-sm text-amber-900/80 break-words [overflow-wrap:break-word]">{data.mnemonic}</p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
