@@ -1001,14 +1001,6 @@ export default function SalaAula() {
     setShowStudyPalco(false);
   };
 
-  const handleExplainDifferently = () => {
-    if (currentContent?.enrichment) {
-      addMessage("enrichment", { text: currentContent.enrichment });
-    } else {
-      addMessage("system", "Ainda não temos uma explicação alternativa para este tópico. Tente fazer uma questão ou avance para o próximo.");
-    }
-  };
-
   const selectConcurso = async (concursoId: string | null) => {
     // Atualização otimista: fecha modal e atualiza UI imediatamente
     const found = concursosList.find(c => c.id === concursoId);
@@ -2145,8 +2137,8 @@ export default function SalaAula() {
             </p>
           </div>
 
-          <ScrollArea className="flex-1 p-4">
-            <div className="max-w-2xl mx-auto space-y-4">
+          <ScrollArea className="flex-1 overflow-x-hidden">
+            <div className="px-4 py-4 max-w-2xl mx-auto space-y-4 w-full min-w-0">
               <AnimatePresence mode="popLayout">
                 {messages.map((msg) => (
                   <motion.div
@@ -2572,17 +2564,17 @@ function MessageBubble({
 
   if (type === "content") {
     return (
-      <Card className="border-l-4 border-l-primary">
-        <CardHeader className="pb-2">
+      <Card className="border-l-4 border-l-primary w-full min-w-0">
+        <CardHeader className="pb-2 px-3 sm:px-6">
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">{data.subjectName}</Badge>
           </div>
-          <CardTitle className="text-lg">{data.title}</CardTitle>
+          <CardTitle className="text-lg break-words">{data.title}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="prose prose-sm max-w-none text-foreground">
+        <CardContent className="px-3 sm:px-6">
+          <div className="prose prose-sm max-w-none text-foreground break-words [overflow-wrap:break-word] [hyphens:auto]">
             {data.body?.split("\n").map((line: string, i: number) => (
-              <p key={i} className={line.trim() === "" ? "h-2" : ""}>
+              <p key={i} className={line.trim() === "" ? "h-2" : "break-words"}>
                 {line}
               </p>
             ))}
@@ -2594,14 +2586,14 @@ function MessageBubble({
 
   if (type === "enrichment") {
     return (
-      <Card className="border-l-4 border-l-amber-500 bg-amber-50/50">
-        <CardContent className="pt-4 space-y-3">
+      <Card className="border-l-4 border-l-amber-500 bg-amber-50/50 w-full min-w-0">
+        <CardContent className="pt-4 px-3 sm:px-6 space-y-3">
           {data.keyPoints && (
             <div>
               <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-1">
                 <Sparkles className="h-3.5 w-3.5 text-amber-600" /> Pontos-chave
               </h4>
-              <p className="text-sm text-muted-foreground">{data.keyPoints}</p>
+              <p className="text-sm text-muted-foreground break-words [overflow-wrap:break-word]">{data.keyPoints}</p>
             </div>
           )}
           {data.example && (
@@ -2609,7 +2601,7 @@ function MessageBubble({
               <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-1">
                 <BookOpen className="h-3.5 w-3.5 text-amber-600" /> Exemplo
               </h4>
-              <p className="text-sm text-muted-foreground">{data.example}</p>
+              <p className="text-sm text-muted-foreground break-words [overflow-wrap:break-word]">{data.example}</p>
             </div>
           )}
           {data.tip && (
@@ -2617,7 +2609,7 @@ function MessageBubble({
               <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-1">
                 <Lightbulb className="h-3.5 w-3.5 text-amber-600" /> Dica
               </h4>
-              <p className="text-sm text-muted-foreground">{data.tip}</p>
+              <p className="text-sm text-muted-foreground break-words [overflow-wrap:break-word]">{data.tip}</p>
             </div>
           )}
         </CardContent>
@@ -2628,8 +2620,8 @@ function MessageBubble({
   if (type === "question") {
     const isAnswered = answeredIndex !== null;
     return (
-      <Card className="border-l-4 border-l-blue-500 shadow-sm">
-        <CardHeader className="pb-2">
+      <Card className="border-l-4 border-l-blue-500 shadow-sm w-full min-w-0">
+        <CardHeader className="pb-2 px-3 sm:px-6">
           <CardTitle className="text-base flex items-center gap-2">
             <Brain className="h-4 w-4 text-blue-600" /> Questão
             {data.banca && (
@@ -2637,8 +2629,8 @@ function MessageBubble({
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-base leading-relaxed mb-4">{data.text}</p>
+        <CardContent className="px-3 sm:px-6">
+          <p className="text-base leading-relaxed mb-4 break-words [overflow-wrap:break-word] [hyphens:auto]">{data.text}</p>
           <div className="space-y-2">
             {data.options?.map((option: string, i: number) => {
               let variant: "outline" | "default" | "destructive" | "secondary" = "outline";
@@ -2652,14 +2644,14 @@ function MessageBubble({
                 <Button
                   key={i}
                   variant={variant}
-                  className="w-full justify-start text-left h-auto py-2 px-3"
+                  className="w-full justify-start text-left h-auto py-2 px-3 whitespace-normal"
                   onClick={() => !isAnswered && onAnswer(i)}
                   disabled={isAnswered}
                 >
-                  <span className="font-medium mr-2">{String.fromCharCode(65 + i)})</span>
-                  <span className="text-sm">{option}</span>
-                  {isAnswered && correctIndex === i && <CheckCircle2 className="ml-auto h-4 w-4 text-green-600" />}
-                  {isAnswered && answeredIndex === i && correctIndex !== i && <XCircle className="ml-auto h-4 w-4 text-red-600" />}
+                  <span className="font-medium mr-2 shrink-0">{String.fromCharCode(65 + i)})</span>
+                  <span className="text-sm break-words min-w-0 flex-1 text-left">{option}</span>
+                  {isAnswered && correctIndex === i && <CheckCircle2 className="ml-2 h-4 w-4 text-green-600 shrink-0" />}
+                  {isAnswered && answeredIndex === i && correctIndex !== i && <XCircle className="ml-2 h-4 w-4 text-red-600 shrink-0" />}
                 </Button>
               );
             })}
@@ -2671,17 +2663,17 @@ function MessageBubble({
 
   if (type === "answer") {
     return (
-      <Card className={`border-l-4 ${data.isCorrect ? "border-l-green-500 bg-green-50/50" : "border-l-red-500 bg-red-50/50"}`}>
-        <CardContent className="pt-4">
+      <Card className={`border-l-4 w-full min-w-0 ${data.isCorrect ? "border-l-green-500 bg-green-50/50" : "border-l-red-500 bg-red-50/50"}`}>
+        <CardContent className="pt-4 px-3 sm:px-6">
           <div className="flex items-center gap-2 mb-2">
             {data.isCorrect ? (
-              <><CheckCircle2 className="h-5 w-5 text-green-600" /> <span className="font-semibold text-green-700">Correto!</span></>
+              <><CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" /> <span className="font-semibold text-green-700">Correto!</span></>
             ) : (
-              <><XCircle className="h-5 w-5 text-red-600" /> <span className="font-semibold text-red-700">Incorreto</span></>
+              <><XCircle className="h-5 w-5 text-red-600 shrink-0" /> <span className="font-semibold text-red-700">Incorreto</span></>
             )}
           </div>
           {data.explanation && (
-            <p className="text-sm text-muted-foreground">{data.explanation}</p>
+            <p className="text-sm text-muted-foreground break-words [overflow-wrap:break-word]">{data.explanation}</p>
           )}
         </CardContent>
       </Card>
@@ -2699,7 +2691,7 @@ function MessageBubble({
       { label: "Intervenção", score: data.scores?.comp5, feedback: data.feedback?.comp5 },
     ];
     return (
-      <Card className="border-l-4 border-l-violet-500 bg-violet-50/30">
+      <Card className="border-l-4 border-l-violet-500 bg-violet-50/30 w-full min-w-0">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             <PenLine className="h-4 w-4 text-violet-600" /> Resultado: {data.theme}
