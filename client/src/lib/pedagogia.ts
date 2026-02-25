@@ -20,13 +20,29 @@ export const NUCLEO_DURO: string[] = [
   "Informática",
 ];
 
+// Palavras-chave que identificam matérias do Núcleo Duro, funcionando tanto com
+// nomes exibíveis ("Direito Administrativo") quanto com códigos internos ("DIREITO_ADMINISTRATIVO").
+const NUCLEO_DURO_KEYWORDS: string[] = [
+  "portugu",        // Língua Portuguesa, LINGUA_PORTUGUESA, PORTUGUES
+  "constitucional", // Direito Constitucional, DIREITO_CONSTITUCIONAL
+  "administrat",    // Direito Administrativo, DIREITO_ADMINISTRATIVO
+  "raciocin",       // Raciocínio Lógico, RACIOCINIO_LOGICO
+  "logico",         // Raciocínio Lógico
+  "informatica",    // Informática, INFORMATICA
+];
+
 /**
  * Retorna true se o nome da matéria pertence ao Núcleo Duro.
- * Comparação case-insensitive e tolerante a variações leves de nome.
+ * Tolerante a: acentos, maiúsculas/minúsculas, underscores (códigos internos).
  */
 export function isNucleoDuro(subjectName: string): boolean {
-  const normalized = subjectName.trim().toLowerCase();
-  return NUCLEO_DURO.some((nd) => normalized.includes(nd.toLowerCase()));
+  const cleaned = subjectName
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, ""); // remove diacritics
+  return NUCLEO_DURO_KEYWORDS.some((kw) => cleaned.includes(kw));
 }
 
 /**

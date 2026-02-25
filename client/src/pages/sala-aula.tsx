@@ -959,13 +959,16 @@ export default function SalaAula() {
 
   const handleNextSubject = () => {
     setSubjectCompleted(false);
-    // Achar próxima matéria com conteúdo pendente (percentage < 100), começando após a atual
+    // Achar próxima matéria com conteúdo pendente, começando após a atual
     const currentIdx = studyPlan.findIndex(s => s.subjectId === selectedSubject);
     const rotated = [
       ...studyPlan.slice(currentIdx + 1),
       ...studyPlan.slice(0, currentIdx),
     ];
-    const next = rotated.find(s => s.percentage < 100);
+    // Prioriza Núcleo Duro incompleto; se não houver, qualquer matéria incompleta
+    const nextND = rotated.find(s => isNucleoDuro(s.subjectName) && s.percentage < 100);
+    const nextAny = rotated.find(s => s.percentage < 100);
+    const next = nextND ?? nextAny;
     if (next) {
       handleSubjectClick(next.subjectId);
     } else {
@@ -1177,6 +1180,8 @@ export default function SalaAula() {
                     {sortByNucleoDuro(studyPlan.map(s => ({ ...s, name: s.subjectName }))).map((s) => {
                       const isND = isNucleoDuro(s.name);
                       const pct = s.percentage ?? 0;
+                      // Desbloqueada se: é Núcleo Duro, ou já foi estudada, ou é a atual
+                      const isUnlocked = isND || pct > 0 || selectedSubject === s.subjectId;
                       const level = pct < 25 ? "Nível 1: Iniciante"
                         : pct < 50 ? "Nível 2: Intermediário"
                         : pct < 75 ? "Nível 3: Avançado"
@@ -1185,7 +1190,7 @@ export default function SalaAula() {
                         <button
                           key={s.subjectId}
                           onClick={() => {
-                            if (!isND) {
+                            if (!isUnlocked) {
                               toast({ title: "Matéria bloqueada", description: "Complete o Núcleo Duro primeiro para desbloquear esta matéria." });
                               return;
                             }
@@ -1197,19 +1202,19 @@ export default function SalaAula() {
                           className={cn(
                             "w-full text-left px-3 py-2 transition-colors",
                             selectedSubject === s.subjectId ? "bg-accent" : "hover:bg-accent/50",
-                            !isND && "opacity-40"
+                            !isUnlocked && "opacity-40"
                           )}
                         >
                           <div className="flex items-start gap-2">
-                            {isND
+                            {isUnlocked
                               ? <BookOpen className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
                               : <Lock className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />}
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium truncate">{s.subjectName}</p>
-                              <p className="text-[10px] text-muted-foreground">{isND ? level : "Bloqueada"}</p>
+                              <p className="text-[10px] text-muted-foreground">{isUnlocked ? level : "Bloqueada"}</p>
                             </div>
                           </div>
-                          {isND && (
+                          {isUnlocked && (
                             <Progress value={pct} className="h-0.5 mt-1.5 ml-5 mr-1" />
                           )}
                         </button>

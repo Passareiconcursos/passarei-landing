@@ -642,12 +642,20 @@ export function registerSalaRoutes(app: Express) {
 
       const u = userResult[0];
 
+      // Contar questões únicas respondidas (DISTINCT por questionId para evitar inflação)
+      const distinctCountResult = await db.execute(sql`
+        SELECT COUNT(DISTINCT qa."questionId")::int as total
+        FROM "QuestionAttempt" qa
+        WHERE qa."userId" = ${student.userId}
+      `) as any[];
+      const totalQuestionsAnswered = Number(distinctCountResult[0]?.total || 0);
+
       // Get per-subject stats — join via Question.subjectId (Content has no contentId on Question)
       const subjectStats = await db.execute(sql`
         SELECT
           s.name as subject_name,
-          COUNT(qa.id) as total_questions,
-          COUNT(CASE WHEN qa."isCorrect" = true THEN 1 END) as correct
+          COUNT(DISTINCT qa."questionId") as total_questions,
+          COUNT(DISTINCT CASE WHEN qa."isCorrect" = true THEN qa."questionId" END) as correct
         FROM "QuestionAttempt" qa
         JOIN "Question" q ON qa."questionId" = q.id
         JOIN "Subject" s ON q."subjectId" = s.id
@@ -662,7 +670,7 @@ export function registerSalaRoutes(app: Express) {
       return res.json({
         success: true,
         stats: {
-          totalQuestionsAnswered: u.totalQuestionsAnswered || 0,
+          totalQuestionsAnswered,
           plan: u.plan,
           planStatus: u.planStatus,
           dailyUsed: u.dailyContentCount || 0,
