@@ -479,7 +479,7 @@ export function registerSalaRoutes(app: Express) {
         } else {
           // Try questions (Drizzle) — correctAnswer is a letter (A/B/C/D)
           const drizzleQ = await db.execute(sql`
-            SELECT correct_answer, question_text FROM questions WHERE id = ${questionId} LIMIT 1
+            SELECT correct_answer, question_text, explanation FROM questions WHERE id = ${questionId} LIMIT 1
           `) as any[];
 
           if (drizzleQ.length === 0) {
@@ -487,6 +487,8 @@ export function registerSalaRoutes(app: Express) {
           }
           correctAnswer = ["A", "B", "C", "D", "E"].indexOf(drizzleQ[0].correct_answer);
           questionText = drizzleQ[0].question_text ?? "";
+          // Guardar explicação da questão Drizzle para usar como fallback antes da IA
+          (req as any)._drizzleExplanation = drizzleQ[0].explanation ?? null;
         }
       }
 
@@ -553,23 +555,30 @@ export function registerSalaRoutes(app: Express) {
         } catch (_e) { /* SM2 upsert is non-fatal */ }
       }
 
-      // Explanation: banco primeiro (explanationCorrect/Wrong), IA como complemento
+      // Explicação: prioridade Prisma (seeds) > Drizzle (AI gerada) > IA on-the-fly
       const prismaExpCorrect = (req as any)._prismaExplanationCorrect ?? null;
       const prismaExpWrong = (req as any)._prismaExplanationWrong ?? null;
-      const dbExplanation = isCorrect ? prismaExpCorrect : prismaExpWrong;
+      const drizzleExplanation = (req as any)._drizzleExplanation ?? null;
+      // Seeds: explanation específica por acerto/erro
+      const seedExplanation = isCorrect ? prismaExpCorrect : prismaExpWrong;
+      // Fallback chain: seed > drizzle.explanation > IA
+      const dbExplanation = seedExplanation ?? drizzleExplanation;
 
       let aiExplanation: string | null = null;
-      try {
-        const expResult = await generateExplanation(
-          contentTitle || "",
-          contentText || questionText || "",
-          String(userAnswer),
-          String(correctAnswer),
-          isCorrect,
-        );
-        aiExplanation = expResult.explanation ?? null;
-      } catch (_e) {
-        // Explanation is optional — não bloquear se IA falhar
+      if (!dbExplanation) {
+        // Só chama IA se não houver explicação no banco (evita custo desnecessário)
+        try {
+          const expResult = await generateExplanation(
+            contentTitle || "",
+            contentText || questionText || "",
+            String(userAnswer),
+            String(correctAnswer),
+            isCorrect,
+          );
+          aiExplanation = expResult.explanation ?? null;
+        } catch (_e) {
+          // Explanation is optional
+        }
       }
 
       return res.json({

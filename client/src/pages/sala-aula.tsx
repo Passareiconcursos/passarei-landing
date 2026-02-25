@@ -222,6 +222,7 @@ export default function SalaAula() {
   const [gamification, setGamification] = useState<GamificationData | null>(null);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
+  const [subjectCompleted, setSubjectCompleted] = useState(false);
   const [answeredIndex, setAnsweredIndex] = useState<number | null>(null);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [remaining, setRemaining] = useState<number | undefined>();
@@ -420,6 +421,7 @@ export default function SalaAula() {
     setCurrentQuestion(null);
     setAnsweredIndex(null);
     setQuestionCorrectIndex(null);
+    setSubjectCompleted(false); // reset sempre que tentar carregar novo conteúdo
 
     try {
       const res = await fetch(`/api/sala/content/sequential?subjectId=${subjectId}`, { headers });
@@ -434,6 +436,8 @@ export default function SalaAula() {
         }
         fetchStudyPlan(); // refresh progress
       } else {
+        // Matéria esgotada: sinaliza para exibir botão "próxima matéria"
+        if (data.success && !data.content) setSubjectCompleted(true);
         addMessage("system", { text: data.message || "Nenhum conteúdo disponível." });
       }
     } catch {
@@ -950,6 +954,22 @@ export default function SalaAula() {
       fetchSequentialContent(selectedSubject);
     } else {
       fetchNextContent(selectedSubject);
+    }
+  };
+
+  const handleNextSubject = () => {
+    setSubjectCompleted(false);
+    // Achar próxima matéria com conteúdo pendente (percentage < 100), começando após a atual
+    const currentIdx = studyPlan.findIndex(s => s.subjectId === selectedSubject);
+    const rotated = [
+      ...studyPlan.slice(currentIdx + 1),
+      ...studyPlan.slice(0, currentIdx),
+    ];
+    const next = rotated.find(s => s.percentage < 100);
+    if (next) {
+      handleSubjectClick(next.subjectId);
+    } else {
+      addMessage("system", { text: "Parabéns! Você concluiu todo o conteúdo disponível no plano de estudos. 🎉" });
     }
   };
 
@@ -2209,6 +2229,18 @@ export default function SalaAula() {
                   handleNextContent();
                 }}>
                 Próximo tópico →
+              </Button>
+            </div>
+          )}
+
+          {/* Botão fim de matéria — aparece quando todos os conteúdos foram estudados */}
+          {subjectCompleted && !activeSimulado && !isTyping && (
+            <div className="px-3 py-2 border-t flex gap-1.5 bg-background">
+              <Button
+                size="sm"
+                className="text-xs h-7 rounded-full bg-green-600 hover:bg-green-700 text-white"
+                onClick={handleNextSubject}>
+                Ir para a próxima matéria →
               </Button>
             </div>
           )}
