@@ -130,25 +130,8 @@ export async function getQuestionForContent(
     console.warn(`⚠️ [Question T1] Falhou: ${e?.message?.split("\n")[0]}`);
   }
 
-  // ── Tier 2: Drizzle `questions` por subject/examType do conteúdo ───────
-  try {
-    const t2 = await db.execute(sql`
-      SELECT q.* FROM questions q
-      JOIN content c ON c.id = q.content_id
-      WHERE c.subject = (SELECT subject FROM content WHERE id = ${contentId} LIMIT 1)
-        AND c.exam_type = (SELECT exam_type FROM content WHERE id = ${contentId} LIMIT 1)
-        AND q.content_id != ${contentId}
-      ORDER BY RANDOM()
-      LIMIT 1
-    `) as any[];
-
-    if (t2.length > 0) {
-      console.log(`✅ [Question T2] Drizzle por subject/examType: ${t2[0].id}`);
-      return mapDrizzleQuestion(t2[0]);
-    }
-  } catch (e: any) {
-    console.warn(`⚠️ [Question T2] Falhou: ${e?.message?.split("\n")[0]}`);
-  }
+  // ── Tier 2: desabilitado (tabela Drizzle `content` não existe no schema atual)
+  // Cobertura equivalente feita via T3 (Prisma "Question" por topicId/subjectId)
 
   // ── Tier 3: "Question" (Prisma legacy) por topicId / subjectId ─────────
   try {

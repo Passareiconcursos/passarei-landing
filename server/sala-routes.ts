@@ -412,12 +412,29 @@ export function registerSalaRoutes(app: Express) {
       // Calculate remaining
       const remaining = access.freeRemaining ?? access.dailyRemaining;
 
+      // Normalizar para formato uniforme {text, options}
+      // T1/T2/T4 (Drizzle) retornam: { pergunta, opcoes }
+      // T3 (Prisma legacy) retorna: { statement, alternatives: [{letter, text}] }
+      const qText = question.pergunta ?? question.statement ?? question.text ?? "";
+      const qOptions: string[] = question.opcoes
+        ?? question.options
+        ?? (() => {
+          try {
+            const alts = typeof question.alternatives === "string"
+              ? JSON.parse(question.alternatives)
+              : question.alternatives;
+            if (Array.isArray(alts)) return alts.map((a: any) => a.text ?? String(a));
+          } catch (_) { /* noop */ }
+          return undefined;
+        })()
+        ?? [];
+
       return res.json({
         success: true,
         question: {
           id: question.id,
-          text: question.pergunta || question.text,
-          options: question.opcoes || question.options,
+          text: qText,
+          options: qOptions,
           banca,
           // NOTE: Don't send correct answer yet
         },
@@ -449,12 +466,16 @@ export function registerSalaRoutes(app: Express) {
       } else {
         // Try "Question" (Prisma legacy) first
         const prismaQ = await db.execute(sql`
-          SELECT "correctOption", "statement" FROM "Question" WHERE id = ${questionId} LIMIT 1
+          SELECT "correctOption", "statement", "explanationCorrect", "explanationWrong"
+          FROM "Question" WHERE id = ${questionId} LIMIT 1
         `) as any[];
 
         if (prismaQ.length > 0) {
           correctAnswer = prismaQ[0].correctOption;
           questionText = prismaQ[0].statement ?? "";
+          // Armazenar explicações do banco para usar como fallback
+          (req as any)._prismaExplanationCorrect = prismaQ[0].explanationCorrect ?? null;
+          (req as any)._prismaExplanationWrong = prismaQ[0].explanationWrong ?? null;
         } else {
           // Try questions (Drizzle) — correctAnswer is a letter (A/B/C/D)
           const drizzleQ = await db.execute(sql`
@@ -532,8 +553,12 @@ export function registerSalaRoutes(app: Express) {
         } catch (_e) { /* SM2 upsert is non-fatal */ }
       }
 
-      // Generate explanation via AI
-      let explanation = null;
+      // Explanation: banco primeiro (explanationCorrect/Wrong), IA como complemento
+      const prismaExpCorrect = (req as any)._prismaExplanationCorrect ?? null;
+      const prismaExpWrong = (req as any)._prismaExplanationWrong ?? null;
+      const dbExplanation = isCorrect ? prismaExpCorrect : prismaExpWrong;
+
+      let aiExplanation: string | null = null;
       try {
         const expResult = await generateExplanation(
           contentTitle || "",
@@ -542,16 +567,16 @@ export function registerSalaRoutes(app: Express) {
           String(correctAnswer),
           isCorrect,
         );
-        explanation = expResult.explanation;
+        aiExplanation = expResult.explanation ?? null;
       } catch (_e) {
-        // Explanation is optional
+        // Explanation is optional — não bloquear se IA falhar
       }
 
       return res.json({
         success: true,
         isCorrect,
         correctAnswer,
-        explanation,
+        explanation: dbExplanation || aiExplanation,
       });
     } catch (error) {
       console.error("❌ [Sala] Erro ao responder questão:", error);

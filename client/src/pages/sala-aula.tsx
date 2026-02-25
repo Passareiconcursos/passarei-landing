@@ -40,14 +40,10 @@ import {
   LogOut,
   Send,
   ShieldCheck,
-  Anchor,
-  Plane,
-  FileBadge,
   Scale,
   Building2,
   Shield,
   Crosshair,
-  MapPin,
   Lock,
 } from "lucide-react";
 import { sortByNucleoDuro, isNucleoDuro } from "@/lib/pedagogia";
@@ -2192,11 +2188,6 @@ export default function SalaAula() {
                 className="text-xs h-7 rounded-full border-dashed"
                 onClick={() => handleNextContent()}>
                 Entendi, avançar →
-              </Button>
-              <Button variant="outline" size="sm"
-                className="text-xs h-7 rounded-full border-dashed"
-                onClick={handleExplainDifferently}>
-                Explicar de outro jeito
               </Button>
               <Button variant="outline" size="sm"
                 className="text-xs h-7 rounded-full border-dashed"
