@@ -2178,7 +2178,7 @@ export default function SalaAula() {
             </div>
           </ScrollArea>
 
-          {/* Quick reply buttons — fixo acima da action bar, aparece após conteúdo/enrichment */}
+          {/* Quick reply buttons — pré-questão: aparece após conteúdo/enrichment */}
           {!isTyping && !activeSimulado &&
             messages.length > 0 &&
             (messages[messages.length - 1]?.type === "content" || messages[messages.length - 1]?.type === "enrichment") &&
@@ -2193,6 +2193,22 @@ export default function SalaAula() {
                 className="text-xs h-7 rounded-full border-dashed"
                 onClick={fetchQuestion}>
                 Quero responder uma questão
+              </Button>
+            </div>
+          )}
+
+          {/* Botão pós-questão — aparece imediatamente após o aluno responder */}
+          {!isTyping && !activeSimulado && answeredIndex !== null && (
+            <div className="px-3 py-2 border-t flex flex-wrap gap-1.5 bg-background">
+              <Button variant="outline" size="sm"
+                className="text-xs h-7 rounded-full border-dashed"
+                onClick={() => {
+                  setCurrentQuestion(null);
+                  setAnsweredIndex(null);
+                  setQuestionCorrectIndex(null);
+                  handleNextContent();
+                }}>
+                Próximo tópico →
               </Button>
             </div>
           )}

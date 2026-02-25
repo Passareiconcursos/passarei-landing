@@ -165,27 +165,16 @@ export async function getQuestionForContent(
 
   // ── Tier 4: AI Haiku on-the-fly + persistência obrigatória ────────────
   try {
-    // Buscar conteúdo do banco para ter title/body/examType reais
-    // Tenta Drizzle `content` primeiro, cai para Prisma `"Content"` se não existir
+    // Buscar conteúdo no Prisma "Content" (Drizzle `content` não existe no schema atual)
     let aiCtx = contentForAI;
     try {
-      const contentRow = await db.execute(sql`
-        SELECT title, body, exam_type FROM content WHERE id = ${contentId} LIMIT 1
+      const prismaRow = await db.execute(sql`
+        SELECT "title", "textContent" FROM "Content" WHERE "id" = ${contentId} LIMIT 1
       `) as any[];
-      if (contentRow.length > 0) {
-        aiCtx = { title: contentRow[0].title, text: contentRow[0].body || "", examType: contentRow[0].exam_type || "POLICIA_FEDERAL" };
+      if (prismaRow.length > 0) {
+        aiCtx = { title: prismaRow[0].title, text: prismaRow[0].textContent || "", examType: "POLICIA_FEDERAL" };
       }
-    } catch (_e) {
-      // Drizzle `content` não existe — tentar Prisma `"Content"`
-      try {
-        const prismaRow = await db.execute(sql`
-          SELECT "title", "textContent", "examType" FROM "Content" WHERE "id" = ${contentId} LIMIT 1
-        `) as any[];
-        if (prismaRow.length > 0) {
-          aiCtx = { title: prismaRow[0].title, text: prismaRow[0].textContent || "", examType: prismaRow[0].examType || "POLICIA_FEDERAL" };
-        }
-      } catch (_e2) { /* ambas falharam — usar contentForAI se disponível */ }
-    }
+    } catch (_e) { /* usar contentForAI passado pelo caller se disponível */ }
 
     if (aiCtx) {
       console.warn(`⚠️ [AI-Q] Nenhuma questão no banco para contentId: ${contentId} — gerando via Haiku`);
