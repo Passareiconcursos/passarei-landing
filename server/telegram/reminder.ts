@@ -5,12 +5,7 @@ import {
   recordReminderSent,
   SCHEDULE_HOURS,
   checkQuestionAccess,
-  consumeQuestion,
-  getQuestionForSubject,
-  saveStudyProgress,
-  getMnemonicForContent,
 } from "./database";
-import { generateEnhancedContent } from "./ai-service";
 import { activeSessions } from "./learning-session";
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
@@ -31,105 +26,6 @@ const pendingReminderQuestions = new Map<
     correctAnswer: string;
   }
 >();
-
-// Artigos corretos para cada concurso (gênero gramatical)
-const ARTIGO_CONCURSO: Record<string, string> = {
-  PF: "a",
-  PRF: "a",
-  PMERJ: "a",
-  PCERJ: "a",
-  PMSP: "a",
-  PCESP: "a",
-  PM: "a",
-  PC: "a",
-  CBM: "o",
-  PP: "a",
-  PP_FEDERAL: "a",
-  PL_FEDERAL: "a",
-  PJ_CNJ: "a",
-  ABIN: "a",
-  EXERCITO: "o",
-  MARINHA: "a",
-  AERONAUTICA: "a",
-  DEPEN: "o",
-  SEAP: "a",
-  GM: "a",
-  OUTRO: "o",
-};
-
-function getArtigoConcurso(examType: string): string {
-  return ARTIGO_CONCURSO[examType] || "o";
-}
-
-/**
- * Extrai seções estruturadas do textContent (mesma lógica do learning-session)
- */
-function parseTextContent(text: string): {
-  definition: string;
-  keyPoints: string | null;
-  example: string | null;
-  tip: string | null;
-} {
-  const pontosIdx = text.indexOf("PONTOS-CHAVE:");
-  if (pontosIdx === -1) {
-    return { definition: text, keyPoints: null, example: null, tip: null };
-  }
-
-  const definition = text.substring(0, pontosIdx).trim();
-  const rest = text.substring(pontosIdx);
-
-  const keyPointsMatch = rest.match(
-    /PONTOS-CHAVE:\n([\s\S]*?)(?=\n\nEXEMPLO:|\nEXEMPLO:)/,
-  );
-  const exampleMatch = rest.match(
-    /EXEMPLO:\n([\s\S]*?)(?=\n\nDICA:|\nDICA:)/,
-  );
-  const tipMatch = rest.match(/DICA:\n([\s\S]*?)$/);
-
-  return {
-    definition,
-    keyPoints: keyPointsMatch ? keyPointsMatch[1].trim() : null,
-    example: exampleMatch ? exampleMatch[1].trim() : null,
-    tip: tipMatch ? tipMatch[1].trim() : null,
-  };
-}
-
-/**
- * Normaliza alternativas da questão para formato { letter, text }
- * Aceita: string[], {letter,text}[], JSON string
- */
-function normalizeAlternatives(
-  raw: any,
-): { letter: string; text: string }[] {
-  let arr = raw;
-
-  // Se é string, tentar parsear como JSON
-  if (typeof arr === "string") {
-    try {
-      arr = JSON.parse(arr);
-    } catch {
-      return [];
-    }
-  }
-
-  if (!Array.isArray(arr)) return [];
-
-  return arr
-    .map((alt: any, idx: number) => {
-      const letter = String.fromCharCode(65 + idx); // A, B, C, D
-      if (typeof alt === "string") {
-        return { letter, text: alt };
-      }
-      if (alt && typeof alt === "object") {
-        return {
-          letter: alt.letter || letter,
-          text: alt.text || String(alt),
-        };
-      }
-      return { letter, text: String(alt) };
-    })
-    .filter((alt) => alt.text && alt.text !== "undefined");
-}
 
 /**
  * Obtém hora atual em Brasília (America/Sao_Paulo)
@@ -283,235 +179,56 @@ async function checkRecentActivity(telegramId: string): Promise<boolean> {
 }
 
 /**
- * Envia conteúdo proativo para o aluno (continua de onde parou)
+ * Envia push minimalista de lembrete (sem conteúdo longo).
+ * O conteúdo real é entregue quando o aluno clica em "Continuar Estudando".
  */
 async function sendProactiveContent(
   bot: TelegramBot,
   user: any,
-  accessReason: string,
+  _accessReason: string,
   currentHour: number,
 ) {
   const chatId = parseInt(user.telegramId);
-  const turno =
-    currentHour <= 11 ? "Manhã" : currentHour <= 17 ? "Tarde" : "Noite";
 
   try {
-    // 1. Mensagem de lembrete (com artigo correto de gênero)
-    const greetings: Record<string, string> = {
-      Manhã: "Bom dia",
-      Tarde: "Boa tarde",
-      Noite: "Boa noite",
+    // Saudação dinâmica pelo horário (Brasília)
+    const greeting =
+      currentHour < 12 ? "Bom dia" :
+      currentHour < 18 ? "Boa tarde" :
+                         "Boa noite";
+
+    // Primeiro nome (fallback para "estudante")
+    const firstName = (user.name || "").split(" ")[0] || "estudante";
+
+    const appUrl = process.env.APP_URL || "https://passarei.com.br";
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: "📖 Continuar Estudando",
+            callback_data: "menu_estudar",
+          },
+        ],
+        [
+          {
+            text: "💻 Ir para o Site",
+            url: `${appUrl}/sala`,
+          },
+        ],
+      ],
     };
 
-    const examType = user.examType || "concurso";
-    const artigo = getArtigoConcurso(examType);
-
     await bot.sendMessage(
       chatId,
-      `${greetings[turno]}! Hora de estudar para ${artigo} *${examType}*` +
-        `${accessReason === "free_first_day" ? "\n🎁 Usando questão grátis!" : ""}\n\n` +
-        `📚 Preparando seu conteúdo...`,
-      { parse_mode: "Markdown" },
+      `${greeting}, ${firstName}\\! 🚀\n\n` +
+        `Chegou a hora dos seus estudos planejados\\. ` +
+        `Seu sonho não descansa\\!\n\n` +
+        `Clique abaixo para continuar de onde parou ou acesse o site\\.`,
+      { parse_mode: "MarkdownV2", reply_markup: keyboard },
     );
 
-    await new Promise((r) => setTimeout(r, 2000));
-
-    // 2. Buscar conteúdo inteligente (continuando de onde parou)
-    const content = await getSmartReminderContent(user);
-
-    if (!content) {
-      await bot.sendMessage(
-        chatId,
-        `⚠️ Conteúdo em preparação. Use /estudar para iniciar uma sessão!`,
-        { parse_mode: "Markdown" },
-      );
-      return;
-    }
-
-    // 3. Consumir questão (debitar)
-    await consumeQuestion(user.telegramId, accessReason as any);
-
-    // 4. Enviar conteúdo (FIX 0.6: usar parseTextContent para evitar duplicação)
-    const title = content.title || "Conteúdo";
-    const rawText =
-      content.textContent || content.definition || content.description || "";
-
-    // Buscar nome do subject
-    let subjectName = "Conteúdo";
-    if (content.subjectId) {
-      try {
-        const subjectResult = (await db.execute(sql`
-          SELECT "displayName" FROM "Subject" WHERE id = ${content.subjectId}
-        `)) as any[];
-        subjectName = subjectResult[0]?.displayName || "Conteúdo";
-      } catch (e) {
-        // ignore
-      }
-    }
-
-    // FIX 0.6: Verificar se o conteúdo já tem seções estruturadas
-    const parsed = parseTextContent(rawText);
-    let keyPoints: string;
-    let example: string;
-    let tip: string;
-    let definition: string;
-
-    if (parsed.keyPoints && parsed.example && parsed.tip) {
-      // Conteúdo já enriquecido - usar seções do parse (sem IA)
-      definition = parsed.definition;
-      keyPoints = parsed.keyPoints;
-      example = parsed.example;
-      tip = parsed.tip;
-    } else {
-      // Conteúdo sem seções - gerar com IA ou smart fallback
-      definition = rawText;
-      const enhanced = await generateEnhancedContent(
-        title,
-        rawText,
-        user.examType || "PF",
-      );
-      keyPoints = enhanced.keyPoints;
-      example = enhanced.example;
-      tip = enhanced.tip;
-    }
-
-    // Buscar mnemônico relevante
-    const mnemonic = content.subjectId
-      ? await getMnemonicForContent(content.subjectId, title, definition)
-      : null;
-
-    const mnemonicBlock = mnemonic
-      ? `\n\n🧠 *MACETE: ${mnemonic.mnemonic}*\n${mnemonic.meaning}\n📎 _${mnemonic.article}_`
-      : "";
-
-    await bot.sendMessage(
-      chatId,
-      `📚 *${subjectName.toUpperCase()}*\n\n` +
-        `🎯 *${title}*\n\n` +
-        `📖 ${definition}\n\n` +
-        `✅ *Pontos-chave:*\n${keyPoints}${mnemonicBlock}\n\n` +
-        `💡 *Exemplo:* ${example}\n\n` +
-        `🎯 *Dica:* ${tip}`,
-      { parse_mode: "Markdown" },
-    );
-
-    await new Promise((r) => setTimeout(r, 3000));
-
-    // 5. Enviar questão (FIX 0.7: normalizar alternatives + callback curto)
-    const realQuestion = content.subjectId
-      ? await getQuestionForSubject(content.subjectId, [])
-      : null;
-
-    if (realQuestion) {
-      const alternatives = normalizeAlternatives(realQuestion.alternatives);
-
-      // Validar que temos alternativas válidas
-      if (alternatives.length < 2) {
-        console.warn(
-          `⚠️ [Reminder] Questão ${realQuestion.id} tem ${alternatives.length} alternativas, pulando`,
-        );
-        const keyboard = {
-          inline_keyboard: [
-            [
-              {
-                text: "📚 Iniciar sessão de estudos",
-                callback_data: "menu_estudar",
-              },
-            ],
-          ],
-        };
-        await bot.sendMessage(
-          chatId,
-          `💪 Revise o conteúdo acima e inicie uma sessão completa!`,
-          { parse_mode: "Markdown", reply_markup: keyboard },
-        );
-        return;
-      }
-
-      // FIX 0.7: Armazenar questão no Map e usar callback_data curto
-      pendingReminderQuestions.set(user.telegramId, {
-        questionId: realQuestion.id,
-        contentId: content.id,
-        alternatives,
-        correctAnswer: realQuestion.correctAnswer,
-      });
-
-      const isCertoErrado = realQuestion.questionType === "CERTO_ERRADO";
-
-      const optionsText = alternatives
-        .map((alt) => `${alt.letter}) ${alt.text}`)
-        .join("\n\n");
-
-      // callback_data curto: "rem_0", "rem_1", etc. (máx 5 bytes)
-      const keyboard = {
-        inline_keyboard: [
-          ...alternatives.map((alt, idx) => [
-            {
-              text: isCertoErrado ? alt.text : `${alt.letter}) ${alt.text.substring(0, 30)}`,
-              callback_data: `rem_${idx}`,
-            },
-          ]),
-          [
-            {
-              text: "📚 Continuar estudando",
-              callback_data: "menu_estudar",
-            },
-          ],
-        ],
-      };
-
-      const diffEmoji =
-        realQuestion.difficulty === "FACIL"
-          ? "🟢"
-          : realQuestion.difficulty === "MEDIO"
-            ? "🟡"
-            : "🔴";
-
-      await bot.sendMessage(
-        chatId,
-        `✍️ *QUESTÃO ${diffEmoji}*\n\n` +
-          `❓ ${realQuestion.statement}\n\n` +
-          `───────────────\n` +
-          `${optionsText}\n` +
-          `───────────────\n\n` +
-          `👇 *Escolha sua resposta:*`,
-        {
-          parse_mode: "Markdown",
-          reply_markup: keyboard,
-        },
-      );
-    } else {
-      // Sem questão - oferecer continuar estudando
-      const keyboard = {
-        inline_keyboard: [
-          [
-            {
-              text: "📚 Iniciar sessão de estudos",
-              callback_data: "menu_estudar",
-            },
-          ],
-        ],
-      };
-
-      await bot.sendMessage(
-        chatId,
-        `💪 Revise o conteúdo acima e quando estiver pronto, inicie uma sessão completa!`,
-        { parse_mode: "Markdown", reply_markup: keyboard },
-      );
-    }
-
-    // 6. Salvar progresso (adicionar este contentId aos já vistos)
-    const updatedContentIds = [
-      ...(user.lastStudyContentIds || []),
-      content.id,
-    ];
-    // Manter no máximo 200 IDs (evitar crescimento infinito)
-    const trimmedIds = updatedContentIds.slice(-200);
-    await saveStudyProgress(user.telegramId, trimmedIds);
-
-    console.log(
-      `✅ [Reminder] Conteúdo enviado para ${user.telegramId}: ${title}`,
-    );
+    console.log(`✅ [Reminder] Push enviado para ${user.telegramId} (${firstName})`);
   } catch (error: any) {
     // Se o bot foi bloqueado pelo usuário (403), desativar lembretes
     if (error?.response?.statusCode === 403) {
@@ -526,107 +243,6 @@ async function sendProactiveContent(
       return;
     }
     throw error;
-  }
-}
-
-/**
- * Busca conteúdo inteligente para o lembrete
- * Continua de onde o aluno parou (evita conteúdos já vistos)
- * Prioriza: dificuldades (70%) > facilidades (30%)
- */
-async function getSmartReminderContent(user: any): Promise<any | null> {
-  try {
-    const usedIds = user.lastStudyContentIds || [];
-    const usedIdsClause =
-      usedIds.length > 0
-        ? sql`AND c."id" NOT IN (${sql.join(
-            usedIds.map((id: string) => sql`${id}`),
-            sql`, `,
-          )})`
-        : sql``;
-
-    // D1: Excluir conteúdos REJEITADOS pelo Professor Revisor
-    const reviewClause = sql`AND (c."reviewStatus" IS NULL OR c."reviewStatus" != 'REJEITADO')`;
-    // 1. Priorizar matérias de dificuldade (70% das vezes)
-    const shouldPrioritizeDifficulty = Math.random() < 0.7;
-
-    if (
-      shouldPrioritizeDifficulty &&
-      user.dificuldades &&
-      user.dificuldades.length > 0
-    ) {
-      const result = (await db.execute(sql`
-        SELECT c.* FROM "Content" c
-        JOIN "Subject" s ON c."subjectId" = s.id
-        WHERE s."displayName" IN (${sql.join(
-          user.dificuldades.map((d: string) => sql`${d}`),
-          sql`, `,
-        )})
-          AND c."isActive" = true
-          ${usedIdsClause}
-          ${reviewClause}
-
-        ORDER BY RANDOM()
-        LIMIT 1
-      `)) as any[];
-
-      if (result.length > 0) return result[0];
-    }
-
-    // 2. Tentar facilidades
-    if (user.facilidades && user.facilidades.length > 0) {
-      const result = (await db.execute(sql`
-        SELECT c.* FROM "Content" c
-        JOIN "Subject" s ON c."subjectId" = s.id
-        WHERE s."displayName" IN (${sql.join(
-          user.facilidades.map((f: string) => sql`${f}`),
-          sql`, `,
-        )})
-          AND c."isActive" = true
-          ${usedIdsClause}
-          ${reviewClause}
-
-        ORDER BY RANDOM()
-        LIMIT 1
-      `)) as any[];
-
-      if (result.length > 0) return result[0];
-    }
-
-    // 3. Fallback: qualquer conteúdo (exceto rejeitados)
-    // Nota: usedIdsClause usa alias "c." mas fallback não usa alias - reconstruir sem alias
-    const usedIdsFallback =
-      usedIds.length > 0
-        ? sql`AND "id" NOT IN (${sql.join(
-            usedIds.map((id: string) => sql`${id}`),
-            sql`, `,
-          )})`
-        : sql``;
-
-    const result = (await db.execute(sql`
-      SELECT * FROM "Content"
-      WHERE "isActive" = true
-        AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-        ${usedIdsFallback}
-      ORDER BY RANDOM()
-      LIMIT 1
-    `)) as any[];
-
-    if (result.length > 0) return result[0];
-
-    // 4. Se todos já foram vistos, resetar e pegar qualquer um (exceto rejeitados)
-    const fallback = (await db.execute(sql`
-      SELECT * FROM "Content"
-      WHERE "isActive" = true
-        AND ("reviewStatus" IS NULL OR "reviewStatus" != 'REJEITADO')
-      ORDER BY RANDOM()
-      LIMIT 1
-    `)) as any[];
-
-    return fallback[0] || null;
-  } catch (error) {
-    console.error("❌ [Reminder] Erro ao buscar conteúdo:", error);
-    return null;
   }
 }
 

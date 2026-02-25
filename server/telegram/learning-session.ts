@@ -440,51 +440,72 @@ async function sendNextContent(bot: TelegramBot, session: LearningSession) {
     "Definição não disponível"
   ) as string;
 
-  // Parse textContent para extrair seções (evita duplicação + economiza API)
+  // ── Rich Content Phase 5: usar colunas dedicadas quando disponíveis ──────
+  // Prioridade: coluna DB (F5) > seção embutida no texto > geração IA
   const parsed = parseTextContent(rawText);
   const definition = parsed.definition;
-  let keyPoints: string;
-  let example: string;
-  let tip: string;
 
-  if (parsed.keyPoints && parsed.example && parsed.tip) {
-    // Conteúdo já tem seções estruturadas - usar direto (sem chamada IA)
-    console.log(`📗 [Content] Usando seções embutidas de "${title}" (sem chamada IA)`);
-    keyPoints = parsed.keyPoints;
-    example = parsed.example;
-    tip = parsed.tip;
-  } else {
-    // Sem seções estruturadas - gerar com IA
+  // keyPoint — "Ponto-Chave"
+  const keyPoint: string =
+    (content.keyPoint as string | null) ||
+    parsed.keyPoints ||
+    "";
+
+  // practicalExample — "Exemplo Prático"
+  const practicalExample: string =
+    (content.practicalExample as string | null) ||
+    parsed.example ||
+    "";
+
+  // mnemonic / dica — "Dica de Ouro"
+  const dbMnemonic: string | null = (content.mnemonic as string | null) || null;
+  const legacyMnemonic = (!dbMnemonic && contentSubjectId)
+    ? await getMnemonicForContent(contentSubjectId, title, definition)
+    : null;
+
+  // Se nenhuma das colunas F5 existe E o texto não tem seções → gerar com IA
+  if (!keyPoint && !practicalExample && !dbMnemonic) {
     await bot.sendMessage(
       session.chatId,
       `⏳ _Preparando conteúdo personalizado..._`,
       { parse_mode: "Markdown" },
     );
-    const enhanced = await generateEnhancedContent(
-      title,
-      definition,
-      session.examType,
+    const enhanced = await generateEnhancedContent(title, definition, session.examType);
+
+    // Montar mensagem com conteúdo gerado por IA
+    const legacyBlock = legacyMnemonic
+      ? `\n\n🧠 *MACETE: ${legacyMnemonic.mnemonic}*\n${legacyMnemonic.meaning}\n📎 _${legacyMnemonic.article}_`
+      : "";
+    await bot.sendMessage(
+      session.chatId,
+      `📚 *CONTEÚDO ${session.contentsSent}*\n\n` +
+        `🎯 *${title}*\n\n` +
+        `📖 ${definition}\n\n` +
+        `✅ *Pontos-chave:*\n${enhanced.keyPoints}${legacyBlock}\n\n` +
+        `💡 *Exemplo:* ${enhanced.example}\n\n` +
+        `🎯 *Dica:* ${enhanced.tip}`,
+      { parse_mode: "Markdown" },
     );
-    keyPoints = enhanced.keyPoints;
-    example = enhanced.example;
-    tip = enhanced.tip;
+  } else {
+    // Conteúdo estruturado disponível — sem chamada IA
+    console.log(`📗 [Content] Rich content Phase 5 de "${title}" (sem chamada IA)`);
+
+    let richMsg = `📚 *CONTEÚDO ${session.contentsSent}*\n\n🎯 *${title}*\n\n📖 ${definition}`;
+
+    if (keyPoint) {
+      richMsg += `\n\n⚡ *Ponto-Chave:*\n${keyPoint}`;
+    }
+    if (practicalExample) {
+      richMsg += `\n\n🔎 *Exemplo Prático:*\n${practicalExample}`;
+    }
+    if (dbMnemonic) {
+      richMsg += `\n\n💡 *Dica de Ouro:*\n${dbMnemonic}`;
+    } else if (legacyMnemonic) {
+      richMsg += `\n\n🧠 *MACETE: ${legacyMnemonic.mnemonic}*\n${legacyMnemonic.meaning}\n📎 _${legacyMnemonic.article}_`;
+    }
+
+    await bot.sendMessage(session.chatId, richMsg, { parse_mode: "Markdown" });
   }
-
-  // Buscar mnemônico relevante para este conteúdo
-  const mnemonic = contentSubjectId
-    ? await getMnemonicForContent(contentSubjectId, title, definition)
-    : null;
-
-  // Montar bloco do mnemônico (só aparece se encontrar match)
-  const mnemonicBlock = mnemonic
-    ? `\n\n🧠 *MACETE: ${mnemonic.mnemonic}*\n${mnemonic.meaning}\n📎 _${mnemonic.article}_`
-    : "";
-
-  await bot.sendMessage(
-    session.chatId,
-    `📚 *CONTEÚDO ${session.contentsSent}*\n\n🎯 *${title}*\n\n📖 ${definition}\n\n✅ *Pontos-chave:*\n${keyPoints}${mnemonicBlock}\n\n💡 *Exemplo:* ${example}\n\n🎯 *Dica:* ${tip}`,
-    { parse_mode: "Markdown" },
-  );
 
   // ============================================
   // FASE 5: TENTAR QUESTÃO REAL DO BANCO (por topicId → subjectId)

@@ -1628,6 +1628,7 @@ export async function getUsersForReminder(currentHour: number): Promise<any[]> {
     const result = await db.execute(sql`
       SELECT
         "telegramId",
+        "name",
         "examType",
         "plan",
         "dailyContentCount",
