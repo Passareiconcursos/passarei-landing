@@ -1195,13 +1195,29 @@ export function registerSalaRoutes(app: Express) {
       const subjects: any[] = [];
       let totalStudied = 0, totalAll = 0;
 
+      // Helper: normaliza nome para código interno (ex: "Informática" → "INFORMATICA")
+      const toSubjectCode = (name: string) =>
+        name.trim()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toUpperCase()
+          .replace(/\s+/g, "_")
+          .replace(/[^A-Z0-9_]/g, "");
+
       for (const m of materias) {
         const materiaName: string = m.name || "";
         if (!materiaName) continue;
 
-        const subjectRows = await db.execute(sql`
+        // Busca Subject pelo nome de exibição primeiro; fallback pelo código normalizado
+        let subjectRows = await db.execute(sql`
           SELECT id FROM "Subject" WHERE name ILIKE ${"%" + materiaName + "%"} LIMIT 1
         `) as any[];
+        if (!subjectRows[0]) {
+          const code = toSubjectCode(materiaName);
+          subjectRows = await db.execute(sql`
+            SELECT id FROM "Subject" WHERE name ILIKE ${"%" + code + "%"} LIMIT 1
+          `) as any[];
+        }
         if (!subjectRows[0]) continue;
         const sid = subjectRows[0].id;
 
@@ -1212,16 +1228,33 @@ export function registerSalaRoutes(app: Express) {
         `) as any[];
         const total = parseInt(totalRows[0]?.total ?? "0", 10);
 
-        // Conteúdos VISTOS pelo aluno nesta matéria (via lastStudyContentIds)
-        let studied = 0;
-        if (studiedIds.length > 0) {
-          const studiedRows = await db.execute(sql`
-            SELECT COUNT(*)::int AS studied FROM "Content"
-            WHERE "subjectId" = ${sid} AND "isActive" = true
-              AND id = ANY(${studiedIds})
-          `) as any[];
-          studied = parseInt(studiedRows[0]?.studied ?? "0", 10);
-        }
+        // Conteúdos estudados — UNION de 3 fontes (DISTINCT, sem inflação):
+        //   1. lastStudyContentIds (conteúdo visualizado na web)
+        //   2. QuestionAttempt → "Question" Prisma (seeds legados)
+        //   3. QuestionAttempt → questions Drizzle (questões geradas/AI)
+        const studiedRows = await db.execute(sql`
+          SELECT COUNT(DISTINCT cid)::int AS studied FROM (
+            SELECT c.id AS cid FROM "Content" c
+            WHERE c."subjectId" = ${sid} AND c."isActive" = true
+              AND c.id = ANY(${studiedIds.length > 0 ? studiedIds : ["__none__"]})
+            UNION
+            SELECT q."contentId" AS cid
+            FROM "QuestionAttempt" qa
+            JOIN "Question" q ON q.id = qa."questionId"
+            JOIN "Content" c ON c.id = q."contentId"
+            WHERE qa."userId" = ${student.userId}
+              AND c."subjectId" = ${sid} AND c."isActive" = true
+              AND q."contentId" IS NOT NULL
+            UNION
+            SELECT dq.content_id AS cid
+            FROM "QuestionAttempt" qa
+            JOIN questions dq ON dq.id = qa."questionId"
+            JOIN "Content" c ON c.id = dq.content_id
+            WHERE qa."userId" = ${student.userId}
+              AND c."subjectId" = ${sid} AND c."isActive" = true
+          ) t
+        `) as any[];
+        const studied = parseInt(studiedRows[0]?.studied ?? "0", 10);
 
         totalStudied += studied;
         totalAll += total;

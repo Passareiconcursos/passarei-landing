@@ -39,6 +39,7 @@ export async function runAutoMigrations() {
   await run("phase5Content",     migratePhase5ContentColumns);
   await run("phase5Question",    migratePhase5QuestionColumns);
   await run("phase5Subject",     migratePhase5SubjectColumns);
+  await run("studyProgressCols", migrateStudyProgressColumns);
 
   console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
@@ -1373,4 +1374,25 @@ async function migratePhase5SubjectColumns() {
     ADD COLUMN IF NOT EXISTS "minStudyRequirement" INTEGER NOT NULL DEFAULT 1
   `);
   console.log("  ✅ [Phase5] Subject: minStudyRequirement adicionado (default: 1)");
+}
+
+// ============================================
+// COLUNAS DE PROGRESSO DO ALUNO NA TABELA "User"
+// lastStudyContentIds — JSON array de IDs de conteúdo visualizados
+//   (antes em migrate-reminder.ts, que nunca foi chamado)
+// ============================================
+async function migrateStudyProgressColumns() {
+  const cols = await db.execute(sql`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_name = 'User' AND column_name = 'lastStudyContentIds'
+  `) as any[];
+
+  if (cols.length > 0) return; // já existe
+
+  console.log("  🔄 [StudyProgress] Adicionando lastStudyContentIds em User...");
+  await db.execute(sql`
+    ALTER TABLE "User"
+    ADD COLUMN IF NOT EXISTS "lastStudyContentIds" TEXT DEFAULT '[]'
+  `);
+  console.log("  ✅ [StudyProgress] User: lastStudyContentIds adicionado");
 }
