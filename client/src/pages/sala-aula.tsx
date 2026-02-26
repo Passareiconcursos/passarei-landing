@@ -45,8 +45,78 @@ import {
   Shield,
   Crosshair,
   Lock,
+  User,
+  KeyRound,
+  Mail,
 } from "lucide-react";
 import { sortByNucleoDuro, isNucleoDuro } from "@/lib/pedagogia";
+
+// ============================================
+// SUBJECT NAME FORMATTER
+// Maps internal DB codes → display names (with accents, abbreviations)
+// ============================================
+const SUBJECT_DISPLAY_NAMES: Record<string, string> = {
+  // Língua Portuguesa
+  "PORTUGUES": "Língua Portuguesa",
+  "LINGUA_PORTUGUESA": "Língua Portuguesa",
+  // Direito
+  "DIR_CONSTITUCIONAL": "Dir. Constitucional",
+  "DIREITO_CONSTITUCIONAL": "Dir. Constitucional",
+  "DIREITO_ADMINISTRATIVO": "Dir. Administrativo",
+  "NOCOES_DE_DIREITO_ADMINISTRATIVO": "Dir. Administrativo",
+  "DIREITO_PENAL": "Direito Penal",
+  "DIR_PENAL": "Direito Penal",
+  "PROCESSUAL_PENAL": "Dir. Processual Penal",
+  "DIREITO_PROCESSUAL_PENAL": "Dir. Processual Penal",
+  "LEGISLACAO_PENAL_EXTRAVAGANTE": "Leg. Penal Extravagante",
+  "DIREITO_CIVIL": "Direito Civil",
+  "DIREITO_TRIBUTARIO": "Dir. Tributário",
+  "DIREITO_EMPRESARIAL": "Dir. Empresarial",
+  "DIREITO_TRABALHISTA": "Dir. Trabalhista",
+  "DIREITO_ELEITORAL": "Dir. Eleitoral",
+  // Exatas / Raciocínio
+  "RACIOCINIO_LOGICO": "Raciocínio Lógico",
+  "MATEMATICA": "Matemática",
+  "ESTATISTICA": "Estatística",
+  // Informática
+  "INFORMATICA": "Informática",
+  "NOCOES_DE_INFORMATICA": "Informática",
+  "TECNOLOGIA_DA_INFORMACAO": "Tecnologia da Informação",
+  // Outros
+  "ADMINISTRACAO": "Administração",
+  "ADMINISTRACAO_PUBLICA": "Adm. Pública",
+  "ATUALIDADES": "Atualidades",
+  "FILOSOFIA": "Filosofia",
+  "SOCIOLOGIA": "Sociologia",
+  "GEOGRAFIA": "Geografia",
+  "HISTORIA": "História",
+  "ECONOMIA": "Economia",
+  "CONTABILIDADE": "Contabilidade",
+  "AUDITORIA": "Auditoria",
+  "CONTROLE_EXTERNO": "Controle Externo",
+  "SEGURANCA_PUBLICA": "Segurança Pública",
+  "LEGISLACAO_ESPECIAL": "Legislação Especial",
+  "REDACAO": "Redação",
+};
+
+function formatSubjectName(raw: string): string {
+  if (!raw) return raw;
+  // Direct lookup first
+  if (SUBJECT_DISPLAY_NAMES[raw]) return SUBJECT_DISPLAY_NAMES[raw];
+  // Normalize to code and lookup
+  const code = raw.trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^A-Z0-9_]/g, "");
+  if (SUBJECT_DISPLAY_NAMES[code]) return SUBJECT_DISPLAY_NAMES[code];
+  // Fallback: Title Case with accents preserved
+  return raw
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 // ============================================
 // TYPES
@@ -231,6 +301,12 @@ export default function SalaAula() {
   const [remaining, setRemaining] = useState<number | undefined>();
   const [showConcursoSelector, setShowConcursoSelector] = useState(false);
   const [showRaioX, setShowRaioX] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileCurrentPw, setProfileCurrentPw] = useState("");
+  const [profileNewPw, setProfileNewPw] = useState("");
+  const [profileNewEmail, setProfileNewEmail] = useState("");
+  const [profileEmailPw, setProfileEmailPw] = useState("");
+  const [profileLoading, setProfileLoading] = useState(false);
   const [lastStudiedSubjectId, setLastStudiedSubjectId] = useState<string | null>(
     () => localStorage.getItem("passarei_last_subject") ?? null
   );
@@ -1312,7 +1388,7 @@ export default function SalaAula() {
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-5 pb-2 pr-1">
 
               {/* ── Métricas gerais ── */}
@@ -1365,7 +1441,7 @@ export default function SalaAula() {
                       .map((s) => (
                         <div key={s.subject}>
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium truncate flex-1 pr-2">{s.subject}</span>
+                            <span className="text-xs font-medium truncate flex-1 pr-2">{formatSubjectName(s.subject)}</span>
                             <span className={cn(
                               "text-xs font-semibold tabular-nums shrink-0",
                               s.percentage >= 70 ? "text-green-600" : s.percentage >= 50 ? "text-yellow-600" : "text-red-500"
@@ -1397,6 +1473,111 @@ export default function SalaAula() {
 
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════
+          PERFIL / MINHA CONTA — Modal
+          ═══════════════════════════════════════════ */}
+      <Dialog open={showProfileModal} onOpenChange={(open) => {
+        setShowProfileModal(open);
+        if (!open) { setProfileCurrentPw(""); setProfileNewPw(""); setProfileNewEmail(""); setProfileEmailPw(""); }
+      }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-4 w-4 text-primary" /> Minha Conta
+            </DialogTitle>
+            <DialogDescription>
+              {student?.email}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 pt-1">
+            {/* ── Alterar Senha ── */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <KeyRound className="h-3.5 w-3.5" /> Alterar Senha
+              </p>
+              <input
+                type="password"
+                placeholder="Senha atual"
+                value={profileCurrentPw}
+                onChange={(e) => setProfileCurrentPw(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <input
+                type="password"
+                placeholder="Nova senha (mín. 8 caracteres)"
+                value={profileNewPw}
+                onChange={(e) => setProfileNewPw(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <Button size="sm" className="w-full" disabled={profileLoading || !profileCurrentPw || !profileNewPw}
+                onClick={async () => {
+                  setProfileLoading(true);
+                  try {
+                    const res = await fetch("/api/sala/auth/change-password", {
+                      method: "PUT", headers: { ...headers, "Content-Type": "application/json" },
+                      body: JSON.stringify({ currentPassword: profileCurrentPw, newPassword: profileNewPw }),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      toast({ title: "Senha alterada!", description: "Sua senha foi atualizada com sucesso." });
+                      setProfileCurrentPw(""); setProfileNewPw("");
+                    } else {
+                      toast({ variant: "destructive", title: "Erro", description: data.error });
+                    }
+                  } catch { toast({ variant: "destructive", title: "Erro de conexão" }); }
+                  finally { setProfileLoading(false); }
+                }}>
+                {profileLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar nova senha"}
+              </Button>
+            </div>
+
+            <Separator />
+
+            {/* ── Alterar E-mail ── */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5" /> Alterar E-mail
+              </p>
+              <input
+                type="email"
+                placeholder="Novo e-mail"
+                value={profileNewEmail}
+                onChange={(e) => setProfileNewEmail(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <input
+                type="password"
+                placeholder="Confirme sua senha"
+                value={profileEmailPw}
+                onChange={(e) => setProfileEmailPw(e.target.value)}
+                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <Button size="sm" variant="outline" className="w-full" disabled={profileLoading || !profileNewEmail || !profileEmailPw}
+                onClick={async () => {
+                  setProfileLoading(true);
+                  try {
+                    const res = await fetch("/api/sala/auth/change-email", {
+                      method: "PUT", headers: { ...headers, "Content-Type": "application/json" },
+                      body: JSON.stringify({ password: profileEmailPw, newEmail: profileNewEmail }),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      toast({ title: "E-mail alterado!", description: `Novo e-mail: ${data.newEmail}` });
+                      setProfileNewEmail(""); setProfileEmailPw("");
+                    } else {
+                      toast({ variant: "destructive", title: "Erro", description: data.error });
+                    }
+                  } catch { toast({ variant: "destructive", title: "Erro de conexão" }); }
+                  finally { setProfileLoading(false); }
+                }}>
+                {profileLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar novo e-mail"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1634,6 +1815,10 @@ export default function SalaAula() {
                       <Send className="h-4 w-4" /> Estudar pelo Bot
                     </a>
                   </Button>
+                  <Button variant="ghost" className="w-full justify-start gap-2"
+                    onClick={() => { setShowNavSheet(false); setShowProfileModal(true); }}>
+                    <User className="h-4 w-4" /> Minha Conta
+                  </Button>
                   <Separator className="my-2" />
                   <Button variant="ghost" className="w-full justify-start gap-2 text-destructive hover:text-destructive"
                     onClick={() => { setShowNavSheet(false); logout(); }}>
@@ -1740,11 +1925,13 @@ export default function SalaAula() {
                   {/* Card 2 — Reforço SM2 */}
                   {(() => {
                     const total = stats?.totalQuestionsAnswered ?? 0;
-                    const locked = total < 15;
+                    const notEnough = total < 15;
+                    const upToDate = !notEnough && sm2DueCount === 0;
+                    const hasPending = !notEnough && sm2DueCount > 0;
                     return (
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="h-full">
-                        {locked ? (
-                          /* ── BLOQUEADO ── */
+                        {notEnough ? (
+                          /* ── BLOQUEADO — base insuficiente ── */
                           <Card
                             className="h-full cursor-pointer border-2 bg-emerald-900/10 border-emerald-900/20 active:scale-[0.98] transition-transform"
                             onClick={() => toast({
@@ -1770,8 +1957,28 @@ export default function SalaAula() {
                               </div>
                             </CardContent>
                           </Card>
+                        ) : upToDate ? (
+                          /* ── EM DIA — sem revisões pendentes ── */
+                          <Card
+                            className="h-full cursor-default border-2 bg-sky-50/60 border-sky-200/60"
+                            onClick={() => toast({
+                              title: "Revisões em dia!",
+                              description: "O algoritmo SM2 agendará novas revisões automaticamente conforme você estuda.",
+                            })}
+                          >
+                            <CardContent className="p-4 flex flex-col gap-2">
+                              <RotateCcw className="h-7 w-7 text-sky-400" />
+                              <div>
+                                <Badge variant="outline" className="text-[8px] font-bold tracking-widest uppercase text-sky-600 border-sky-300 px-1.5 py-0 mb-1.5">
+                                  EM DIA
+                                </Badge>
+                                <p className="text-sm font-semibold leading-tight text-sky-900/70">Reforço SM2</p>
+                              </div>
+                              <p className="text-[10px] text-sky-700/70 leading-snug">Novas revisões serão agendadas automaticamente.</p>
+                            </CardContent>
+                          </Card>
                         ) : (
-                          /* ── LIBERADO — brilho verde ── */
+                          /* ── REFORÇO CRÍTICO — revisões pendentes ── */
                           <motion.div
                             className="rounded-lg h-full"
                             animate={{ boxShadow: ["0 0 0 0 rgba(34,197,94,0)", "0 0 0 7px rgba(34,197,94,0.22)", "0 0 0 0 rgba(34,197,94,0)"] }}
@@ -2338,7 +2545,7 @@ export default function SalaAula() {
                   {stats.bySubject.map((s) => (
                     <div key={s.subject} className="text-sm">
                       <div className="flex justify-between">
-                        <span className="truncate">{s.subject}</span>
+                        <span className="truncate">{formatSubjectName(s.subject)}</span>
                         <span className="font-medium">{s.percentage}%</span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-1.5 mt-1">

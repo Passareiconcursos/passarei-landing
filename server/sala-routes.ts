@@ -1243,10 +1243,12 @@ export function registerSalaRoutes(app: Express) {
         `) as any[];
         const total = parseInt(totalRows[0]?.total ?? "0", 10);
 
-        // Conteúdos estudados — UNION de 3 fontes (DISTINCT, sem inflação):
+        // Conteúdos estudados — UNION de 4 fontes (DISTINCT, sem inflação):
         //   1. lastStudyContentIds (conteúdo visualizado na web)
-        //   2. QuestionAttempt → "Question" Prisma (seeds legados)
+        //   2. QuestionAttempt → "Question" Prisma com contentId (seeds Grupo A)
         //   3. QuestionAttempt → questions Drizzle (questões geradas/AI)
+        //   4. QuestionAttempt → "Question" Prisma SEM contentId (seeds Grupo B legados):
+        //      proxy por topicId — 1 Content atom por tópico visitado (não infla)
         const studiedRows = await db.execute(sql`
           SELECT COUNT(DISTINCT cid)::int AS studied FROM (
             SELECT c.id AS cid FROM "Content" c
@@ -1267,6 +1269,18 @@ export function registerSalaRoutes(app: Express) {
             JOIN "Content" c ON c.id = dq.content_id
             WHERE qa."userId" = ${student.userId}
               AND c."subjectId" = ${sid} AND c."isActive" = true
+            UNION
+            SELECT cid FROM (
+              SELECT DISTINCT ON (q."topicId") c.id AS cid
+              FROM "QuestionAttempt" qa
+              JOIN "Question" q ON q.id = qa."questionId"
+              JOIN "Content" c ON c."topicId" = q."topicId"
+                AND c."subjectId" = ${sid} AND c."isActive" = true
+              WHERE qa."userId" = ${student.userId}
+                AND q."subjectId" = ${sid}
+                AND q."contentId" IS NULL
+              ORDER BY q."topicId"
+            ) _legacy
           ) t
         `) as any[];
         const studied = parseInt(studiedRows[0]?.studied ?? "0", 10);
@@ -1342,17 +1356,31 @@ export function registerSalaRoutes(app: Express) {
       const examType: string = concursoRows[0]?.exam_type || "POLICIAL";
       const concursoNome: string = concursoRows[0]?.nome || "Semanal";
 
-      // Coletar subjectIds do edital
+      // Coletar subjectIds do edital — mesma lógica de aliases do edital/progress
+      const _toCode = (n: string) => n.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, "_").replace(/[^A-Z0-9_]/g, "");
+      const _aliases: Record<string, string> = {
+        "LINGUA_PORTUGUESA": "PORTUGUES",
+        "DIREITO_CONSTITUCIONAL": "DIR_CONSTITUCIONAL",
+        "DIREITO_PROCESSUAL_PENAL": "PROCESSUAL_PENAL",
+        "NOCOES_DE_DIREITO_ADMINISTRATIVO": "DIREITO_ADMINISTRATIVO",
+        "NOCOES_DE_INFORMATICA": "INFORMATICA",
+      };
       const subjectIds: string[] = [];
       for (const m of materias) {
         const materiaName: string = m.name || "";
         if (!materiaName) continue;
-        const sRows = await db.execute(sql`
+        let sRows = await db.execute(sql`
           SELECT id FROM "Subject" WHERE name ILIKE ${"%" + materiaName + "%"} LIMIT 1
         `) as any[];
+        if (!sRows[0]) {
+          const aliased = _aliases[_toCode(materiaName)] ?? _toCode(materiaName);
+          sRows = await db.execute(sql`
+            SELECT id FROM "Subject" WHERE name ILIKE ${"%" + aliased + "%"} LIMIT 1
+          `) as any[];
+        }
         if (sRows[0]?.id) subjectIds.push(sRows[0].id);
       }
-      if (!subjectIds.length) return res.status(400).json({ success: false, error: "Nenhuma matéria encontrada para este edital." });
+      if (!subjectIds.length) return res.status(400).json({ success: false, error: "Nenhuma matéria encontrada para este edital. Verifique o concurso-alvo." });
 
       // 80% conteúdo inédito — aleatório das matérias do edital
       const newContentRows = await db.execute(sql`

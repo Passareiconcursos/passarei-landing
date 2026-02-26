@@ -232,6 +232,12 @@ CONTEÚDO ESTUDADO: ${textContent}
 ${instruction}
 A questão DEVE testar o conhecimento específico do texto apresentado.
 
+VALIDAÇÃO OBRIGATÓRIA — verifique antes de gerar:
+1. Entidades geográficas: "Estado" ≠ "cidade" ≠ "município". Use só classificações presentes no conteúdo. Se incerto, use formulação genérica ("determinado Estado", "certa localidade").
+2. Leis e artigos: cite somente números presentes no CONTEÚDO ESTUDADO. Não invente numeração.
+3. Cargos e hierarquias: não confunda títulos (Delegado ≠ Agente ≠ Escrivão; Ministro ≠ Secretário).
+4. Dado factual não verificável no texto → crie questão conceitual sem mencionar a entidade específica.
+
 Responda em JSON válido:
 {
   "pergunta": "Enunciado da questão",
