@@ -43,12 +43,12 @@ export function Hero() {
               data-testid="hero-title"
               style={{ contain: "content" }}
             >
-              Seu preparador pessoal para concursos policiais.
+              A tecnologia que coloca você dentro das corporações policiais.
             </h1>
 
             <p className="text-xl md:text-2xl text-gray-600 mb-8">
-              IA que envia o conteúdo certo, na hora certa — direto no seu
-              celular
+              Estude menos e aprenda mais. Use o método de estudo ativo que
+              identifica sua dificuldade e acelera sua aprovação policial.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">

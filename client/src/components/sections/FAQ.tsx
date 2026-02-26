@@ -12,13 +12,13 @@ export function FAQ() {
       number: 1,
       question: "Como o Passarei funciona na prática?",
       answer:
-        "Não precisa baixar nada! O Passarei funciona 100% pelo Telegram.\n\nVocê receberá mensagens diárias com:\n• Conteúdos explicativos (5min de leitura)\n• Questões de provas reais (5-10min de prática)\n• Revisões programadas (quando o algoritmo decidir)\n\nÉ como ter um professor particular no seu bolso, disponível 24/7.\n\nBasta ter o Telegram instalado e conexão com internet.",
+        "Não precisa baixar nada! O Passarei funciona pelo Telegram, aplicando o Método de Estudo Ativo direto no seu celular.\n\nVocê receberá mensagens diárias com:\n• Conteúdos explicativos (5min de leitura)\n• Questões de provas reais (5-10min de prática)\n• Revisões programadas pelo algoritmo no momento certo\n\nÉ o Método de Estudo Ativo no seu bolso, disponível 24/7.\n\nBasta ter o Telegram instalado e conexão com internet.",
     },
     {
       number: 2,
-      question: "Funciona para qual concurso policial?",
+      question: "O Passarei serve para a Polícia Federal (PF), PRF e Polícias Civis?",
       answer:
-        "Atualmente cobrimos:\n✅ PM (Polícia Militar) - Todos os estados\n✅ PC (Polícia Civil) - Todos os estados\n✅ PRF (Polícia Rodoviária Federal)\n✅ PF (Polícia Federal)\n✅ Entre outros concursos policiais federais/estaduais\n\nVocê informa qual concurso está estudando no cadastro e nosso sistema adapta TODO o conteúdo automaticamente.\n\nMatérias cobertas:\n• Português\n• Direito Constitucional\n• Direito Administrativo\n• Direito Penal\n• Direito Processual Penal\n• Legislação Penal Extravagante\n• E inumeras outras matérias pertinentes.",
+        "Sim, nosso método é focado nas principais matérias das carreiras federais e polícias civis.\n\nAtualmente cobrimos:\n✅ PF (Polícia Federal)\n✅ PRF (Polícia Rodoviária Federal)\n✅ PC (Polícia Civil) - Todos os estados\n✅ PM (Polícia Militar) - Todos os estados\n✅ Entre outros concursos policiais federais/estaduais\n\nVocê informa qual concurso está estudando no cadastro e nosso sistema adapta TODO o conteúdo automaticamente.\n\nMatérias cobertas:\n• Português\n• Direito Constitucional\n• Direito Administrativo\n• Direito Penal\n• Direito Processual Penal\n• Legislação Penal Extravagante\n• E inumeras outras matérias pertinentes.",
     },
     {
       number: 3,
@@ -36,7 +36,7 @@ export function FAQ() {
       number: 5,
       question: "Quanto tempo por dia preciso estudar?",
       answer:
-        "Recomendamos 15-20 minutos por dia para resultados consistentes.\n\nO segredo não é estudar horas seguidas, mas sim estudar UM POUCO TODOS OS DIAS.\n\nNosso método de repetição espaçada é otimizado para sessões curtas. Você aprende mais em 15 min focados do que em 2h de aula cansativa.\n\nDistribuição ideal:\n• Manhã: 5 min (conteúdo do dia)\n• Noite: 10 min (questões + revisão)\n• Total: 15 min/dia\n\nTem mais tempo? Ótimo! Mas 15 min DIÁRIOS já garantem ótimos resultados.",
+        "Recomendamos 15-20 minutos por dia para resultados consistentes.\n\nO segredo não é estudar horas seguidas, mas sim estudar UM POUCO TODOS OS DIAS.\n\nO Método de Estudo Ativo com revisão espaçada científica é otimizado para sessões curtas. Você aprende mais em 15 min focados do que em 2h de aula cansativa.\n\nDistribuição ideal:\n• Manhã: 5 min (conteúdo do dia)\n• Noite: 10 min (questões + revisão espaçada)\n• Total: 15 min/dia\n\nTem mais tempo? Ótimo! Mas 15 min DIÁRIOS com o Método de Estudo Ativo já garantem ótimos resultados.",
     },
     {
       number: 6,
@@ -52,6 +52,12 @@ export function FAQ() {
     },
     {
       number: 8,
+      question: "O que é o Método de Estudo Ativo?",
+      answer:
+        "É a técnica comprovada de aprender através da prática e da recuperação ativa, em vez de apenas assistir aulas passivamente.\n\nEm vez de ler resumos por horas, você:\n• Resolve questões reais de banca\n• Recebe análise técnica de cada alternativa\n• Revisita o conteúdo no momento exato em que ia esquecer\n\nSeu cérebro retém até 3x mais do que no estudo passivo — e o Passarei aplica esse método automaticamente, todos os dias.\n\nResultado: menos tempo de estudo, mais fixação e aprovação mais rápida.",
+    },
+    {
+      number: 9,
       question: "Como vocês são tão mais baratos que os concorrentes?",
       answer:
         "Automação inteligente:\n\n• Estratégia Concursos: a partir de R$ 109,90/mês\n• Passarei Veterano: R$ 44,90/mês (anual)\n• ECONOMIA: até 80%!\n\nComo?\n• 100% Telegram (sem app caro)\n• IA faz correções (sem professor humano)\n• Conteúdo automatizado (sem filmagens)\n• Infraestrutura enxuta (sem aluguel de espaço)\n\nRepassamos TODA economia para você.\n\nMesmo conteúdo, menor custo.\n\nAlém disso:\n• Plano Veterano inclui 2 redações/mês\n• 900 questões/mês (3x mais que Calouro!)\n• São 10.800 questões de simulados por ano!\n• Poupe R$ 540/ano vs Calouro mensal\n• Suporte prioritário\n• Intensivo nas suas dificuldades",
