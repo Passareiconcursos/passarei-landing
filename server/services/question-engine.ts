@@ -151,7 +151,26 @@ export async function getQuestionForContent(
       } catch (_e) { /* não bloqueia */ }
     }
 
-    // T3a: questão vinculada ao tópico específico (maior precisão pedagógica)
+    // T3a-0: questão vinculada ao conteúdo EXATO (precisão máxima — evita "roleta russa")
+    if (contentId) {
+      const t3a0 = await db.execute(sql`
+        SELECT q.* FROM "Question" q
+        WHERE q."contentId" = ${contentId}
+          AND q."isActive" = true
+          ${reviewClause}
+        ORDER BY q."timesUsed" ASC, RANDOM()
+        LIMIT 1
+      `) as any[];
+
+      if (t3a0.length > 0) {
+        await db.execute(sql`UPDATE "Question" SET "timesUsed" = "timesUsed" + 1 WHERE "id" = ${t3a0[0].id}`);
+        console.log(`✅ [Question T3a-0] Prisma por contentId: ${t3a0[0].id}`);
+        return t3a0[0];
+      }
+      console.log(`⚠️ [Question T3a-0] Nenhuma questão para contentId ${contentId} — caindo para topicId`);
+    }
+
+    // T3a: questão vinculada ao tópico específico (fallback quando não há questão por contentId)
     if (effectiveTopicId) {
       const t3a = await db.execute(sql`
         SELECT q.* FROM "Question" q

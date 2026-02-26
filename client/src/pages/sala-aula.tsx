@@ -2733,15 +2733,18 @@ function MessageBubble({
       return (
         <Card className="border-l-4 border-l-green-500 bg-green-50/60 w-full min-w-0">
           <CardContent className="pt-4 pb-4 px-3 sm:px-6 space-y-3">
-            {/* Header */}
+            {/* Título binário */}
             <div className="flex items-center gap-2">
-              <Medal className="h-5 w-5 text-green-600 shrink-0" />
-              <span className="font-semibold text-green-700 text-sm">Análise Técnica do Acerto</span>
+              <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+              <span className="font-bold text-green-700 text-base">✅ RESPOSTA CORRETA</span>
             </div>
-            {/* Explicação */}
-            <p className="text-sm text-green-900/80 leading-relaxed break-words [overflow-wrap:break-word] [hyphens:auto]">
-              {explanation}
-            </p>
+            {/* Análise técnica */}
+            <div className="border-t border-green-200 pt-2 space-y-1">
+              <p className="text-xs text-green-600 font-medium uppercase tracking-wide">Análise Técnica</p>
+              <p className="text-sm text-green-900/80 leading-relaxed break-words [overflow-wrap:break-word] [hyphens:auto]">
+                {explanation}
+              </p>
+            </div>
             {/* Botão próximo inline */}
             {onNextTopic && (
               <div className="pt-1">
@@ -2759,18 +2762,27 @@ function MessageBubble({
       );
     }
 
+    const userLetter    = ["A", "B", "C", "D", "E"][data.userAnswer]    ?? "?";
+    const correctLetter = ["A", "B", "C", "D", "E"][data.correctAnswer] ?? "?";
     return (
       <Card className="border-l-4 border-l-red-500 bg-red-50/50 w-full min-w-0">
         <CardContent className="pt-4 pb-4 px-3 sm:px-6 space-y-3">
-          {/* Header */}
+          {/* Título binário */}
           <div className="flex items-center gap-2">
             <XCircle className="h-5 w-5 text-red-600 shrink-0" />
-            <span className="font-semibold text-red-700 text-sm">Revise o Conceito</span>
+            <span className="font-bold text-red-700 text-base">❌ RESPOSTA INCORRETA</span>
           </div>
-          {/* Explicação */}
-          <p className="text-sm text-red-900/75 leading-relaxed break-words [overflow-wrap:break-word] [hyphens:auto]">
-            {explanation}
+          {/* Comparação de letras */}
+          <p className="text-xs text-red-700/80 font-medium">
+            Sua escolha: <strong>{userLetter}</strong>&nbsp;|&nbsp;Gabarito: <strong>{correctLetter}</strong>
           </p>
+          {/* Análise técnica */}
+          <div className="border-t border-red-200 pt-2 space-y-1">
+            <p className="text-xs text-red-600 font-medium uppercase tracking-wide">Análise Técnica</p>
+            <p className="text-sm text-red-900/75 leading-relaxed break-words [overflow-wrap:break-word] [hyphens:auto]">
+              {explanation}
+            </p>
+          </div>
           {/* Botão próximo inline */}
           {onNextTopic && (
             <div className="pt-1">
