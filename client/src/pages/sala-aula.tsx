@@ -2228,6 +2228,22 @@ export default function SalaAula() {
             </div>
           )}
 
+          {/* Botão pós-questão no modo plano — garante visibilidade fora do scroll */}
+          {!isTyping && !activeSimulado && answeredIndex !== null && (
+            <div className="px-3 py-2 border-t flex flex-wrap gap-1.5 bg-background">
+              <Button variant="outline" size="sm"
+                className="text-xs h-7 rounded-full border-dashed"
+                onClick={() => {
+                  setCurrentQuestion(null);
+                  setAnsweredIndex(null);
+                  setQuestionCorrectIndex(null);
+                  handleNextContent();
+                }}>
+                Próximo tópico →
+              </Button>
+            </div>
+          )}
+
           {/* Botão pós-questão de simulado — apenas no modo simulado (card de answer já tem botão inline no modo plano) */}
           {!isTyping && activeSimulado && answeredIndex !== null && (
             <div className="px-3 py-2 border-t flex flex-wrap gap-1.5 bg-background">

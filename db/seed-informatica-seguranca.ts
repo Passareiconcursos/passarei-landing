@@ -476,14 +476,14 @@ async function main() {
       INSERT INTO "Question" (
         "id", "statement", "alternatives", "correctAnswer", "correctOption",
         "explanation", "explanationCorrect", "explanationWrong",
-        "subjectId", "topicId",
+        "subjectId", "topicId", "contentId",
         "isActive", "difficulty",
         "timesUsed", "questionType",
         "createdAt", "updatedAt"
       ) VALUES (
         ${q.id}, ${q.statement}, ${alternativesJson}::jsonb, ${q.correctAnswer}, ${q.correctOption},
         ${q.explanation}, ${q.explanationCorrect}, ${q.explanationWrong},
-        ${subjectId}, ${topicId},
+        ${subjectId}, ${topicId}, ${contentId},
         true, ${q.difficulty},
         0, 'MULTIPLA_ESCOLHA',
         NOW(), NOW()
@@ -492,6 +492,19 @@ async function main() {
     console.log(`  ✅ Questão criada: ${q.id}`);
     questionCreated++;
   }
+
+  // ── Backfill contentId em questões já existentes (sem contentId) ─────────
+  let backfillCount = 0;
+  for (const q of questions) {
+    const contentId = contentIdMap[q.contentTitle];
+    if (!contentId) continue;
+    const result = await db.execute(sql`
+      UPDATE "Question" SET "contentId" = ${contentId}
+      WHERE id = ${q.id} AND "contentId" IS NULL
+    `) as any;
+    if ((result.rowCount ?? result.count ?? 0) > 0) backfillCount++;
+  }
+  if (backfillCount > 0) console.log(`  🔧 Backfill contentId: ${backfillCount} questões atualizadas`);
 
   // ── Relatório ────────────────────────────────────────────────────────────
   console.log("\n─────────────────────────────────────────");

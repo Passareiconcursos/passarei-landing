@@ -1204,21 +1204,36 @@ export function registerSalaRoutes(app: Express) {
           .replace(/\s+/g, "_")
           .replace(/[^A-Z0-9_]/g, "");
 
+      // Mapa de aliases: cobre divergências entre o nome normalizado e o Subject.name real no banco.
+      // Necessário porque lista_materias_json usa nomes de exibição e o banco usa siglas históricas.
+      const SUBJECT_CODE_ALIASES: Record<string, string> = {
+        "LINGUA_PORTUGUESA": "PORTUGUES",
+        "DIREITO_CONSTITUCIONAL": "DIR_CONSTITUCIONAL",
+        "DIREITO_PROCESSUAL_PENAL": "PROCESSUAL_PENAL",
+        "NOCOES_DE_DIREITO_ADMINISTRATIVO": "DIREITO_ADMINISTRATIVO",
+        "NOCOES_DE_INFORMATICA": "INFORMATICA",
+      };
+
       for (const m of materias) {
         const materiaName: string = m.name || "";
         if (!materiaName) continue;
 
-        // Busca Subject pelo nome de exibição primeiro; fallback pelo código normalizado
+        // Busca Subject pelo nome de exibição primeiro; fallback pelo código normalizado + alias
         let subjectRows = await db.execute(sql`
           SELECT id FROM "Subject" WHERE name ILIKE ${"%" + materiaName + "%"} LIMIT 1
         `) as any[];
         if (!subjectRows[0]) {
           const code = toSubjectCode(materiaName);
+          const aliasedCode = SUBJECT_CODE_ALIASES[code] ?? code;
           subjectRows = await db.execute(sql`
-            SELECT id FROM "Subject" WHERE name ILIKE ${"%" + code + "%"} LIMIT 1
+            SELECT id FROM "Subject" WHERE name ILIKE ${"%" + aliasedCode + "%"} LIMIT 1
           `) as any[];
+          console.log(`[edital/progress] matéria="${materiaName}" code="${code}" aliased="${aliasedCode}" found=${!!subjectRows[0]}`);
         }
-        if (!subjectRows[0]) continue;
+        if (!subjectRows[0]) {
+          console.warn(`[edital/progress] ⚠️  Matéria não encontrada no banco: "${materiaName}"`);
+          continue;
+        }
         const sid = subjectRows[0].id;
 
         // Total de conteúdos ativos na matéria

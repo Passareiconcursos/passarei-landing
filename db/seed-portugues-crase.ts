@@ -535,6 +535,20 @@ async function main() {
     questionCreated++;
   }
 
+  // ── Backfill contentId (fallback: primeiro conteúdo do tópico) ───────────
+  const firstContentRows = await db.execute(sql`
+    SELECT id FROM "Content" WHERE "topicId" = ${topicId} ORDER BY "createdAt" LIMIT 1
+  `) as any[];
+  if (firstContentRows[0]?.id) {
+    const fallbackContentId = firstContentRows[0].id;
+    const result = await db.execute(sql`
+      UPDATE "Question" SET "contentId" = ${fallbackContentId}
+      WHERE "topicId" = ${topicId} AND "contentId" IS NULL
+    `) as any;
+    const updated = result.rowCount ?? result.count ?? 0;
+    if (updated > 0) console.log(`  🔧 Backfill contentId: ${updated} questões → primeiro conteúdo do tópico`);
+  }
+
   // ── Relatório ────────────────────────────────────────────────────────────
   console.log("\n─────────────────────────────────────────");
   console.log(`📚 Conteúdos: ${contentCreated} criados, ${contentSkipped} já existiam`);
