@@ -2298,20 +2298,7 @@ export default function SalaAula() {
                 </>
               ) : (
                 <>
-                  {sm2DueCount > 0 && sm2ActiveIndex === null && (
-                    <Button
-                      onClick={startSm2Review}
-                      variant="outline"
-                      size="sm"
-                      className="relative"
-                    >
-                      <RotateCcw className="mr-1 h-3 w-3" />
-                      Revisar
-                      <span className="absolute -top-1.5 -right-1.5 bg-orange-500 text-white text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
-                        {sm2DueCount > 9 ? "9+" : sm2DueCount}
-                      </span>
-                    </Button>
-                  )}
+
                   {remaining != null && (
                     <span className="text-xs text-muted-foreground self-center ml-auto">
                       {remaining} questões restantes hoje
