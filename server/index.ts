@@ -148,6 +148,9 @@ Sitemap: https://www.passarei.com.br/sitemap.xml`);
     },
     () => {
       log(`serving on port ${port}`);
+      // Timeout aumentado para suportar chamadas de IA (redação ~30-60s)
+      server.timeout = 90_000;         // 90s por requisição
+      server.keepAliveTimeout = 95_000; // deve ser maior que timeout
     },
   );
 })();

@@ -364,6 +364,20 @@ export interface EssayCorrectionResult {
   };
 }
 
+const MODEL_HAIKU = "claude-haiku-4-5-20251001";
+
+// Erros que justificam tentar o modelo de fallback
+function isRetryableEssayError(error: any): boolean {
+  const status = error?.status ?? error?.statusCode ?? 0;
+  const errType = error?.error?.type ?? error?.type ?? "";
+  const code = error?.code ?? "";
+  return (
+    status === 429 || status === 503 || status === 529 ||
+    errType === "overloaded_error" ||
+    code === "ETIMEDOUT" || code === "ECONNRESET"
+  );
+}
+
 export async function correctEssay(
   theme: string,
   text: string,
@@ -411,38 +425,61 @@ Responda EXATAMENTE neste formato JSON:
 
 Retorne APENAS o JSON, sem texto adicional.`;
 
-  try {
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 2000,
-      messages: [{ role: "user", content: prompt }],
-    });
+  const candidates = [
+    { id: MODEL,       label: "Sonnet" },
+    { id: MODEL_HAIKU, label: "Haiku (fallback)" },
+  ];
 
-    const responseText =
-      response.content[0].type === "text" ? response.content[0].text : "";
+  let lastError: any;
 
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Resposta da IA não contém JSON válido");
+  for (const { id: modelId, label } of candidates) {
+    try {
+      console.log(`[AI] Iniciando chamada de Redação - Modelo: ${label}`);
+
+      const response = await anthropic.messages.create({
+        model: modelId,
+        max_tokens: 2000,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const responseText =
+        response.content[0].type === "text" ? response.content[0].text : "";
+
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("Resposta da IA não contém JSON válido");
+      }
+
+      const result = JSON.parse(jsonMatch[0]);
+      const total =
+        result.scores.comp1 +
+        result.scores.comp2 +
+        result.scores.comp3 +
+        result.scores.comp4 +
+        result.scores.comp5;
+
+      console.log(`✅ [AI] Redação corrigida por ${label} — Total: ${total}/1000`);
+      return {
+        scores: { ...result.scores, total },
+        feedback: result.feedback,
+      };
+    } catch (error: any) {
+      lastError = error;
+      const status = error?.status ?? error?.statusCode ?? "?";
+      const errType = error?.error?.type ?? error?.type ?? "unknown";
+      const msg = error?.message ?? String(error);
+
+      const isLast = modelId === candidates[candidates.length - 1].id;
+
+      if (!isLast && isRetryableEssayError(error)) {
+        console.warn(`⚠️ [AI Engine] Redação ${label} indisponível (status=${status} type=${errType}) — tentando fallback...`);
+        continue;
+      }
+
+      console.error(`❌ [AI Engine] Erro na correção de redação — Modelo: ${label} status=${status} type=${errType}: ${msg}`);
+      throw error;
     }
-
-    const result = JSON.parse(jsonMatch[0]);
-    const total =
-      result.scores.comp1 +
-      result.scores.comp2 +
-      result.scores.comp3 +
-      result.scores.comp4 +
-      result.scores.comp5;
-
-    return {
-      scores: { ...result.scores, total },
-      feedback: result.feedback,
-    };
-  } catch (error: any) {
-    const status = error?.status ?? error?.statusCode ?? "?";
-    const errType = error?.error?.type ?? error?.type ?? "unknown";
-    const msg = error?.message ?? String(error);
-    console.error(`❌ [AI Engine] Erro na correção de redação — status=${status} type=${errType}: ${msg}`);
-    throw error;
   }
+
+  throw lastError;
 }
