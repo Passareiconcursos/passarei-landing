@@ -41,6 +41,7 @@ export async function runAutoMigrations() {
   await run("phase5Subject",     migratePhase5SubjectColumns);
   await run("studyProgressCols", migrateStudyProgressColumns);
   await run("backfillCorrectOption", backfillCorrectOption);
+  await run("backfillCertoErrado",  backfillCertoErrado);
 
   console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
@@ -1396,6 +1397,45 @@ async function migrateStudyProgressColumns() {
     ADD COLUMN IF NOT EXISTS "lastStudyContentIds" TEXT DEFAULT '[]'
   `);
   console.log("  ✅ [StudyProgress] User: lastStudyContentIds adicionado");
+}
+
+// ============================================
+// BACKFILL CERTO/ERRADO — normaliza letras C/E → A/B
+// Seeds antigos (pre-Phase5) gravaram alternativas com letra "C" (Certo)
+// e "E" (Errado). O backfillCorrectOption anterior corretamente leu
+// correctAnswer='E' → correctOption=4. Mas 4 fica fora das 2 opções
+// renderizadas (A e B), causando "Gabarito: E" inválido na UI.
+// Este backfill renormaliza: C→A (índice 0), E→B (índice 1).
+// Idempotente: WHERE correctAnswer IN ('C','E') AND questionType='CERTO_ERRADO'.
+// ============================================
+async function backfillCertoErrado() {
+  const result = await db.execute(sql`
+    UPDATE "Question"
+    SET
+      "correctAnswer" = CASE "correctAnswer"
+        WHEN 'C' THEN 'A'
+        WHEN 'E' THEN 'B'
+        ELSE "correctAnswer"
+      END,
+      "correctOption" = CASE "correctAnswer"
+        WHEN 'C' THEN 0
+        WHEN 'E' THEN 1
+        ELSE "correctOption"
+      END,
+      "alternatives" = CASE
+        WHEN "questionType" = 'CERTO_ERRADO'
+        THEN '[{"letter":"A","text":"Certo"},{"letter":"B","text":"Errado"}]'::jsonb
+        ELSE "alternatives"
+      END
+    WHERE "questionType" = 'CERTO_ERRADO'
+      AND ("correctAnswer" = 'C' OR "correctAnswer" = 'E')
+  `) as any;
+  const updated = result.rowCount ?? result.count ?? 0;
+  if (updated > 0) {
+    console.log(`  ✅ [Backfill] CERTO/ERRADO: ${updated} questões normalizadas (C/E → A/B)`);
+  } else {
+    console.log("  ✅ [Backfill] CERTO/ERRADO: todas as questões já normalizadas");
+  }
 }
 
 // ============================================
