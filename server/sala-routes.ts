@@ -8,8 +8,8 @@
 import type { Express } from "express";
 import { db } from "../db";
 import { sql } from "drizzle-orm";
-import Anthropic from "@anthropic-ai/sdk";
 import { requireStudentAuth, getStudentProfile, type StudentJWTPayload } from "./auth-student";
+import { correctEssay } from "./services/ai-engine";
 
 // Services (shared with Telegram bot)
 import {
@@ -1502,20 +1502,7 @@ export function registerSalaRoutes(app: Express) {
     };
   }
 
-  async function correctEssayWithAI(theme: string, text: string, examType: string = "concurso policial") {
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2000,
-      messages: [{ role: "user", content: `Você é um corretor especialista em redações para ${examType}.\n\nTEMA: ${theme}\n\nTEXTO:\n${text}\n\nCorrija com os 5 critérios (0-200 pts cada, múltiplos de 40):\n1. Domínio da norma culta\n2. Compreensão da proposta\n3. Seleção e organização de argumentos\n4. Coesão textual\n5. Proposta de intervenção\n\nRetorne APENAS JSON:\n{"scores":{"comp1":0,"comp2":0,"comp3":0,"comp4":0,"comp5":0},"feedback":{"general":"...","comp1":"...","comp2":"...","comp3":"...","comp4":"...","comp5":"..."}}` }],
-    });
-    const text2 = response.content[0].type === "text" ? response.content[0].text : "";
-    const match = text2.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("JSON inválido na resposta da IA");
-    const r = JSON.parse(match[0]);
-    const total = r.scores.comp1 + r.scores.comp2 + r.scores.comp3 + r.scores.comp4 + r.scores.comp5;
-    return { scores: { ...r.scores, total }, feedback: r.feedback };
-  }
+  // correctEssay importado de ./services/ai-engine (compartilhado com bot)
 
   // GET /api/sala/essays/status - Status de redações do aluno
   app.get("/api/sala/essays/status", requireStudentAuth, async (req, res) => {
@@ -1574,12 +1561,15 @@ export function registerSalaRoutes(app: Express) {
       `) as any[];
       const essayId = essayResult[0].id;
 
-      // Correção via IA ANTES de consumir crédito (transação atômica)
+      // Correção via IA ANTES de consumir crédito (crédito preservado em caso de falha)
       let correction = null;
       try {
-        correction = await correctEssayWithAI(theme, text, examType);
-      } catch (_e) {
+        correction = await correctEssay(theme, text, examType);
+      } catch (aiError: any) {
         // IA falhou — marca erro, NÃO debita crédito
+        const aiStatus = aiError?.status ?? aiError?.statusCode ?? "?";
+        const aiMsg = aiError?.message ?? String(aiError);
+        console.error(`❌ [Sala] Falha na correção de redação (essayId=${essayId}, status=${aiStatus}): ${aiMsg}`);
         await db.execute(sql`UPDATE "essays" SET "status"='ERROR',"updated_at"=NOW() WHERE "id"=${essayId}`);
         return res.status(500).json({
           success: false,

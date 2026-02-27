@@ -1,139 +1,13 @@
 import type { Express } from "express";
 import { db } from "../db";
 import { sql } from "drizzle-orm";
-import Anthropic from "@anthropic-ai/sdk";
 import {
   checkEssayAccess,
   consumeEssay,
   getEssayStatus,
   PLAN_LIMITS,
 } from "./telegram/database";
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-// ============================================
-// CORREÇÃO DE REDAÇÃO COM IA CLAUDE
-// ============================================
-interface EssayCorrectionResult {
-  scores: {
-    comp1: number;
-    comp2: number;
-    comp3: number;
-    comp4: number;
-    comp5: number;
-    total: number;
-  };
-  feedback: {
-    general: string;
-    comp1: string;
-    comp2: string;
-    comp3: string;
-    comp4: string;
-    comp5: string;
-  };
-}
-
-async function correctEssayWithAI(
-  theme: string,
-  text: string,
-  examType: string = "concurso policial",
-): Promise<EssayCorrectionResult> {
-  const prompt = `Você é um corretor especialista em redações para concursos públicos, especialmente ${examType}.
-
-TEMA DA REDAÇÃO: ${theme}
-
-TEXTO DO CANDIDATO:
-${text}
-
-Corrija esta redação usando os 5 critérios de avaliação de redação para concursos públicos (0-200 pontos cada):
-
-1. **Competência 1** - Domínio da norma culta da língua escrita
-2. **Competência 2** - Compreensão da proposta e aplicação de conceitos
-3. **Competência 3** - Seleção, relação e organização de argumentos
-4. **Competência 4** - Conhecimento dos mecanismos linguísticos de coesão
-5. **Competência 5** - Proposta de intervenção respeitando direitos humanos
-
-IMPORTANTE:
-- Seja rigoroso mas construtivo
-- Dê notas múltiplas de 40 (0, 40, 80, 120, 160, 200)
-- Adapte a avaliação para o contexto de concursos públicos
-- Destaque pontos fortes e fracos
-
-Responda EXATAMENTE neste formato JSON:
-{
-  "scores": {
-    "comp1": [0-200],
-    "comp2": [0-200],
-    "comp3": [0-200],
-    "comp4": [0-200],
-    "comp5": [0-200]
-  },
-  "feedback": {
-    "general": "Feedback geral sobre a redação (3-4 linhas)",
-    "comp1": "Feedback específico da competência 1",
-    "comp2": "Feedback específico da competência 2",
-    "comp3": "Feedback específico da competência 3",
-    "comp4": "Feedback específico da competência 4",
-    "comp5": "Feedback específico da competência 5"
-  }
-}
-
-Retorne APENAS o JSON, sem texto adicional.`;
-
-  try {
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2000,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const responseText =
-      response.content[0].type === "text" ? response.content[0].text : "";
-
-    // Extrair JSON da resposta
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Resposta da IA não contém JSON válido");
-    }
-
-    const result = JSON.parse(jsonMatch[0]);
-
-    // Calcular nota total
-    const total =
-      result.scores.comp1 +
-      result.scores.comp2 +
-      result.scores.comp3 +
-      result.scores.comp4 +
-      result.scores.comp5;
-
-    return {
-      scores: {
-        comp1: result.scores.comp1,
-        comp2: result.scores.comp2,
-        comp3: result.scores.comp3,
-        comp4: result.scores.comp4,
-        comp5: result.scores.comp5,
-        total: total,
-      },
-      feedback: {
-        general: result.feedback.general,
-        comp1: result.feedback.comp1,
-        comp2: result.feedback.comp2,
-        comp3: result.feedback.comp3,
-        comp4: result.feedback.comp4,
-        comp5: result.feedback.comp5,
-      },
-    };
-  } catch (error: any) {
-    const status = error?.status ?? error?.statusCode ?? "?";
-    const errType = error?.error?.type ?? error?.type ?? "unknown";
-    const msg = error?.message ?? String(error);
-    console.error(`[Essay] Erro na correção com IA — status=${status} type=${errType}: ${msg}`);
-    throw error;
-  }
-}
+import { correctEssay, type EssayCorrectionResult } from "./services/ai-engine";
 
 // ============================================
 // ROTAS DE REDAÇÃO
@@ -253,18 +127,18 @@ export function registerEssayRoutes(app: Express) {
 
       const essay = essayResult[0] as any;
 
-      // Consumir redação (debitar créditos ou incrementar contador)
-      await consumeEssay(telegramId, access.reason);
-
-      // Corrigir com IA (async)
+      // Corrigir com IA ANTES de debitar crédito (crédito preservado em caso de falha)
       console.log(`[Essay] Iniciando correção da redação ${essay.id}...`);
 
       try {
-        const correction = await correctEssayWithAI(
+        const correction = await correctEssay(
           theme,
           text,
           user.examType || "concurso policial",
         );
+
+        // IA OK — consumir crédito apenas após sucesso
+        await consumeEssay(telegramId, access.reason);
 
         // Atualizar redação com correção
         await db.execute(sql`
