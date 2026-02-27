@@ -134,11 +134,12 @@ export async function getQuestionForContent(
   // Cobertura equivalente feita via T3 (Prisma "Question" por topicId/subjectId)
 
   // ── Tier 3: "Question" (Prisma legacy) por topicId / subjectId ─────────
+  // effectiveTopicId declarado FORA do try para ser acessível no T3a-LAST (após T4)
+  let effectiveTopicId = topicId;
   try {
     const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
 
     // Garantir topicId: se não veio no parâmetro, buscar no banco pelo contentId
-    let effectiveTopicId = topicId;
     if (!effectiveTopicId && contentId) {
       try {
         const contentRows = await db.execute(sql`
