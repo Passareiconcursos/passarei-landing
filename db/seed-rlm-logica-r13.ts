@@ -61,6 +61,13 @@ async function questionExists(id: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+function getCorrectAnswer(
+  alternatives: Array<{ letter: string; text: string }>,
+  correctOption: number,
+): string {
+  return alternatives[correctOption]?.letter ?? ["A", "B", "C", "D", "E"][correctOption] ?? "A";
+}
+
 // ============================================
 // CONTEÚDOS (6 átomos)
 // ============================================
@@ -318,7 +325,7 @@ interface QuestionData {
   statement: string;
   alternatives: Array<{ letter: string; text: string }>;
   correctOption: number;
-  questionType: "MULTIPLE_CHOICE" | "CERTO_ERRADO";
+  questionType: "MULTIPLA_ESCOLHA" | "CERTO_ERRADO";
   difficulty: "FACIL" | "MEDIO" | "DIFICIL";
   explanationCorrect: string;
   explanationWrong: string;
@@ -337,7 +344,7 @@ const questions: QuestionData[] = [
       { letter: "D", text: "O suspeito não foi identificado e está foragido." },
     ],
     correctOption: 1,
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
     difficulty: "MEDIO",
     explanationCorrect: "Alternativa B. Pela Lei de De Morgan: ¬(p ∧ q) ≡ ¬p ∨ ¬q. A conjunção negada vira disjunção das negações. 'Identificado E foragido' negado = 'NÃO identificado OU NÃO foragido'.",
     explanationWrong: "A negação da conjunção (∧) é a disjunção (∨) das negações — De Morgan. Negar 'p E q' resulta em '¬p OU ¬q', não '¬p E ¬q'.",
@@ -382,7 +389,7 @@ const questions: QuestionData[] = [
       { letter: "D", text: "p é verdadeiro e q é falso." },
     ],
     correctOption: 3,
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
     difficulty: "FACIL",
     explanationCorrect: "Alternativa D. O condicional p→q só é FALSO quando a hipótese (p) é verdadeira e a tese (q) é falsa. Em todos os outros casos, o condicional é verdadeiro — inclusive quando p é falso.",
     explanationWrong: "O condicional é falso APENAS quando p=V e q=F. Isso ocorre porque uma premissa verdadeira não pode levar a uma conclusão falsa em um raciocínio válido.",
@@ -413,7 +420,7 @@ const questions: QuestionData[] = [
       { letter: "D", text: "Falso, pois o bicondicional é verdadeiro." },
     ],
     correctOption: 0,
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
     difficulty: "DIFICIL",
     explanationCorrect: "Alternativa A. Com p=V e q=F: p↔q = F (valores distintos). O condicional (p↔q)→¬p tem antecedente F, portanto é VERDADEIRO (condicional com antecedente falso é sempre verdadeiro).",
     explanationWrong: "Passo a passo: p=V, q=F → p↔q=F. Então F→¬p. Como o antecedente é F, o condicional é V independentemente do consequente. Regra: condicional com hipótese falsa é sempre verdadeiro.",
@@ -444,7 +451,7 @@ const questions: QuestionData[] = [
       { letter: "D", text: "p ↔ p" },
     ],
     correctOption: 2,
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
     difficulty: "FACIL",
     explanationCorrect: "Alternativa C. p∧¬p é sempre FALSA (uma proposição não pode ser verdadeira e falsa ao mesmo tempo — lei da não-contradição). As demais (p∨¬p, p→p, p↔p) são tautologias.",
     explanationWrong: "A contradição é p∧¬p: afirmar p e ¬p simultaneamente é sempre falso. As demais são tautologias: p∨¬p (terceiro excluído), p→p (identidade), p↔p (identidade bicondicional).",
@@ -490,7 +497,7 @@ const questions: QuestionData[] = [
       { letter: "D", text: "Se o candidato não obtiver nota mínima, não será aprovado." },
     ],
     correctOption: 1,
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
     difficulty: "DIFICIL",
     explanationCorrect: "Alternativa B. 'p somente se q' equivale a p→q. Aqui: 'aprovado (p) somente se nota mínima (q)' = aprovado → nota mínima. Alternativa B expressa exatamente isso. A alternativa A inverte a relação (seria q→p, a recíproca).",
     explanationWrong: "'Somente se' é uma das pegadinhas mais cobradas. 'p somente se q' = p→q (não q→p). A nota mínima é condição NECESSÁRIA para aprovação: sem nota mínima, não há aprovação.",
@@ -586,16 +593,17 @@ async function main() {
     }
 
     const alternatives = JSON.stringify(q.alternatives);
+    const correctAnswer = getCorrectAnswer(q.alternatives, q.correctOption);
 
     await db.execute(sql`
       INSERT INTO "Question" (
-        id, statement, alternatives, "correctOption",
+        id, statement, alternatives, "correctAnswer", "correctOption",
         "questionType", difficulty,
         "explanationCorrect", "explanationWrong",
         "subjectId", "topicId", "contentId",
         "isActive", "timesUsed", "createdAt", "updatedAt"
       ) VALUES (
-        ${q.id}, ${q.statement}, ${alternatives}::jsonb, ${q.correctOption},
+        ${q.id}, ${q.statement}, ${alternatives}::jsonb, ${correctAnswer}, ${q.correctOption},
         ${q.questionType}, ${q.difficulty},
         ${q.explanationCorrect}, ${q.explanationWrong},
         ${subjectId}, ${topicId}, ${contentId},

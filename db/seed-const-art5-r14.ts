@@ -68,6 +68,13 @@ async function questionExists(id: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+function getCorrectAnswer(
+  alternatives: Array<{ letter: string; text: string }>,
+  correctOption: number,
+): string {
+  return alternatives[correctOption]?.letter ?? ["A", "B", "C", "D", "E"][correctOption] ?? "A";
+}
+
 // ============================================
 // CONTEÚDOS (6 átomos)
 // ============================================
@@ -329,7 +336,7 @@ interface QuestionData {
   statement: string;
   alternatives: Array<{ letter: string; text: string }>;
   correctOption: number;
-  questionType: "MULTIPLE_CHOICE" | "CERTO_ERRADO";
+  questionType: "MULTIPLA_ESCOLHA" | "CERTO_ERRADO";
   difficulty: "FACIL" | "MEDIO" | "DIFICIL";
   explanationCorrect: string;
   explanationWrong: string;
@@ -362,7 +369,7 @@ const questions: QuestionData[] = [
       { letter: "D", text: "É permitida para qualquer processo judicial, inclusive cível, desde que por ordem do juiz." },
     ],
     correctOption: 2,
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
     difficulty: "MEDIO",
     explanationCorrect: "Alternativa C. O Art. 5°, XII autoriza a quebra do sigilo telefônico apenas por ORDEM JUDICIAL e para fins de INVESTIGAÇÃO CRIMINAL ou INSTRUÇÃO PROCESSUAL PENAL. A exceção é restrita — não vale para processos cíveis nem pode ser determinada pela autoridade policial.",
     explanationWrong: "O inciso XII é claro: sigilo telefônico pode ser quebrado por ordem judicial, mas somente para investigação criminal ou instrução processual penal. Processos cíveis ou decisão policial sem mandado são hipóteses não previstas.",
@@ -393,7 +400,7 @@ const questions: QuestionData[] = [
       { letter: "D", text: "A censura prévia é admitida para conteúdos que possam ofender grupos vulneráveis." },
     ],
     correctOption: 1,
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
     difficulty: "FACIL",
     explanationCorrect: "Alternativa B. O inciso IX é expresso: expressão intelectual, artística, científica e de comunicação é livre, INDEPENDENTEMENTE de censura ou licença. A CF/88 veda a censura prévia — a responsabilização ocorre APÓS a expressão, não antes.",
     explanationWrong: "O Art. 5°, IX veda censura e licença prévia de forma absoluta para atividade intelectual/artística/científica. O Estado não pode impedir a publicação — pode responsabilizar civilmente ou penalmente após a publicação.",
@@ -424,7 +431,7 @@ const questions: QuestionData[] = [
       { letter: "D", text: "Exclusivamente penal: não se aplica a processos administrativos." },
     ],
     correctOption: 2,
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
     difficulty: "MEDIO",
     explanationCorrect: "Alternativa C. O devido processo legal possui DUAS dimensões: formal (procedimental) — cumprimento dos ritos e formas legais; e substantiva (material) — razoabilidade e proporcionalidade das decisões. Aplica-se a processos judiciais E administrativos.",
     explanationWrong: "O STF reconhece o devido processo legal substantivo (substantive due process), além do formal. Uma lei tecnicamente válida, mas desproporcional, pode violar o devido processo legal material.",
@@ -441,7 +448,7 @@ const questions: QuestionData[] = [
       { letter: "D", text: "O habeas corpus protege direito líquido e certo não amparado por outros remédios." },
     ],
     correctOption: 2,
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
     difficulty: "MEDIO",
     explanationCorrect: "Alternativa C. O mandado de injunção (Art. 5°, LXXI) é cabível exatamente quando a falta de norma regulamentadora torna inviável o exercício de direitos constitucionais. O HD é personalíssimo (só o titular). A AP exige qualidade de cidadão (eleitor). O HC protege liberdade de locomoção.",
     explanationWrong: "A: HD é personalíssimo — só o titular pode impetrar. B: AP exige qualidade de CIDADÃO (eleitor com título em dia). D: HC protege liberdade de locomoção, não 'direito líquido e certo' (esse é o MS).",
@@ -486,7 +493,7 @@ const questions: QuestionData[] = [
       { letter: "D", text: "Só ficará isento de identificação criminal se apresentar certidão de antecedentes." },
     ],
     correctOption: 1,
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
     difficulty: "MEDIO",
     explanationCorrect: "Alternativa B. O inciso LVIII estabelece a regra: o civilmente identificado não será submetido à identificação criminal — salvo nas hipóteses previstas em lei. A lei pode criar exceções, como em crimes hediondos ou militares.",
     explanationWrong: "A CF/88 adota regra (sem ID criminal para identificado civilmente) mais exceção (lei pode prever hipóteses). Não é direito absoluto nem obrigação absoluta.",
@@ -517,7 +524,7 @@ const questions: QuestionData[] = [
       { letter: "D", text: "A propriedade que não cumpre função social deve ser extinta, sem qualquer forma de indenização." },
     ],
     correctOption: 1,
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
     difficulty: "DIFICIL",
     explanationCorrect: "Alternativa B. A função social não é mero limite externo — ela integra o CONTEÚDO do direito de propriedade. Propriedade que não cumpre função social pode ser objeto de desapropriação (com indenização na forma da lei) ou de outras sanções previstas na CF/88. Aplica-se tanto à propriedade rural quanto à urbana.",
     explanationWrong: "A função social é elemento constitutivo do direito de propriedade, não apenas um limite externo. A propriedade urbana também deve cumprir função social (plano diretor, Art. 182 CF). A não observância pode gerar desapropriação, mas com indenização (exceto confisco do Art. 243).",
@@ -598,16 +605,17 @@ async function main() {
     }
 
     const alternatives = JSON.stringify(q.alternatives);
+    const correctAnswer = getCorrectAnswer(q.alternatives, q.correctOption);
 
     await db.execute(sql`
       INSERT INTO "Question" (
-        id, statement, alternatives, "correctOption",
+        id, statement, alternatives, "correctAnswer", "correctOption",
         "questionType", difficulty,
         "explanationCorrect", "explanationWrong",
         "subjectId", "topicId", "contentId",
         "isActive", "timesUsed", "createdAt", "updatedAt"
       ) VALUES (
-        ${q.id}, ${q.statement}, ${alternatives}::jsonb, ${q.correctOption},
+        ${q.id}, ${q.statement}, ${alternatives}::jsonb, ${correctAnswer}, ${q.correctOption},
         ${q.questionType}, ${q.difficulty},
         ${q.explanationCorrect}, ${q.explanationWrong},
         ${subjectId}, ${topicId}, ${contentId},
