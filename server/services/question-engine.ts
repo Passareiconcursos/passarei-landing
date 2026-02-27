@@ -273,25 +273,37 @@ export async function getQuestionForContent(
     console.error(`❌ [Question T4] AI Haiku falhou: ${e?.message?.split("\n")[0]}`);
   }
 
-  // ── Tier 3a-LAST: último recurso por topicId (só quando contentId foi fornecido mas T4 falhou)
-  // Evita "Nenhuma questão disponível" quando a IA está indisponível.
-  // Pode servir questão de átomo diferente (roleta russa), mas é preferível a erro.
-  if (contentId && effectiveTopicId) {
-    try {
-      const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
-      const t3aLast = await db.execute(sql`
-        SELECT q.* FROM "Question" q
-        WHERE q."topicId" = ${effectiveTopicId}
-          AND q."isActive" = true
-          ${reviewClause}
-        ORDER BY q."timesUsed" ASC, RANDOM()
-        LIMIT 1
-      `) as any[];
+  // ── Tier 3-LAST: último recurso após T4 falhar (evita "Nenhuma questão disponível")
+  // Aceita roleta russa como mal menor quando a IA está indisponível.
+  if (contentId) {
+    // T3a-LAST: por topicId (mais preciso — só se disponível)
+    if (effectiveTopicId) {
+      try {
+        const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
+        const t3aLast = await db.execute(sql`
+          SELECT q.* FROM "Question" q
+          WHERE q."topicId" = ${effectiveTopicId}
+            AND q."isActive" = true
+            ${reviewClause}
+          ORDER BY q."timesUsed" ASC, RANDOM()
+          LIMIT 1
+        `) as any[];
 
-      if (t3aLast.length > 0) {
-        await db.execute(sql`UPDATE "Question" SET "timesUsed" = "timesUsed" + 1 WHERE "id" = ${t3aLast[0].id}`);
-        console.warn(`⚠️ [Question T3a-LAST] Fallback topicId após falha T4 — questão pode não ser do átomo correto: ${t3aLast[0].id}`);
-        return t3aLast[0];
+        if (t3aLast.length > 0) {
+          await db.execute(sql`UPDATE "Question" SET "timesUsed" = "timesUsed" + 1 WHERE "id" = ${t3aLast[0].id}`);
+          console.warn(`⚠️ [Question T3a-LAST] Fallback topicId após T4: ${t3aLast[0].id}`);
+          return t3aLast[0];
+        }
+      } catch (_e) { /* não bloqueia */ }
+    }
+
+    // T3b-LAST: por subjectId — fallback absoluto, garante que jamais retorna null
+    // quando há questões disponíveis para a matéria (mesmo de tópico diferente).
+    try {
+      const bySubject = await getQuestionForSubject(subjectId, usedQuestionIds);
+      if (bySubject) {
+        console.warn(`⚠️ [Question T3b-LAST] Fallback subjectId após T4 (topicId=${effectiveTopicId ?? "null"}): ${bySubject.id}`);
+        return bySubject;
       }
     } catch (_e) { /* não bloqueia */ }
   }
