@@ -84,7 +84,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
 
   try {
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 2000,
       messages: [{ role: "user", content: prompt }],
     });
@@ -126,8 +126,11 @@ Retorne APENAS o JSON, sem texto adicional.`;
         comp5: result.feedback.comp5,
       },
     };
-  } catch (error) {
-    console.error("[Essay] Erro na correção com IA:", error);
+  } catch (error: any) {
+    const status = error?.status ?? error?.statusCode ?? "?";
+    const errType = error?.error?.type ?? error?.type ?? "unknown";
+    const msg = error?.message ?? String(error);
+    console.error(`[Essay] Erro na correção com IA — status=${status} type=${errType}: ${msg}`);
     throw error;
   }
 }
@@ -300,7 +303,7 @@ export function registerEssayRoutes(app: Express) {
           amountPaid:
             access.reason === "paid" ? PLAN_LIMITS.PRICE_PER_ESSAY : 0,
         });
-      } catch (correctionError) {
+      } catch (correctionError: any) {
         // Marcar como erro
         await db.execute(sql`
           UPDATE "essays"
@@ -308,11 +311,14 @@ export function registerEssayRoutes(app: Express) {
           WHERE "id" = ${essay.id}
         `);
 
-        console.error("[Essay] Erro na correção:", correctionError);
+        const status = correctionError?.status ?? correctionError?.statusCode ?? "?";
+        const msg = correctionError?.message ?? String(correctionError);
+        console.error(`[Essay] Falha na correção (essayId=${essay.id}, status=${status}): ${msg}`);
         res.status(500).json({
           success: false,
           error: "Erro ao corrigir redação. Tente novamente.",
           essayId: essay.id,
+          detail: process.env.NODE_ENV !== "production" ? msg : undefined,
         });
       }
     } catch (error) {

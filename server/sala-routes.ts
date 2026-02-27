@@ -1505,7 +1505,7 @@ export function registerSalaRoutes(app: Express) {
   async function correctEssayWithAI(theme: string, text: string, examType: string = "concurso policial") {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 2000,
       messages: [{ role: "user", content: `Você é um corretor especialista em redações para ${examType}.\n\nTEMA: ${theme}\n\nTEXTO:\n${text}\n\nCorrija com os 5 critérios (0-200 pts cada, múltiplos de 40):\n1. Domínio da norma culta\n2. Compreensão da proposta\n3. Seleção e organização de argumentos\n4. Coesão textual\n5. Proposta de intervenção\n\nRetorne APENAS JSON:\n{"scores":{"comp1":0,"comp2":0,"comp3":0,"comp4":0,"comp5":0},"feedback":{"general":"...","comp1":"...","comp2":"...","comp3":"...","comp4":"...","comp5":"..."}}` }],
     });
