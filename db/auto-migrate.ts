@@ -40,6 +40,7 @@ export async function runAutoMigrations() {
   await run("phase5Question",    migratePhase5QuestionColumns);
   await run("phase5Subject",     migratePhase5SubjectColumns);
   await run("studyProgressCols", migrateStudyProgressColumns);
+  await run("backfillCorrectOption", backfillCorrectOption);
 
   console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
@@ -1270,7 +1271,7 @@ async function verifyPhase5Integrity() {
     console.log("  ✅ [Phase5 Integrity] Content.body ausente (usa textContent) — OK");
   }
 
-  // 3. Confirmar que "Question" NÃO tem coluna contentId (relação via subjectId)
+  // 3. Confirmar que "Question" TEM coluna contentId (usada pelo Tier 3a-0 para evitar roleta russa)
   const contentIdCheck = await db.execute(sql`
     SELECT EXISTS (
       SELECT FROM information_schema.columns
@@ -1278,9 +1279,9 @@ async function verifyPhase5Integrity() {
     ) as exists
   `) as any[];
   if (contentIdCheck[0]?.exists) {
-    console.warn("  ⚠️ [Phase5 Integrity] Question.contentId encontrado — coluna obsoleta presente");
+    console.log("  ✅ [Phase5 Integrity] Question.contentId presente — vínculo por conteúdo ativo (Tier 3a-0)");
   } else {
-    console.log("  ✅ [Phase5 Integrity] Question.contentId ausente (relação via subjectId) — OK");
+    console.warn("  ⚠️ [Phase5 Integrity] Question.contentId ausente — seeds Group A não funcionarão corretamente");
   }
 
   console.log("  ✅ [Phase5 Integrity] Verificação concluída");
@@ -1395,4 +1396,35 @@ async function migrateStudyProgressColumns() {
     ADD COLUMN IF NOT EXISTS "lastStudyContentIds" TEXT DEFAULT '[]'
   `);
   console.log("  ✅ [StudyProgress] User: lastStudyContentIds adicionado");
+}
+
+// ============================================
+// BACKFILL correctOption — questões antigas sem índice numérico
+// Seeds pré-Phase5 popularam "correctAnswer" (letra A/B/C/D/E) mas
+// não "correctOption" (índice 0-4). O endpoint de resposta usa
+// correctOption para calcular isCorrect — sem ele, qualquer resposta
+// diferente de A é marcada incorreta e o gabarito exibe "?".
+// Idempotente: WHERE "correctOption" IS NULL.
+// ============================================
+async function backfillCorrectOption() {
+  const result = await db.execute(sql`
+    UPDATE "Question"
+    SET "correctOption" = CASE "correctAnswer"
+      WHEN 'A' THEN 0
+      WHEN 'B' THEN 1
+      WHEN 'C' THEN 2
+      WHEN 'D' THEN 3
+      WHEN 'E' THEN 4
+      ELSE NULL
+    END
+    WHERE "correctOption" IS NULL
+      AND "correctAnswer" IS NOT NULL
+      AND "correctAnswer" IN ('A','B','C','D','E')
+  `) as any;
+  const updated = result.rowCount ?? result.count ?? 0;
+  if (updated > 0) {
+    console.log(`  ✅ [Backfill] correctOption: ${updated} questões corrigidas (gabarito '?' eliminado)`);
+  } else {
+    console.log("  ✅ [Backfill] correctOption: todas as questões já estavam corretas");
+  }
 }

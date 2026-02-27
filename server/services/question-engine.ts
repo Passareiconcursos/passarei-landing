@@ -167,11 +167,15 @@ export async function getQuestionForContent(
         console.log(`✅ [Question T3a-0] Prisma por contentId: ${t3a0[0].id}`);
         return t3a0[0];
       }
-      console.log(`⚠️ [Question T3a-0] Nenhuma questão para contentId ${contentId} — caindo para topicId`);
+      console.log(`⚠️ [Question T3a-0] Nenhuma questão para contentId ${contentId} — pulando T3a, indo para T4`);
     }
 
-    // T3a: questão vinculada ao tópico específico (fallback quando não há questão por contentId)
-    if (effectiveTopicId) {
+    // T3a: questão vinculada ao tópico específico.
+    // REGRA ANTI-ROLETA-RUSSA: se contentId foi fornecido (átomo específico), NÃO usar T3a.
+    // Retornar uma questão aleatória do tópico quando o aluno estuda um átomo específico
+    // causa "roleta russa" (aluno estuda Sócrates, recebe questão de Platão).
+    // Quando contentId está presente, T4 (IA) gera a questão certa e a persiste para usos futuros.
+    if (effectiveTopicId && !contentId) {
       const t3a = await db.execute(sql`
         SELECT q.* FROM "Question" q
         WHERE q."topicId" = ${effectiveTopicId}
@@ -189,11 +193,13 @@ export async function getQuestionForContent(
       console.log(`⚠️ [Question T3a] Nenhuma questão para topicId ${effectiveTopicId} — caindo para subjectId`);
     }
 
-    // T3b: fallback para qualquer questão da matéria (último recurso antes da IA)
-    const bySubject = await getQuestionForSubject(subjectId, usedQuestionIds);
-    if (bySubject) {
-      console.log(`✅ [Question T3b] Prisma por subjectId: ${bySubject.id}`);
-      return bySubject;
+    // T3b: fallback para qualquer questão da matéria (apenas sem contentId — nunca roleta russa)
+    if (!contentId) {
+      const bySubject = await getQuestionForSubject(subjectId, usedQuestionIds);
+      if (bySubject) {
+        console.log(`✅ [Question T3b] Prisma por subjectId: ${bySubject.id}`);
+        return bySubject;
+      }
     }
   } catch (e: any) {
     console.warn(`⚠️ [Question T3] Falhou (tabela legada): ${e?.message?.split("\n")[0]}`);

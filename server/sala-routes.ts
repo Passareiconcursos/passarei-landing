@@ -469,12 +469,19 @@ export function registerSalaRoutes(app: Express) {
       } else {
         // Try "Question" (Prisma legacy) first
         const prismaQ = await db.execute(sql`
-          SELECT "correctOption", "statement", "explanation", "explanationCorrect", "explanationWrong"
+          SELECT "correctOption", "correctAnswer", "statement", "explanation", "explanationCorrect", "explanationWrong"
           FROM "Question" WHERE id = ${questionId} LIMIT 1
         `) as any[];
 
         if (prismaQ.length > 0) {
-          correctAnswer = prismaQ[0].correctOption;
+          // Fallback: questões antigas (pré-Phase5) têm correctAnswer (letra) mas correctOption NULL.
+          // Sem esse fallback: isCorrect sempre false para respostas ≠ A, gabarito exibe "?".
+          const rawOption = prismaQ[0].correctOption;
+          if (rawOption != null) {
+            correctAnswer = Number(rawOption);
+          } else {
+            correctAnswer = ["A", "B", "C", "D", "E"].indexOf(prismaQ[0].correctAnswer ?? "");
+          }
           questionText = prismaQ[0].statement ?? "";
           // Armazenar explicações do banco para usar na cadeia de fallback
           (req as any)._prismaExplanationCorrect = prismaQ[0].explanationCorrect ?? null;
