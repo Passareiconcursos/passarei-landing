@@ -598,14 +598,14 @@ async function main() {
     await db.execute(sql`
       INSERT INTO "Question" (
         id, statement, alternatives, "correctAnswer", "correctOption",
+        "explanation", "explanationCorrect", "explanationWrong",
         "questionType", difficulty,
-        "explanationCorrect", "explanationWrong",
         "subjectId", "topicId", "contentId",
         "isActive", "timesUsed", "createdAt", "updatedAt"
       ) VALUES (
         ${q.id}, ${q.statement}, ${alternatives}::jsonb, ${correctAnswer}, ${q.correctOption},
+        ${q.explanationCorrect}, ${q.explanationCorrect}, ${q.explanationWrong},
         ${q.questionType}, ${q.difficulty},
-        ${q.explanationCorrect}, ${q.explanationWrong},
         ${subjectId}, ${topicId}, ${contentId},
         true, 0, NOW(), NOW()
       )
