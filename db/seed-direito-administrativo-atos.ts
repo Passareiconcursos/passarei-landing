@@ -157,6 +157,7 @@ interface QuestionData {
   explanationCorrect: string;
   explanationWrong: string;
   difficulty: "FACIL" | "MEDIO" | "DIFICIL";
+  questionType: "CERTO_ERRADO" | "MULTIPLA_ESCOLHA";
   contentTitle: string;
 }
 
@@ -177,6 +178,7 @@ const questions: QuestionData[] = [
     explanationCorrect: "Correto! Presunção juris tantum = relativa = quem alega ilegalidade prova. Esse é o efeito prático da presunção de legitimidade — inverte o ônus da prova em favor da Administração.",
     explanationWrong: "A presunção NÃO é absoluta (juris et de jure). Ela é RELATIVA (juris tantum) e pode ser afastada por prova em contrário. O ônus de provar a ilegalidade é de quem a alega (geralmente o administrado), não da Administração.",
     difficulty: "FACIL",
+    questionType: "MULTIPLA_ESCOLHA",
     contentTitle: "Ato Administrativo: Conceito, Validade e Presunção de Legitimidade",
   },
   // ── Q2 — Autoexecutoriedade (FACIL) ─────────────────────────────────────
@@ -195,6 +197,7 @@ const questions: QuestionData[] = [
     explanationCorrect: "Exato! Autoexecutoriedade = execução por meios próprios sem autorização judicial, MAS exige previsão legal ou urgência. Não é um atributo presente em todos os atos nem de forma ilimitada.",
     explanationWrong: "Autoexecutoriedade NÃO é absoluta — não está presente em todos os atos. Cobrança de multa NÃO é autoexecutória (precisa de execução fiscal). A questão-chave: autoexecutoriedade permite executar, não cobrar valores sem processo judicial.",
     difficulty: "FACIL",
+    questionType: "MULTIPLA_ESCOLHA",
     contentTitle: "Atributos do Ato Administrativo: PIAT (Presunção, Imperatividade, Autoexecutoriedade, Tipicidade)",
   },
   // ── Q3 — Forma como Elemento (FACIL) ─────────────────────────────────────
@@ -213,6 +216,7 @@ const questions: QuestionData[] = [
     explanationCorrect: "Correto que a alternativa C é a INCORRETA. Forma é elemento obrigatório, e o Direito Administrativo é formal — a regra é a forma escrita. O agente público não escolhe livremente a forma.",
     explanationWrong: "A alternativa incorreta é a C. Forma é elemento OBRIGATÓRIO do ato administrativo. O Direito Administrativo é formal — regra geral: ato escrito. A ausência ou vício de forma pode invalidar o ato (salvo convalidação quando não essencial).",
     difficulty: "FACIL",
+    questionType: "MULTIPLA_ESCOLHA",
     contentTitle: "Elementos do Ato Administrativo: Competência, Objeto, Motivo, Finalidade e Forma",
   },
   // ── Q4 — Vinculado vs Discricionário (FACIL) ────────────────────────────
@@ -231,6 +235,7 @@ const questions: QuestionData[] = [
     explanationCorrect: "Perfeito! Ato vinculado: lei prevê todos os requisitos → agente DEVE agir. Não há mérito administrativo. Alvará concedido quando cumpridos todos os requisitos é o exemplo padrão de ato vinculado.",
     explanationWrong: "Ato vinculado = lei esgota os requisitos → agente não tem margem. Se todos os requisitos estão atendidos, a negativa é ilegal. Discricionário seria se a lei deixasse espaço de escolha (conveniência/oportunidade) — não é o caso de alvará com requisitos legais definidos.",
     difficulty: "FACIL",
+    questionType: "MULTIPLA_ESCOLHA",
     contentTitle: "Atos Vinculados vs Discricionários: Mérito Administrativo",
   },
   // ── Q5 — Teoria dos Motivos Determinantes (MEDIO) ───────────────────────
@@ -249,6 +254,7 @@ const questions: QuestionData[] = [
     explanationCorrect: "Correto! Teoria dos Motivos Determinantes: motivo declarado vincula o ato. Motivo falso → anulação. Mesmo que a lei não exigisse motivação (cargo em comissão é ad nutum), ao motivar, a Administração se vinculou.",
     explanationWrong: "Cuidado! Cargos em comissão são ad nutum (livre exoneração), mas quando a Administração DECLARA um motivo, esse motivo se torna vinculante. Motivo falso → ato anulado (Teoria dos Motivos Determinantes). Vício de motivo é INSANÁVEL — não pode ser convalidado.",
     difficulty: "MEDIO",
+    questionType: "MULTIPLA_ESCOLHA",
     contentTitle: "Teoria dos Motivos Determinantes e Convalidação dos Atos Administrativos",
   },
   // ── Q6 — Revogação: efeitos ex-nunc (MEDIO, CERTO/ERRADO) ────────────────
@@ -265,6 +271,7 @@ const questions: QuestionData[] = [
     explanationCorrect: "Correto! Revogação = ato legal + conveniência/oportunidade + efeitos ex-nunc. Atos praticados durante a vigência do ato revogado são válidos. Questão clássica CEBRASPE sobre revogação.",
     explanationWrong: "O item está CERTO. Revogação: ato válido + razões de mérito + efeitos ex-nunc (futuro). Os atos praticados durante a vigência do ato revogado NÃO são afetados. Atenção: anulação sim retroage (ex-tunc); revogação não.",
     difficulty: "MEDIO",
+    questionType: "CERTO_ERRADO",
     contentTitle: "Extinção dos Atos Administrativos: Revogação vs Anulação",
   },
   // ── Q7 — Anulação: efeitos ex-tunc (MEDIO) ──────────────────────────────
@@ -283,6 +290,7 @@ const questions: QuestionData[] = [
     explanationCorrect: "Correto! Anulação = ato ilegal + efeitos ex-tunc + Administração pode anular (autotutela/Súmula 473). Terceiros de boa-fé têm efeitos preservados por segurança jurídica. Prazo decadencial: 5 anos (não 10).",
     explanationWrong: "Atenção: a Administração TEM poder de anular seus atos (autotutela). A anulação produz efeitos ex-TUNC (retroativos), não ex-nunc. O prazo decadencial é de 5 anos (não 10). Boa-fé de terceiros é preservada por segurança jurídica.",
     difficulty: "MEDIO",
+    questionType: "MULTIPLA_ESCOLHA",
     contentTitle: "Extinção dos Atos Administrativos: Revogação vs Anulação",
   },
   // ── Q8 — Imperatividade (MEDIO) ─────────────────────────────────────────
@@ -301,6 +309,7 @@ const questions: QuestionData[] = [
     explanationCorrect: "Exato! Imperatividade = imposição unilateral de obrigações sem necessidade de consentimento. O ato obriga terceiros. Distinga de autoexecutoriedade (execução sem judiciário) — são atributos diferentes.",
     explanationWrong: "Imperatividade ≠ autoexecutoriedade. Imperatividade: obriga sem consentimento. Autoexecutoriedade: executa sem judicial. A alternativa D descreve autoexecutoriedade, não imperatividade. Nem todo ato tem imperatividade (atos negociais, por exemplo, não impõem — dependem de pedido do particular).",
     difficulty: "MEDIO",
+    questionType: "MULTIPLA_ESCOLHA",
     contentTitle: "Atributos do Ato Administrativo: PIAT (Presunção, Imperatividade, Autoexecutoriedade, Tipicidade)",
   },
   // ── Q9 — Mérito Administrativo e Judiciário (DIFICIL, C/E) ───────────────
@@ -317,6 +326,7 @@ const questions: QuestionData[] = [
     explanationCorrect: "Correto! Controle judicial do ato discricionário: legalidade sim, mérito não. Desvio de finalidade é ilegalidade → anulável. Substituir conveniência/oportunidade: vedado ao Judiciário. Entendimento consolidado STF/STJ.",
     explanationWrong: "O item está CERTO. Judiciário: pode anular ato ilegal (inclusive discricionário com desvio de finalidade), MAS não pode substituir a opção de conveniência/oportunidade do administrador — isso seria violação à separação de poderes.",
     difficulty: "DIFICIL",
+    questionType: "CERTO_ERRADO",
     contentTitle: "Atos Vinculados vs Discricionários: Mérito Administrativo",
   },
   // ── Q10 — Convalidação: vícios sanáveis (DIFICIL, C/E) ───────────────────
@@ -333,6 +343,7 @@ const questions: QuestionData[] = [
     explanationCorrect: "Correto! Convalidação: Competência e Forma (CoFo) — sanáveis. Objeto, Motivo e Finalidade (OMF) — insanáveis. Essa distinção é cobrada extensamente em provas federais e CEBRASPE.",
     explanationWrong: "O item está CERTO. Memorize CoFo vs OMF: Competência e Forma podem ser convalidados; Objeto, Motivo e Finalidade são insanáveis → só anulação. A convalidação tem efeitos ex-tunc (retroage — como se o ato sempre fosse válido).",
     difficulty: "DIFICIL",
+    questionType: "CERTO_ERRADO",
     contentTitle: "Teoria dos Motivos Determinantes e Convalidação dos Atos Administrativos",
   },
   // ── Q11 — Autoexecutoriedade + Proporcionalidade (DIFICIL) ────────────────
@@ -351,6 +362,7 @@ const questions: QuestionData[] = [
     explanationCorrect: "Perfeito! Autoexecutoriedade em urgência + previsão legal + proporcionalidade = ação legal. Medicamentos adulterados representam risco imediato à saúde pública — justifica atuação sem judicial. Esse é o caso típico de autoexecutoriedade por urgência.",
     explanationWrong: "Autoexecutoriedade não exige autorização judicial quando há urgência ou previsão legal (ambos presentes aqui). A proporcionalidade é exigida, mas apreensão de medicamentos adulterados é medida adequada, necessária e proporcional ao risco à saúde. A alternativa A erra ao exigir sempre autorização judicial.",
     difficulty: "DIFICIL",
+    questionType: "MULTIPLA_ESCOLHA",
     contentTitle: "Atributos do Ato Administrativo: PIAT (Presunção, Imperatividade, Autoexecutoriedade, Tipicidade)",
   },
   // ── Q12 — Silêncio Administrativo (DIFICIL) ──────────────────────────────
@@ -369,6 +381,7 @@ const questions: QuestionData[] = [
     explanationCorrect: "Correto! Silêncio não é ato, mas lei pode atribuir efeitos (positivo ou negativo). Lei 13.874/19 e 14.210/21: aprovação tácita para licenças de baixo risco após prazo razoável. Esse tema é crescente em provas de concursos federais.",
     explanationWrong: "O silêncio não é sempre indeferimento — a lei pode prever efeito positivo (aprovação tácita) ou negativo (indeferimento). Ato tácito ≠ ato verbal. Ato tácito é inferi do do comportamento da Administração (ex.: silêncio com efeito legal); ato verbal é manifestação oral expressa (ex.: ordem de policial).",
     difficulty: "DIFICIL",
+    questionType: "MULTIPLA_ESCOLHA",
     contentTitle: "Ato Administrativo: Conceito, Validade e Presunção de Legitimidade",
   },
 ];
@@ -486,13 +499,25 @@ async function main() {
         ${q.explanation}, ${q.explanationCorrect}, ${q.explanationWrong},
         ${subjectId}, ${topicId}, ${contentId},
         true, ${q.difficulty},
-        0, 'MULTIPLA_ESCOLHA',
+        0, ${q.questionType},
         NOW(), NOW()
       )
     `);
     console.log(`  ✅ Questão criada: ${q.id}`);
     questionCreated++;
   }
+
+  // ── Corrigir questionType de questões CERTO_ERRADO já inseridas como MULTIPLA_ESCOLHA ──
+  const ceIds = ["qz_dadm_aa_006", "qz_dadm_aa_009", "qz_dadm_aa_010"];
+  let typeFixed = 0;
+  for (const qId of ceIds) {
+    const r = await db.execute(sql`
+      UPDATE "Question" SET "questionType" = 'CERTO_ERRADO'
+      WHERE id = ${qId} AND "questionType" = 'MULTIPLA_ESCOLHA'
+    `) as any;
+    if ((r.rowCount ?? r.count ?? 0) > 0) typeFixed++;
+  }
+  if (typeFixed > 0) console.log(`  🔧 questionType corrigido: ${typeFixed} questões (CERTO_ERRADO)`);
 
   // ── Backfill contentId em questões já existentes (sem contentId) ─────────
   let backfillCount = 0;
