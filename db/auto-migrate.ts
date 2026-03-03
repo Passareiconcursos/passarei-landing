@@ -42,6 +42,8 @@ export async function runAutoMigrations() {
   await run("studyProgressCols", migrateStudyProgressColumns);
   await run("backfillCorrectOption", backfillCorrectOption);
   await run("backfillCertoErrado",  backfillCertoErrado);
+  await run("essayCooldown",        migrateEssayCooldown);
+  await run("redacaoTemplates",     migrateRedacaoTemplates);
 
   console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
@@ -1436,6 +1438,108 @@ async function backfillCertoErrado() {
   } else {
     console.log("  ✅ [Backfill] CERTO/ERRADO: todas as questões já normalizadas");
   }
+}
+
+// ============================================
+// ESSAY COOLDOWN — adiciona last_essay_at na User e rewrite_suggestion na essays
+// Substitui o sistema de reset mensal por cooldown de 15 dias rolling.
+// ============================================
+async function migrateEssayCooldown() {
+  const col1 = await db.execute(sql`
+    SELECT EXISTS (SELECT FROM information_schema.columns
+      WHERE table_name = 'User' AND column_name = 'last_essay_at') as exists
+  `) as any[];
+  if (!col1[0]?.exists) {
+    await db.execute(sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS last_essay_at TIMESTAMP`);
+    console.log("  ✅ Coluna last_essay_at adicionada em User");
+  }
+
+  const col2 = await db.execute(sql`
+    SELECT EXISTS (SELECT FROM information_schema.columns
+      WHERE table_name = 'essays' AND column_name = 'rewrite_suggestion') as exists
+  `) as any[];
+  if (!col2[0]?.exists) {
+    await db.execute(sql`ALTER TABLE essays ADD COLUMN IF NOT EXISTS rewrite_suggestion TEXT`);
+    console.log("  ✅ Coluna rewrite_suggestion adicionada em essays");
+  }
+}
+
+// ============================================
+// REDAÇÃO TEMPLATES — tabela + seed de 9 temas (PF, PM, PC)
+// ============================================
+async function migrateRedacaoTemplates() {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS redacao_templates (
+      id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      title TEXT NOT NULL,
+      motivating_text TEXT NOT NULL,
+      concurso_category TEXT NOT NULL,
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  const count = await db.execute(sql`SELECT COUNT(*) as n FROM redacao_templates`) as any[];
+  if (Number(count[0]?.n) > 0) return;
+
+  const templates = [
+    // PF — Cebraspe (dissertativo-argumentativo)
+    {
+      category: "PF",
+      title: "O papel da inteligência policial no combate ao crime organizado",
+      motivating: "A crescente sofisticação das organizações criminosas exige que a Polícia Federal adote estratégias de inteligência cada vez mais avançadas. Segundo o Relatório de Inteligência 2023, o uso de análise de dados e monitoramento digital ampliou em 40% a taxa de desarticulação de redes criminosas nos últimos cinco anos. Discuta o papel da inteligência policial no combate ao crime organizado e proponha medidas para fortalecer essa atuação.",
+    },
+    {
+      category: "PF",
+      title: "Privacidade e segurança: limites do monitoramento digital pelo Estado",
+      motivating: "A expansão das tecnologias de vigilância digital levanta questões éticas sobre o equilíbrio entre segurança pública e direito à privacidade. A Constituição Federal garante a inviolabilidade das comunicações, mas o Supremo Tribunal Federal reconhece exceções para fins de investigação criminal. Discuta os limites do monitoramento digital pelo Estado à luz dos direitos fundamentais e apresente uma proposta de intervenção.",
+    },
+    {
+      category: "PF",
+      title: "Segurança nas fronteiras e soberania nacional: desafios para a Polícia Federal",
+      motivating: "O Brasil possui 16.886 km de fronteiras terrestres e 7.491 km de litoral, tornando o controle fronteiriço um desafio permanente. O tráfico de drogas, armas e pessoas representa ameaça à soberania e à segurança nacional. Redija um texto dissertativo-argumentativo sobre os desafios da Polícia Federal no controle das fronteiras brasileiras e proponha medidas para aprimorar esse trabalho.",
+    },
+    // PM — Vunesp (dissertativo com análise textual)
+    {
+      category: "PM",
+      title: "Policiamento comunitário como estratégia de redução da violência urbana",
+      motivating: "Estudos do Instituto de Pesquisa Econômica Aplicada (IPEA) apontam que o policiamento comunitário pode reduzir em até 25% os índices de criminalidade em áreas urbanas. A aproximação entre a Polícia Militar e a comunidade fortalece vínculos de confiança e facilita a obtenção de informações. Desenvolva um texto sobre a importância do policiamento comunitário para a redução da violência nas cidades.",
+    },
+    {
+      category: "PM",
+      title: "Saúde mental dos profissionais de segurança pública: um dever institucional",
+      motivating: "Pesquisa do Fórum Brasileiro de Segurança Pública (2023) revelou que 47% dos policiais militares apresentam algum nível de estresse pós-traumático ao longo da carreira. A exposição constante a situações de risco e violência compromete a saúde mental dos profissionais. Escreva um texto dissertativo sobre a importância do cuidado com a saúde mental dos policiais militares e as medidas necessárias para garanti-la.",
+    },
+    {
+      category: "PM",
+      title: "O uso de câmeras corporais por policiais militares: transparência e accountability",
+      motivating: "A adoção de câmeras corporais (bodycams) por policiais militares tem sido apontada como ferramenta eficaz para aumentar a transparência das ações policiais e reduzir denúncias de abusos. Em São Paulo, a implantação das câmeras reduziu em 60% as reclamações contra policiais. Discorra sobre os benefícios e desafios do uso de câmeras corporais pela Polícia Militar.",
+    },
+    // PC — FGV (dissertativo-argumentativo)
+    {
+      category: "PC",
+      title: "Tecnologia forense e modernização das investigações criminais",
+      motivating: "O avanço da tecnologia forense revolucionou as investigações criminais nas últimas décadas. Técnicas como análise de DNA, perícia digital e inteligência artificial permitem solucionar crimes que antes permaneceriam impunes. Segundo o Ministério da Justiça, estados que investiram em laboratórios forenses modernos apresentaram taxa de elucidação de homicídios 35% superior à média nacional. Discuta a importância da tecnologia forense para a Polícia Civil e proponha medidas para sua ampliação.",
+    },
+    {
+      category: "PC",
+      title: "A investigação criminal e o respeito aos direitos fundamentais do investigado",
+      motivating: "O processo investigativo criminal deve equilibrar a eficiência na elucidação de crimes com o respeito aos direitos e garantias fundamentais dos investigados. O Código de Processo Penal prevê mecanismos como o contraditório e a ampla defesa para proteger o cidadão de arbitrariedades. Redija um texto sobre como a Polícia Civil pode conduzir investigações eficientes sem violar os direitos fundamentais dos investigados.",
+    },
+    {
+      category: "PC",
+      title: "Combate à corrupção: o papel estratégico da Polícia Civil",
+      motivating: "A corrupção causa prejuízos estimados em R$ 200 bilhões anuais ao Brasil, segundo a Federação das Indústrias do Estado de São Paulo (FIESP). A Polícia Civil tem papel fundamental na investigação de crimes contra a administração pública, atuando em conjunto com o Ministério Público e órgãos de controle. Desenvolva um texto sobre o papel da Polícia Civil no combate à corrupção e proponha estratégias para fortalecer essa atuação.",
+    },
+  ];
+
+  for (const t of templates) {
+    await db.execute(sql`
+      INSERT INTO redacao_templates (title, motivating_text, concurso_category, active)
+      VALUES (${t.title}, ${t.motivating}, ${t.category}, true)
+    `);
+  }
+  console.log("  ✅ redacao_templates criada com 9 temas seeded");
 }
 
 // ============================================

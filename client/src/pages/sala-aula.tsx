@@ -292,7 +292,7 @@ export default function SalaAula() {
   const [sm2DueCount, setSm2DueCount] = useState(0);
   const [sm2Items, setSm2Items] = useState<{ reviewId: string; contentId: string; title: string; body: string; subjectName: string; totalReviews: number }[]>([]);
   const [sm2ActiveIndex, setSm2ActiveIndex] = useState<number | null>(null);
-  const [essayStatus, setEssayStatus] = useState<{ freeRemaining: number; credits: number; plan: string } | null>(null);
+  const [essayStatus, setEssayStatus] = useState<{ available: boolean; cooldownDaysLeft: number; lastScore: number | null; plan: string; freeRemaining: number; credits: number } | null>(null);
   const [gamification, setGamification] = useState<GamificationData | null>(null);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false);
@@ -558,7 +558,14 @@ export default function SalaAula() {
     try {
       const res = await fetch("/api/sala/essays/status", { headers });
       const data = await res.json();
-      if (data.success) setEssayStatus({ freeRemaining: data.freeRemaining, credits: data.credits, plan: data.plan });
+      if (data.success) setEssayStatus({
+        available: data.available,
+        cooldownDaysLeft: data.cooldownDaysLeft,
+        lastScore: data.lastScore,
+        plan: data.plan,
+        freeRemaining: data.freeRemaining,
+        credits: data.credits,
+      });
     } catch { /* silent */ }
   };
 
@@ -2321,15 +2328,10 @@ export default function SalaAula() {
 
               {/* Card 5 — Redação (hero full-width) */}
               {(() => {
-                const essayRemaining = essayStatus?.freeRemaining ?? 0;
-                const essayCredits = essayStatus?.credits ?? 0;
-                const essayAvailable = essayRemaining > 0 || essayCredits > 0;
-                const essayTotal = 2;
-                // Próximo reset: dia 01 do mês seguinte
-                const nextReset = new Date();
-                nextReset.setMonth(nextReset.getMonth() + 1);
-                nextReset.setDate(1);
-                const nextResetLabel = nextReset.toLocaleDateString("pt-BR", { month: "long" });
+                const essayAvailable = essayStatus?.available ?? false;
+                const cooldownDays = essayStatus?.cooldownDaysLeft ?? 0;
+                const lastScore = essayStatus?.lastScore ?? null;
+                const lastNotaEm10 = lastScore !== null ? ((lastScore / 1000) * 10).toFixed(1) : null;
                 return (
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                     {essayAvailable ? (
@@ -2345,35 +2347,25 @@ export default function SalaAula() {
                               <p className="text-sm font-semibold">Redação</p>
                             </div>
                             <p className="text-[11px] text-muted-foreground">
-                              Correções disponíveis: {essayRemaining}/{essayTotal} este mês
+                              {lastNotaEm10 ? `Última nota: ${lastNotaEm10}/10` : "Correção disponível agora"}
                             </p>
-                          </div>
-                          <div className="flex gap-1 shrink-0">
-                            {Array.from({ length: essayTotal }).map((_, i) => (
-                              <div key={i} className={`h-2 w-6 rounded-full ${i < essayRemaining ? "bg-violet-500" : "bg-muted"}`} />
-                            ))}
                           </div>
                         </CardContent>
                       </Card>
                     ) : (
-                      <Card className="w-full border-2 bg-emerald-900/10 border-emerald-900/20 cursor-default">
+                      <Card className="w-full border-2 bg-amber-900/5 border-amber-400/30 cursor-default">
                         <CardContent className="p-4 flex items-center gap-4">
-                          <PenLine className="h-7 w-7 text-emerald-800/25 shrink-0" />
+                          <PenLine className="h-7 w-7 text-amber-600/40 shrink-0" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
-                              <Badge variant="outline" className="text-[8px] font-bold tracking-widest uppercase text-emerald-800/50 border-emerald-800/25 px-1.5 py-0">
-                                LIMITE ATINGIDO
+                              <Badge variant="outline" className="text-[8px] font-bold tracking-widest uppercase text-amber-600 border-amber-400 px-1.5 py-0">
+                                {cooldownDays} {cooldownDays === 1 ? "DIA" : "DIAS"}
                               </Badge>
-                              <p className="text-sm font-semibold text-foreground/50">Redação</p>
+                              <p className="text-sm font-semibold text-foreground/60">Redação</p>
                             </div>
-                            <p className="text-[11px] text-muted-foreground/60">
-                              Disponível em 01 de {nextResetLabel}
+                            <p className="text-[11px] text-muted-foreground/70">
+                              {lastNotaEm10 ? `Última nota: ${lastNotaEm10}/10 · ` : ""}Disponível em {cooldownDays} {cooldownDays === 1 ? "dia" : "dias"}
                             </p>
-                          </div>
-                          <div className="flex gap-1 shrink-0">
-                            {Array.from({ length: essayTotal }).map((_, i) => (
-                              <div key={i} className="h-2 w-6 rounded-full bg-muted" />
-                            ))}
                           </div>
                         </CardContent>
                       </Card>

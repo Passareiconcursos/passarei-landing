@@ -347,12 +347,11 @@ export async function generateQuestionHaiku(
 
 export interface EssayCorrectionResult {
   scores: {
-    comp1: number;
-    comp2: number;
-    comp3: number;
-    comp4: number;
-    comp5: number;
-    total: number;
+    comp1: number;  // 0-250 Norma Culta
+    comp2: number;  // 0-250 Estrutura do Texto
+    comp3: number;  // 0-250 Desenvolvimento Argumentativo
+    comp4: number;  // 0-250 Coesão e Coerência
+    total: number;  // 0-1000
   };
   feedback: {
     general: string;
@@ -360,8 +359,8 @@ export interface EssayCorrectionResult {
     comp2: string;
     comp3: string;
     comp4: string;
-    comp5: string;
   };
+  rewrite_suggestion: string;  // Sugestão "Nota 10" para o critério mais fraco
 }
 
 const MODEL_HAIKU = "claude-haiku-4-5-20251001";
@@ -382,48 +381,55 @@ export async function correctEssay(
   theme: string,
   text: string,
   examType: string = "concurso policial",
+  motivatingText: string = "",
 ): Promise<EssayCorrectionResult> {
-  const prompt = `Você é um corretor especialista em redações para concursos públicos, especialmente ${examType}.
+  const isFederal = /FEDERAL|PF|PRF/i.test(examType);
+  const bancaLabel = isFederal
+    ? "Cebraspe (CESPE) — dissertativo-argumentativo com posicionamento crítico e proposta concreta"
+    : "Vunesp / FGV — dissertativo com fundamentação e análise do texto motivador";
 
-TEMA DA REDAÇÃO: ${theme}
+  const motivadorBlock = motivatingText
+    ? `\nTEXTO MOTIVADOR:\n${motivatingText}\n`
+    : "";
 
-TEXTO DO CANDIDATO:
+  const prompt = `Você é um corretor especialista em redações para concursos públicos policiais.
+Banca organizadora: ${bancaLabel}
+Concurso: ${examType}
+
+TEMA: ${theme}
+${motivadorBlock}
+REDAÇÃO DO CANDIDATO:
 ${text}
 
-Corrija esta redação usando os 5 critérios de avaliação de redação para concursos públicos (0-200 pontos cada):
+Avalie esta redação com os 4 critérios adaptados para concursos policiais (0-250 pontos cada):
 
-1. **Competência 1** - Domínio da norma culta da língua escrita
-2. **Competência 2** - Compreensão da proposta e aplicação de conceitos
-3. **Competência 3** - Seleção, relação e organização de argumentos
-4. **Competência 4** - Conhecimento dos mecanismos linguísticos de coesão
-5. **Competência 5** - Proposta de intervenção respeitando direitos humanos
+1. **Norma Culta** — gramática, ortografia, concordância, regência, pontuação
+2. **Estrutura do Texto** — introdução, desenvolvimento, conclusão; coerência global
+3. **Desenvolvimento Argumentativo** — profundidade dos argumentos, uso de dados/exemplos, pertinência ao tema
+4. **Coesão e Coerência** — conectivos, progressão textual, fluidez entre parágrafos
 
-IMPORTANTE:
-- Seja rigoroso mas construtivo
-- Dê notas múltiplas de 40 (0, 40, 80, 120, 160, 200)
-- Adapte a avaliação para o contexto de concursos públicos
-- Destaque pontos fortes e fracos
+REGRAS:
+- Notas devem ser múltiplos de 50 (0, 50, 100, 150, 200, 250)
+- Identifique o critério com pior desempenho e forneça UMA sugestão de reescrita de 2-3 linhas para nota máxima
+- Seja rigoroso mas pedagógico
 
-Responda EXATAMENTE neste formato JSON:
+Retorne APENAS o JSON abaixo (sem texto adicional):
 {
   "scores": {
-    "comp1": [0-200],
-    "comp2": [0-200],
-    "comp3": [0-200],
-    "comp4": [0-200],
-    "comp5": [0-200]
+    "comp1": [0-250],
+    "comp2": [0-250],
+    "comp3": [0-250],
+    "comp4": [0-250]
   },
   "feedback": {
-    "general": "Feedback geral sobre a redação (3-4 linhas)",
-    "comp1": "Feedback específico da competência 1",
-    "comp2": "Feedback específico da competência 2",
-    "comp3": "Feedback específico da competência 3",
-    "comp4": "Feedback específico da competência 4",
-    "comp5": "Feedback específico da competência 5"
-  }
-}
-
-Retorne APENAS o JSON, sem texto adicional.`;
+    "general": "Avaliação geral em 2-3 linhas",
+    "comp1": "Feedback da Norma Culta",
+    "comp2": "Feedback da Estrutura do Texto",
+    "comp3": "Feedback do Desenvolvimento Argumentativo",
+    "comp4": "Feedback da Coesão e Coerência"
+  },
+  "rewrite_suggestion": "Sugestão de como reescrever o trecho mais fraco para nota máxima"
+}`;
 
   const candidates = [
     { id: MODEL,       label: "Sonnet" },
@@ -455,13 +461,13 @@ Retorne APENAS o JSON, sem texto adicional.`;
         result.scores.comp1 +
         result.scores.comp2 +
         result.scores.comp3 +
-        result.scores.comp4 +
-        result.scores.comp5;
+        result.scores.comp4;
 
       console.log(`✅ [AI] Redação corrigida por ${label} — Total: ${total}/1000`);
       return {
         scores: { ...result.scores, total },
         feedback: result.feedback,
+        rewrite_suggestion: result.rewrite_suggestion || "",
       };
     } catch (error: any) {
       lastError = error;

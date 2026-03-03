@@ -1588,60 +1588,109 @@ export function registerSalaRoutes(app: Express) {
   // ============================================
 
   const PRICE_PER_ESSAY = 1.99;
-  const VETERANO_FREE_ESSAYS = 2;
+  const ESSAY_COOLDOWN_DAYS = 15;
 
   async function checkEssayAccessByUserId(userId: string) {
     const result = await db.execute(sql`
-      SELECT "plan", "credits", "monthlyEssaysUsed", "lastEssayMonth"
+      SELECT "plan", "credits", last_essay_at
       FROM "User" WHERE id = ${userId} LIMIT 1
     `) as any[];
-    if (result.length === 0) return { canAccess: false, reason: "no_access", message: "Usuário não encontrado." };
+    if (result.length === 0) return { canAccess: false, reason: "not_found", message: "Usuário não encontrado." };
     const u = result[0];
-    const currentMonth = new Date().toISOString().slice(0, 7);
 
-    let essaysUsed = u.monthlyEssaysUsed || 0;
-    if ((u.lastEssayMonth || "") !== currentMonth) {
-      await db.execute(sql`UPDATE "User" SET "monthlyEssaysUsed"=0,"lastEssayMonth"=${currentMonth} WHERE id=${userId}`);
-      essaysUsed = 0;
+    // Cooldown de 15 dias (rolling)
+    const lastEssayAt: Date | null = u.last_essay_at ? new Date(u.last_essay_at) : null;
+    const daysSinceLast = lastEssayAt
+      ? Math.floor((Date.now() - lastEssayAt.getTime()) / (1000 * 60 * 60 * 24))
+      : ESSAY_COOLDOWN_DAYS + 1;
+    const daysLeft = Math.max(0, ESSAY_COOLDOWN_DAYS - daysSinceLast);
+
+    if (daysLeft > 0) {
+      return {
+        canAccess: false, reason: "cooldown", daysLeft,
+        message: `Próxima redação disponível em ${daysLeft} dia${daysLeft !== 1 ? "s" : ""}.`,
+      };
     }
-    if (u.plan === "VETERANO" && essaysUsed < VETERANO_FREE_ESSAYS) {
-      return { canAccess: true, reason: "veterano_free", freeRemaining: VETERANO_FREE_ESSAYS - essaysUsed };
+
+    if (u.plan === "FREE") {
+      return { canAccess: false, reason: "no_plan", message: "Redações disponíveis para planos CALOURO e VETERANO." };
+    }
+    if (u.plan === "VETERANO") {
+      return { canAccess: true, reason: "veterano_free" };
     }
     const credits = parseFloat(u.credits) || 0;
     if (credits >= PRICE_PER_ESSAY) {
-      return { canAccess: true, reason: "paid", credits, price: PRICE_PER_ESSAY };
+      return { canAccess: true, reason: "paid", credits };
     }
     return {
       canAccess: false, reason: "no_credits", credits, price: PRICE_PER_ESSAY,
-      message: u.plan === "FREE"
-        ? `Redações disponíveis para planos CALOURO e VETERANO. O plano VETERANO inclui 2 redações grátis/mês.`
-        : `Saldo insuficiente. Adicione créditos para corrigir redações (R$ ${PRICE_PER_ESSAY.toFixed(2)}/redação).`,
+      message: `Saldo insuficiente. Adicione créditos para corrigir redações (R$ ${PRICE_PER_ESSAY.toFixed(2)}/redação).`,
     };
   }
 
   // correctEssay importado de ./services/ai-engine (compartilhado com bot)
+
+  // GET /api/sala/essays/templates - Temas disponíveis para o concurso do aluno
+  app.get("/api/sala/essays/templates", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const userRow = await db.execute(sql`
+        SELECT "examType" FROM "User" WHERE id = ${student.userId} LIMIT 1
+      `) as any[];
+      const examType: string = userRow[0]?.examType || "";
+      let category = "PF";
+      if (/MILITAR|PM/i.test(examType)) category = "PM";
+      else if (/CIVIL|PC/i.test(examType)) category = "PC";
+
+      const templates = await db.execute(sql`
+        SELECT id, title, motivating_text
+        FROM redacao_templates
+        WHERE concurso_category = ${category} AND active = true
+        ORDER BY RANDOM()
+        LIMIT 3
+      `) as any[];
+
+      return res.json({ success: true, templates, category });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao buscar templates de redação:", error);
+      return res.status(500).json({ success: false, error: "Erro ao buscar temas." });
+    }
+  });
 
   // GET /api/sala/essays/status - Status de redações do aluno
   app.get("/api/sala/essays/status", requireStudentAuth, async (req, res) => {
     try {
       const student = (req as any).student as StudentJWTPayload;
       const result = await db.execute(sql`
-        SELECT "plan","credits","monthlyEssaysUsed","lastEssayMonth","totalEssaysSubmitted"
+        SELECT "plan", "credits", last_essay_at,
+          (SELECT total_score FROM essays
+           WHERE user_id = ${student.userId} AND status = 'CORRECTED'
+           ORDER BY corrected_at DESC LIMIT 1) as last_score
         FROM "User" WHERE id = ${student.userId} LIMIT 1
       `) as any[];
       if (result.length === 0) return res.status(404).json({ success: false, error: "Usuário não encontrado." });
       const u = result[0];
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      const essaysUsed = (u.lastEssayMonth || "") === currentMonth ? (u.monthlyEssaysUsed || 0) : 0;
-      const freeLimit = u.plan === "VETERANO" ? VETERANO_FREE_ESSAYS : 0;
+
+      const lastEssayAt: Date | null = u.last_essay_at ? new Date(u.last_essay_at) : null;
+      const daysSinceLast = lastEssayAt
+        ? Math.floor((Date.now() - lastEssayAt.getTime()) / (1000 * 60 * 60 * 24))
+        : ESSAY_COOLDOWN_DAYS + 1;
+      const cooldownDaysLeft = Math.max(0, ESSAY_COOLDOWN_DAYS - daysSinceLast);
+      const available = cooldownDaysLeft === 0 && u.plan !== "FREE";
+
       return res.json({
         success: true,
         plan: u.plan,
-        used: essaysUsed,
-        freeLimit,
-        freeRemaining: Math.max(0, freeLimit - essaysUsed),
+        available,
+        cooldownDaysLeft,
+        lastEssayAt: lastEssayAt?.toISOString() ?? null,
+        lastScore: u.last_score ?? null,
         credits: parseFloat(u.credits) || 0,
         pricePerEssay: PRICE_PER_ESSAY,
+        // backward-compat para código antigo
+        freeRemaining: available && u.plan === "VETERANO" ? 1 : 0,
+        used: cooldownDaysLeft > 0 ? 1 : 0,
+        freeLimit: u.plan === "VETERANO" ? 1 : 0,
       });
     } catch (error) {
       console.error("❌ [Sala] Erro ao buscar status de redações:", error);
@@ -1653,7 +1702,7 @@ export function registerSalaRoutes(app: Express) {
   app.post("/api/sala/essays/submit", requireStudentAuth, async (req, res) => {
     try {
       const student = (req as any).student as StudentJWTPayload;
-      const { theme, text } = req.body;
+      const { theme, text, motivatingText } = req.body;
       if (!theme || !text) return res.status(400).json({ success: false, error: "Tema e texto são obrigatórios." });
       if (text.trim().split(/\s+/).length < 50) {
         return res.status(400).json({ success: false, error: "Redação muito curta (mínimo 50 palavras)." });
@@ -1661,7 +1710,13 @@ export function registerSalaRoutes(app: Express) {
 
       const access = await checkEssayAccessByUserId(student.userId);
       if (!access.canAccess) {
-        return res.status(403).json({ success: false, requiresUpgrade: true, error: access.message });
+        return res.status(403).json({
+          success: false,
+          requiresUpgrade: access.reason !== "cooldown",
+          cooldown: access.reason === "cooldown",
+          daysLeft: (access as any).daysLeft,
+          error: access.message,
+        });
       }
 
       const userResult = await db.execute(sql`
@@ -1681,7 +1736,7 @@ export function registerSalaRoutes(app: Express) {
       // Correção via IA ANTES de consumir crédito (crédito preservado em caso de falha)
       let correction = null;
       try {
-        correction = await correctEssay(theme, text, examType);
+        correction = await correctEssay(theme, text, examType, motivatingText || "");
       } catch (aiError: any) {
         // IA falhou — marca erro, NÃO debita crédito
         const aiStatus = aiError?.status ?? aiError?.statusCode ?? "?";
@@ -1695,25 +1750,38 @@ export function registerSalaRoutes(app: Express) {
         });
       }
 
-      // IA retornou com sucesso — agora consumir crédito
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      if (access.reason === "veterano_free") {
-        await db.execute(sql`UPDATE "User" SET "monthlyEssaysUsed"=COALESCE("monthlyEssaysUsed",0)+1,"lastEssayMonth"=${currentMonth},"totalEssaysSubmitted"=COALESCE("totalEssaysSubmitted",0)+1,"updatedAt"=NOW() WHERE id=${student.userId}`);
+      // IA retornou com sucesso — atualizar last_essay_at + créditos
+      if (access.reason === "paid") {
+        await db.execute(sql`
+          UPDATE "User" SET
+            last_essay_at = NOW(),
+            "credits"=COALESCE("credits",0)-${PRICE_PER_ESSAY},
+            "totalEssaysSubmitted"=COALESCE("totalEssaysSubmitted",0)+1,
+            "updatedAt"=NOW()
+          WHERE id=${student.userId}
+        `);
       } else {
-        await db.execute(sql`UPDATE "User" SET "credits"=COALESCE("credits",0)-${PRICE_PER_ESSAY},"monthlyEssaysUsed"=COALESCE("monthlyEssaysUsed",0)+1,"lastEssayMonth"=${currentMonth},"totalEssaysSubmitted"=COALESCE("totalEssaysSubmitted",0)+1,"updatedAt"=NOW() WHERE id=${student.userId}`);
+        await db.execute(sql`
+          UPDATE "User" SET
+            last_essay_at = NOW(),
+            "totalEssaysSubmitted"=COALESCE("totalEssaysSubmitted",0)+1,
+            "updatedAt"=NOW()
+          WHERE id=${student.userId}
+        `);
       }
 
-      // Persistir resultado da IA
+      // Persistir resultado da IA (4 critérios, score_5 = NULL)
       await db.execute(sql`
         UPDATE "essays" SET
           "status"='CORRECTED',
           "score_1"=${correction.scores.comp1},"score_2"=${correction.scores.comp2},
           "score_3"=${correction.scores.comp3},"score_4"=${correction.scores.comp4},
-          "score_5"=${correction.scores.comp5},"total_score"=${correction.scores.total},
+          "score_5"=NULL,"total_score"=${correction.scores.total},
           "feedback"=${correction.feedback.general},
           "feedback_comp_1"=${correction.feedback.comp1},"feedback_comp_2"=${correction.feedback.comp2},
           "feedback_comp_3"=${correction.feedback.comp3},"feedback_comp_4"=${correction.feedback.comp4},
-          "feedback_comp_5"=${correction.feedback.comp5},
+          "feedback_comp_5"=NULL,
+          "rewrite_suggestion"=${correction.rewrite_suggestion || null},
           "corrected_at"=NOW(),"updated_at"=NOW()
         WHERE "id"=${essayId}
       `);
