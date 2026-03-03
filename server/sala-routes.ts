@@ -643,7 +643,8 @@ export function registerSalaRoutes(app: Express) {
           "totalQuestionsAnswered",
           plan, "planStatus",
           "dailyContentCount", "lastContentDate",
-          "firstInteractionDate"
+          "firstInteractionDate",
+          target_concurso_id
         FROM "User"
         WHERE id = ${student.userId}
         LIMIT 1
@@ -662,6 +663,40 @@ export function registerSalaRoutes(app: Express) {
         WHERE qa."userId" = ${student.userId}
       `) as any[];
       const totalQuestionsAnswered = Number(distinctCountResult[0]?.total || 0);
+
+      // Contar questões respondidas no curso atual (por matérias do concurso-alvo)
+      let totalQuestionsInCurrentCourse = 0;
+      if (u.target_concurso_id) {
+        const concursoRows = await db.execute(sql`
+          SELECT lista_materias_json FROM concursos WHERE id = ${u.target_concurso_id} LIMIT 1
+        `) as any[];
+        const raw = concursoRows[0]?.lista_materias_json;
+        const materias: any[] = Array.isArray(raw) ? raw : (typeof raw === "string" ? JSON.parse(raw) : []);
+        const nomes = materias.map((m: any) => m.nome || "").filter(Boolean);
+
+        if (nomes.length > 0) {
+          const subjectRows = await db.execute(sql`
+            SELECT id FROM "Subject" WHERE name ILIKE ANY(${nomes})
+          `) as any[];
+          const subjectIds: string[] = subjectRows.map((s: any) => s.id);
+
+          if (subjectIds.length > 0) {
+            const courseCountResult = await db.execute(sql`
+              SELECT COUNT(DISTINCT qa."questionId")::int AS total
+              FROM "QuestionAttempt" qa
+              JOIN "Question" q ON q.id = qa."questionId"
+              WHERE qa."userId" = ${student.userId}
+                AND q."subjectId" = ANY(${subjectIds})
+            `) as any[];
+            totalQuestionsInCurrentCourse = Number(courseCountResult[0]?.total || 0);
+          }
+        }
+      }
+
+      // Dias desde a primeira interação (para gating do Simulado)
+      const daysSinceFirstInteraction = u.firstInteractionDate
+        ? Math.floor((Date.now() - new Date(u.firstInteractionDate).getTime()) / 86400000)
+        : 0;
 
       // Get per-subject stats — join via Question.subjectId (Content has no contentId on Question)
       const subjectStats = await db.execute(sql`
@@ -684,6 +719,8 @@ export function registerSalaRoutes(app: Express) {
         success: true,
         stats: {
           totalQuestionsAnswered,
+          totalQuestionsInCurrentCourse,
+          daysSinceFirstInteraction,
           plan: u.plan,
           planStatus: u.planStatus,
           dailyUsed: u.dailyContentCount || 0,

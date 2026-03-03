@@ -282,7 +282,7 @@ export default function SalaAula() {
   const [currentContent, setCurrentContent] = useState<ContentItem | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<QuestionItem | null>(null);
   const [questionCorrectIndex, setQuestionCorrectIndex] = useState<number | null>(null);
-  const [stats, setStats] = useState<{ totalQuestionsAnswered: number; bySubject: SubjectStat[] } | null>(null);
+  const [stats, setStats] = useState<{ totalQuestionsAnswered: number; totalQuestionsInCurrentCourse: number; daysSinceFirstInteraction: number; bySubject: SubjectStat[] } | null>(null);
   const [studyPlan, setStudyPlan] = useState<{ subjectId: string; subjectName: string; totalContent: number; studiedContent: number; percentage: number; isDifficulty: boolean }[]>([]);
   const [simulados, setSimulados] = useState<SimuladoItem[]>([]);
   const [isVeterano, setIsVeterano] = useState(false);
@@ -1935,11 +1935,6 @@ export default function SalaAula() {
                         <h2 className="text-sm font-semibold truncate">
                           {targetConcurso ? targetConcurso.nome : "Concurso-alvo"}
                         </h2>
-                        {student?.examType && (
-                          <Badge variant="secondary" className="text-[10px] h-4 px-1.5 mb-0.5 font-bold">
-                            {student.examType}
-                          </Badge>
-                        )}
                         {targetConcurso && (
                           <p className="text-[10px] text-primary/60 leading-tight">
                             {targetConcurso.banca} · <span className="underline underline-offset-2">trocar</span>
@@ -2002,8 +1997,8 @@ export default function SalaAula() {
 
                   {/* Card 2 — Reforço SM2 */}
                   {(() => {
-                    const total = stats?.totalQuestionsAnswered ?? 0;
-                    const notEnough = total < 15;
+                    const totalInCourse = stats?.totalQuestionsInCurrentCourse ?? 0;
+                    const notEnough = !student?.targetConcursoId || totalInCourse < 15;
                     const upToDate = !notEnough && sm2DueCount === 0;
                     const hasPending = !notEnough && sm2DueCount > 0;
                     return (
@@ -2011,11 +2006,7 @@ export default function SalaAula() {
                         {notEnough ? (
                           /* ── BLOQUEADO — base insuficiente ── */
                           <Card
-                            className="h-full cursor-pointer border-2 bg-emerald-900/10 border-emerald-900/20 active:scale-[0.98] transition-transform"
-                            onClick={() => toast({
-                              title: "Base de dados insuficiente",
-                              description: `Responda mais ${15 - total} questões para desbloquear seu Mapa de Calor e Reforço Inteligente.`,
-                            })}
+                            className="h-full cursor-default border-2 bg-emerald-900/10 border-emerald-900/20"
                           >
                             <CardContent className="p-4 flex flex-col gap-2">
                               <RotateCcw className="h-7 w-7 text-emerald-800/25" />
@@ -2027,10 +2018,10 @@ export default function SalaAula() {
                               </div>
                               <div className="space-y-1.5 mt-1">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-[10px] font-medium tabular-nums text-emerald-900/40">{total}/15 questões</span>
-                                  <span className="text-[10px] text-emerald-900/30">{Math.round(total / 15 * 100)}%</span>
+                                  <span className="text-[10px] font-medium tabular-nums text-emerald-900/40">{totalInCourse}/15 questões</span>
+                                  <span className="text-[10px] text-emerald-900/30">{Math.round(Math.min(totalInCourse / 15, 1) * 100)}%</span>
                                 </div>
-                                <Progress value={Math.round(total / 15 * 100)} className="h-1 bg-emerald-900/10 [&>div]:bg-emerald-700/40" />
+                                <Progress value={Math.round(Math.min(totalInCourse / 15, 1) * 100)} className="h-1 bg-emerald-900/10 [&>div]:bg-emerald-700/40" />
                                 <p className="text-[9px] text-muted-foreground/60 leading-snug">Atinja sua cota de estudos para desbloquear</p>
                               </div>
                             </CardContent>
@@ -2083,16 +2074,16 @@ export default function SalaAula() {
 
                   {/* Card 3 — Simulados */}
                   {(() => {
-                    const total = stats?.totalQuestionsAnswered ?? 0;
-                    const questoesInsuficientes = total < 15;
+                    const totalInCourse = stats?.totalQuestionsInCurrentCourse ?? 0;
+                    const daysSinceJoin = stats?.daysSinceFirstInteraction ?? 0;
+                    const questoesInsuficientes = !student?.targetConcursoId || totalInCourse < 30 || daysSinceJoin < 7;
                     const weeklyAvailable = !questoesInsuficientes && weeklyStatus?.available === true;
                     const weeklyCooldown = !questoesInsuficientes && weeklyStatus?.reason === "cooldown";
                     return (
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="h-full">
                         {questoesInsuficientes ? (
-                          /* ── BLOQUEADO — questões insuficientes (igual SM2) ── */
-                          <Card className="h-full border-2 bg-emerald-900/10 border-emerald-900/20 active:scale-[0.98] transition-transform cursor-pointer"
-                            onClick={() => toast({ title: "Simulado indisponível", description: `Responda mais ${15 - total} questões para desbloquear os Simulados Semanais.` })}>
+                          /* ── BLOQUEADO — questões insuficientes ou conta nova ── */
+                          <Card className="h-full border-2 bg-emerald-900/10 border-emerald-900/20 cursor-default">
                             <CardContent className="p-4 flex flex-col gap-2">
                               <Trophy className="h-7 w-7 text-emerald-800/25" />
                               <div>
@@ -2103,11 +2094,15 @@ export default function SalaAula() {
                               </div>
                               <div className="space-y-1.5 mt-1">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-[10px] font-medium tabular-nums text-emerald-900/40">{total}/15 questões</span>
-                                  <span className="text-[10px] text-emerald-900/30">{Math.round(total / 15 * 100)}%</span>
+                                  <span className="text-[10px] font-medium tabular-nums text-emerald-900/40">{totalInCourse}/30 questões</span>
+                                  <span className="text-[10px] text-emerald-900/30">{Math.round(Math.min(totalInCourse / 30, 1) * 100)}%</span>
                                 </div>
-                                <Progress value={Math.round(total / 15 * 100)} className="h-1 bg-emerald-900/10 [&>div]:bg-emerald-700/40" />
-                                <p className="text-[9px] text-muted-foreground/60 leading-snug">Atinja sua cota de estudos para desbloquear</p>
+                                <Progress value={Math.round(Math.min(totalInCourse / 30, 1) * 100)} className="h-1 bg-emerald-900/10 [&>div]:bg-emerald-700/40" />
+                                <p className="text-[9px] text-muted-foreground/60 leading-snug">
+                                  {totalInCourse < 30
+                                    ? "Atinja 30 questões no curso para desbloquear"
+                                    : "Aguarde 7 dias de conta para desbloquear"}
+                                </p>
                               </div>
                             </CardContent>
                           </Card>
