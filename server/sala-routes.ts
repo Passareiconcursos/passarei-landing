@@ -1097,6 +1097,68 @@ export function registerSalaRoutes(app: Express) {
     }
   });
 
+  // GET /api/sala/simulados/questions/:userSimuladoId — Retorna todas as questões do simulado de uma vez
+  app.get("/api/sala/simulados/questions/:userSimuladoId", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      const { userSimuladoId } = req.params;
+
+      const userSimRows = await db.execute(sql`
+        SELECT us.simulado_id FROM user_simulados us
+        WHERE us.id = ${userSimuladoId} AND us.user_id = ${student.userId} LIMIT 1
+      `) as any[];
+      if (!userSimRows[0]) return res.status(403).json({ success: false, error: "Acesso negado." });
+
+      const simuladoId = userSimRows[0].simulado_id;
+
+      const simQRows = await db.execute(sql`
+        SELECT id, content_id, question_order
+        FROM simulado_questions
+        WHERE simulado_id = ${simuladoId}
+        ORDER BY question_order ASC
+      `) as any[];
+
+      const questions: any[] = [];
+      for (const sq of simQRows) {
+        const qRows = await db.execute(sql`
+          SELECT
+            q.id, q.statement, q."correctOption", q."explanationCorrect", q."explanationWrong",
+            q."questionType", c.title AS content_title, s.name AS subject_name,
+            json_agg(
+              json_build_object('letter', a.letter, 'text', a.text)
+              ORDER BY a.letter
+            ) AS alternatives
+          FROM "Question" q
+          JOIN "Content" c ON c.id = q."contentId"
+          JOIN "Subject" s ON s.id = c."subjectId"
+          JOIN "Alternative" a ON a."questionId" = q.id
+          WHERE q."contentId" = ${sq.content_id} AND q."isActive" = true
+          GROUP BY q.id, c.title, s.name
+          ORDER BY RANDOM()
+          LIMIT 1
+        `) as any[];
+
+        if (qRows[0]) {
+          const alts: { letter: string; text: string }[] = qRows[0].alternatives || [];
+          questions.push({
+            id: qRows[0].id,
+            simuladoQuestionId: sq.id,
+            statement: qRows[0].statement,
+            options: alts.map((a: any) => a.text),
+            subjectName: qRows[0].subject_name,
+            contentTitle: qRows[0].content_title,
+            explanation: qRows[0].explanationCorrect || qRows[0].explanationWrong || "",
+          });
+        }
+      }
+
+      return res.json({ success: true, questions, totalQuestions: questions.length });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao buscar questões do simulado:", error);
+      return res.status(500).json({ success: false, error: "Erro ao buscar questões." });
+    }
+  });
+
   // POST /api/sala/simulados/answer - Responder questão do simulado
   app.post("/api/sala/simulados/answer", requireStudentAuth, async (req, res) => {
     try {
@@ -1444,22 +1506,22 @@ export function registerSalaRoutes(app: Express) {
       }
       if (!subjectIds.length) return res.status(400).json({ success: false, error: "Nenhuma matéria encontrada para este edital. Verifique o concurso-alvo." });
 
-      // 80% conteúdo inédito — aleatório das matérias do edital
+      // 80% conteúdo inédito — aleatório das matérias do edital (24 de 30)
       const newContentRows = await db.execute(sql`
         SELECT c.id FROM "Content" c
         WHERE c."isActive" = true
           AND c."subjectId" = ANY(${subjectIds})
-        ORDER BY RANDOM() LIMIT 8
+        ORDER BY RANDOM() LIMIT 24
       `) as any[];
 
-      // 20% revisão de erros — conteúdo das matérias onde o aluno errou questões
+      // 20% revisão de erros — conteúdo das matérias onde o aluno errou questões (6 de 30)
       const errorContentRows = await db.execute(sql`
         SELECT DISTINCT c.id FROM "QuestionAttempt" qa
         JOIN "Question" q ON q.id = qa."questionId"
         JOIN "Content" c ON c."subjectId" = q."subjectId"
         WHERE qa."userId" = ${student.userId} AND qa."isCorrect" = false
           AND c."subjectId" = ANY(${subjectIds}) AND c."isActive" = true
-        ORDER BY RANDOM() LIMIT 2
+        ORDER BY RANDOM() LIMIT 6
       `) as any[];
 
       const contentIds: string[] = [

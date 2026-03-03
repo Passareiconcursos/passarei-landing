@@ -356,6 +356,11 @@ export default function SalaAula() {
   const [weeklyExamLoading, setWeeklyExamLoading] = useState(false);
   const [weeklyExamTimeLeft, setWeeklyExamTimeLeft] = useState(3600);
   const [weeklyExamShowReview, setWeeklyExamShowReview] = useState(false);
+  const [weeklyExamAllQuestions, setWeeklyExamAllQuestions] = useState<any[]>([]);
+  const [weeklyExamAnswers, setWeeklyExamAnswers] = useState<(number | null)[]>([]);
+  const [weeklyExamCurrentIdx, setWeeklyExamCurrentIdx] = useState(0);
+  const [weeklyExamBySubject, setWeeklyExamBySubject] = useState<Record<string, { total: number; correct: number }>>({});
+  const [weeklyExamSubmitting, setWeeklyExamSubmitting] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -411,6 +416,13 @@ export default function SalaAula() {
     const t = setTimeout(() => setWeeklyExamTimeLeft(s => s - 1), 1000);
     return () => clearTimeout(t);
   }, [weeklyExamMode, weeklyExamResult, weeklyExamTimeLeft]);
+
+  // Auto-finalizar quando o tempo se esgotar
+  useEffect(() => {
+    if (weeklyExamMode && !weeklyExamResult && weeklyExamTimeLeft === 0 && !weeklyExamSubmitting) {
+      submitAllAndFinish();
+    }
+  }, [weeklyExamTimeLeft]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -624,13 +636,16 @@ export default function SalaAula() {
       setWeeklyExamShowReview(false);
       setWeeklyExamShowExit(false);
       setWeeklyExamShowFinish(false);
-      // Buscar primeira questão
-      const qRes = await fetch(`/api/sala/simulados/question/${data.userSimuladoId}`, { headers });
+      setWeeklyExamBySubject({});
+      setWeeklyExamCurrentIdx(0);
+      // Buscar todas as questões de uma vez
+      const qRes = await fetch(`/api/sala/simulados/questions/${data.userSimuladoId}`, { headers });
       const qData = await qRes.json();
-      if (qData.question) {
-        setWeeklyExamQuestion(qData.question);
-        setWeeklyExamAnswered(null);
-        setWeeklyExamCorrectIdx(null);
+      if (qData.success && qData.questions.length > 0) {
+        setWeeklyExamAllQuestions(qData.questions);
+        setWeeklyExamAnswers(new Array(qData.questions.length).fill(null));
+        setWeeklyExamTotal(qData.questions.length);
+        setWeeklyExamQuestion(qData.questions[0]);
       }
       setWeeklyExamMode(true);
     } catch {
@@ -693,17 +708,66 @@ export default function SalaAula() {
     } catch { /* silent */ }
   };
 
-  const finishWeeklyExam = () => {
-    const elapsed = Math.round((Date.now() - weeklyExamStartedAt) / 60000);
-    setWeeklyExamResult({
-      score: weeklyExamTotal > 0 ? Math.round(weeklyExamCorrect / weeklyExamTotal * 100) : 0,
-      correctAnswers: weeklyExamCorrect,
-      wrongAnswers: weeklyExamWrongQs.length,
-      timeSpent: elapsed,
-      passed: weeklyExamTotal > 0 && weeklyExamCorrect / weeklyExamTotal >= 0.6,
-    });
+  const submitAllAndFinish = async () => {
     setWeeklyExamShowFinish(false);
-    fetchWeeklyStatus();
+    setWeeklyExamSubmitting(true);
+    try {
+      type ExamResult = { isCorrect: boolean; correctAnswer: number; subjectName: string; question: any; userAnswer: number };
+      const resultsCollected: ExamResult[] = [];
+
+      for (let i = 0; i < weeklyExamAllQuestions.length; i++) {
+        const q = weeklyExamAllQuestions[i];
+        const answer = weeklyExamAnswers[i] ?? -1; // -1 = não respondida
+        const res = await fetch("/api/sala/simulados/answer", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            userSimuladoId: weeklyExamUserSimId,
+            questionId: q.id,
+            simuladoQuestionId: q.simuladoQuestionId,
+            answer,
+          }),
+        });
+        const data = await res.json();
+        resultsCollected.push({
+          isCorrect: data.correct ?? false,
+          correctAnswer: data.correctAnswer ?? -1,
+          subjectName: q.subjectName,
+          question: q,
+          userAnswer: answer,
+        });
+      }
+
+      // Breakdown por matéria
+      const bySubject: Record<string, { total: number; correct: number }> = {};
+      for (const r of resultsCollected) {
+        if (!bySubject[r.subjectName]) bySubject[r.subjectName] = { total: 0, correct: 0 };
+        bySubject[r.subjectName].total++;
+        if (r.isCorrect) bySubject[r.subjectName].correct++;
+      }
+
+      const correctCount = resultsCollected.filter(r => r.isCorrect).length;
+      const total = resultsCollected.length;
+
+      setWeeklyExamBySubject(bySubject);
+      setWeeklyExamWrongQs(
+        resultsCollected
+          .filter(r => !r.isCorrect)
+          .map(r => ({ question: r.question, correctAnswer: r.correctAnswer, userAnswer: r.userAnswer }))
+      );
+      setWeeklyExamResult({
+        score: total > 0 ? Math.round(correctCount / total * 100) : 0,
+        correctAnswers: correctCount,
+        wrongAnswers: total - correctCount,
+        timeSpent: Math.round((Date.now() - weeklyExamStartedAt) / 60000),
+        passed: total > 0 && correctCount / total >= 0.6,
+      });
+      fetchWeeklyStatus();
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao finalizar simulado" });
+    } finally {
+      setWeeklyExamSubmitting(false);
+    }
   };
 
   const exitWeeklyExam = () => {
@@ -714,6 +778,11 @@ export default function SalaAula() {
     setWeeklyExamShowExit(false);
     setWeeklyExamShowFinish(false);
     setWeeklyExamShowReview(false);
+    setWeeklyExamAllQuestions([]);
+    setWeeklyExamAnswers([]);
+    setWeeklyExamCurrentIdx(0);
+    setWeeklyExamBySubject({});
+    setWeeklyExamSubmitting(false);
   };
 
   const startWeeklySimulado = async () => {
@@ -1675,20 +1744,24 @@ export default function SalaAula() {
           )}
 
           {/* ── FINISH CONFIRMATION ── */}
-          {weeklyExamShowFinish && (
-            <div className="absolute inset-0 z-10 bg-black/60 flex items-center justify-center p-4">
-              <div className="bg-background rounded-xl shadow-2xl p-6 max-w-sm w-full space-y-4">
-                <h3 className="text-base font-semibold">Finalizar prova?</h3>
-                <p className="text-sm text-muted-foreground">
-                  Você respondeu {weeklyExamQNum - 1} de {weeklyExamTotal} questões. Deseja encerrar e ver o resultado?
-                </p>
-                <div className="flex gap-3 justify-end">
-                  <Button variant="outline" size="sm" onClick={() => setWeeklyExamShowFinish(false)}>Continuar</Button>
-                  <Button size="sm" onClick={finishWeeklyExam}>Finalizar</Button>
+          {weeklyExamShowFinish && (() => {
+            const unanswered = weeklyExamAnswers.filter(a => a === null).length;
+            return (
+              <div className="absolute inset-0 z-10 bg-black/60 flex items-center justify-center p-4">
+                <div className="bg-background rounded-xl shadow-2xl p-6 max-w-sm w-full space-y-4">
+                  <h3 className="text-base font-semibold">Finalizar e Entregar?</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Você respondeu <strong>{weeklyExamAnswers.filter(a => a !== null).length} de {weeklyExamTotal}</strong> questões.
+                    {unanswered > 0 && <> As <strong>{unanswered}</strong> não respondidas serão contadas como erradas.</>}
+                  </p>
+                  <div className="flex gap-3 justify-end">
+                    <Button variant="outline" size="sm" onClick={() => setWeeklyExamShowFinish(false)}>Revisar</Button>
+                    <Button size="sm" variant="destructive" onClick={submitAllAndFinish}>Confirmar entrega</Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {weeklyExamResult ? (
             /* ── RESULT SCREEN ── */
@@ -1730,6 +1803,27 @@ export default function SalaAula() {
                     <p className="text-center text-sm text-orange-500 font-medium">⏰ Tempo esgotado</p>
                   )}
 
+                  {/* Breakdown por matéria */}
+                  {Object.entries(weeklyExamBySubject).length > 0 && (
+                    <div className="rounded-xl border overflow-hidden">
+                      <div className="px-3 py-2 bg-muted/50 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        Desempenho por Matéria
+                      </div>
+                      {Object.entries(weeklyExamBySubject).map(([subj, data]) => {
+                        const pct = data.total > 0 ? Math.round(data.correct / data.total * 100) : 0;
+                        return (
+                          <div key={subj} className="flex items-center gap-3 px-3 py-2.5 border-t">
+                            <span className="flex-1 text-xs truncate">{subj}</span>
+                            <span className="text-xs text-muted-foreground w-10 text-right tabular-nums">{data.correct}/{data.total}</span>
+                            <span className={cn("text-xs font-bold w-10 text-right tabular-nums",
+                              pct >= 70 ? "text-green-600" : pct >= 50 ? "text-amber-500" : "text-red-500"
+                            )}>{pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="flex flex-col gap-3">
                     {weeklyExamWrongQs.length > 0 && (
@@ -1768,84 +1862,129 @@ export default function SalaAula() {
                 </div>
               </ScrollArea>
             </div>
+          ) : weeklyExamSubmitting ? (
+            /* ── SUBMITTING ── */
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <div className="h-10 w-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-muted-foreground font-medium">Corrigindo sua prova...</p>
+            </div>
           ) : (
             /* ── EXAM IN PROGRESS ── */
-            <div className="flex flex-col h-full">
-              {/* Exam top bar */}
-              <div className="flex items-center gap-3 px-4 h-12 border-b bg-background shrink-0">
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => setWeeklyExamShowExit(true)}>
-                  <X className="h-4 w-4" />
-                </Button>
-                {/* Progress bar */}
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[11px] text-muted-foreground">Questão {weeklyExamQNum} de {weeklyExamTotal}</span>
-                  </div>
-                  <Progress value={(weeklyExamQNum - 1) / weeklyExamTotal * 100} className="h-1.5" />
-                </div>
-                {/* Timer */}
-                <div className={`flex items-center gap-1 font-mono text-sm font-semibold shrink-0 ${weeklyExamTimeLeft < 300 ? "text-red-500" : "text-foreground"}`}>
-                  <Clock className="h-3.5 w-3.5" />
-                  {formatExamTime(weeklyExamTimeLeft)}
-                </div>
-              </div>
-
-              {/* Question area */}
-              <ScrollArea className="flex-1">
-                <div className="max-w-xl mx-auto px-4 py-6 space-y-5">
-                  {weeklyExamQuestion ? (
-                    <>
-                      <p className="text-sm font-medium leading-relaxed">{weeklyExamQuestion.statement}</p>
-                      <div className="space-y-2.5">
-                        {(weeklyExamQuestion.options as string[] || []).map((opt: string, idx: number) => {
-                          const isAnswered = weeklyExamAnswered !== null;
-                          const isSelected = weeklyExamAnswered === idx;
-                          const isCorrect = weeklyExamCorrectIdx === idx;
-                          return (
-                            <button
-                              key={idx}
-                              disabled={isAnswered}
-                              onClick={() => submitWeeklyExamAnswer(idx)}
-                              className={`w-full text-left flex items-start gap-3 rounded-lg border px-4 py-3 text-sm transition-all ${
-                                !isAnswered ? "hover:border-primary/50 hover:bg-primary/5 active:scale-[0.99] cursor-pointer" :
-                                isCorrect ? "border-green-500 bg-green-500/10 text-green-700 cursor-default" :
-                                isSelected ? "border-red-400 bg-red-500/10 text-red-600 cursor-default" :
-                                "opacity-50 cursor-default"
-                              }`}
-                            >
-                              <span className="font-semibold shrink-0 mt-0.5">{["A","B","C","D"][idx]}.</span>
-                              <span className="leading-snug">{opt}</span>
-                              {isAnswered && isCorrect && <span className="ml-auto shrink-0 text-green-600">✓</span>}
-                              {isAnswered && isSelected && !isCorrect && <span className="ml-auto shrink-0 text-red-500">✗</span>}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center justify-center py-20">
-                      <div className="text-center space-y-2">
-                        <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-                        <p className="text-sm text-muted-foreground">Carregando questão...</p>
-                      </div>
+            (() => {
+              const q = weeklyExamAllQuestions[weeklyExamCurrentIdx];
+              const selectedAnswer = weeklyExamAnswers[weeklyExamCurrentIdx];
+              const answeredCount = weeklyExamAnswers.filter(a => a !== null).length;
+              return (
+                <div className="flex flex-col h-full">
+                  {/* ── HEADER ── */}
+                  <div className="flex items-center justify-between px-4 h-14 border-b bg-background shrink-0 gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => setWeeklyExamShowExit(true)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm font-semibold truncate hidden sm:block">Simulado Semanal</span>
                     </div>
-                  )}
-                </div>
-              </ScrollArea>
+                    <div className={`flex items-center gap-1.5 font-mono text-sm font-bold shrink-0 ${weeklyExamTimeLeft < 300 ? "text-red-500" : "text-foreground"}`}>
+                      <Clock className="h-3.5 w-3.5" />
+                      {formatExamTime(weeklyExamTimeLeft)}
+                    </div>
+                    <Button size="sm" variant="destructive" className="shrink-0 text-xs h-8"
+                      onClick={() => setWeeklyExamShowFinish(true)}>
+                      Finalizar e Entregar
+                    </Button>
+                  </div>
 
-              {/* Bottom action bar */}
-              <div className="border-t px-4 py-3 bg-background shrink-0 flex items-center justify-between gap-3">
-                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground"
-                  onClick={() => setWeeklyExamShowExit(true)}>
-                  Sair
-                </Button>
-                <Button variant="outline" size="sm" className="text-xs"
-                  onClick={() => setWeeklyExamShowFinish(true)}>
-                  Finalizar Prova
-                </Button>
-              </div>
-            </div>
+                  {/* ── BODY ── */}
+                  <ScrollArea className="flex-1">
+                    <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
+                      {/* Question header */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          Questão {weeklyExamCurrentIdx + 1} de {weeklyExamTotal}
+                        </span>
+                        {q?.subjectName && (
+                          <Badge variant="secondary" className="text-[10px] shrink-0">{q.subjectName}</Badge>
+                        )}
+                      </div>
+                      {/* Statement */}
+                      {q ? (
+                        <>
+                          <p className="text-sm leading-relaxed font-medium">{q.statement}</p>
+                          {/* Options */}
+                          <div className="space-y-2.5">
+                            {(q.options as string[] || []).map((opt: string, idx: number) => {
+                              const isSelected = selectedAnswer === idx;
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={() => {
+                                    setWeeklyExamAnswers(prev => {
+                                      const c = [...prev];
+                                      c[weeklyExamCurrentIdx] = idx;
+                                      return c;
+                                    });
+                                  }}
+                                  className={cn(
+                                    "w-full text-left flex items-start gap-3 rounded-lg border px-4 py-3 text-sm transition-all active:scale-[0.99]",
+                                    isSelected
+                                      ? "border-primary bg-primary/10 text-primary font-medium"
+                                      : "hover:border-primary/40 hover:bg-primary/5 cursor-pointer"
+                                  )}
+                                >
+                                  <span className="font-semibold shrink-0 mt-0.5">{["A","B","C","D","E"][idx]}.</span>
+                                  <span className="leading-snug">{opt}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center justify-center py-20">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+
+                  {/* ── FOOTER: MINIMAP + NAVIGATION ── */}
+                  <div className="border-t px-3 py-3 bg-background shrink-0 space-y-3">
+                    {/* Minimap */}
+                    <div className="flex flex-wrap gap-1 justify-center">
+                      {weeklyExamAnswers.map((a, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setWeeklyExamCurrentIdx(i)}
+                          className={cn(
+                            "w-7 h-7 rounded text-[10px] font-bold border transition-all",
+                            i === weeklyExamCurrentIdx && "ring-2 ring-primary ring-offset-1",
+                            a !== null
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-muted text-muted-foreground border-border hover:border-primary/50"
+                          )}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Navigation */}
+                    <div className="flex items-center justify-between gap-2">
+                      <Button variant="outline" size="sm" className="gap-1"
+                        disabled={weeklyExamCurrentIdx === 0}
+                        onClick={() => setWeeklyExamCurrentIdx(i => Math.max(0, i - 1))}>
+                        <ChevronLeft className="h-4 w-4" /> Anterior
+                      </Button>
+                      <span className="text-xs text-muted-foreground">{answeredCount}/{weeklyExamTotal} respondidas</span>
+                      <Button variant="outline" size="sm" className="gap-1"
+                        disabled={weeklyExamCurrentIdx === weeklyExamAllQuestions.length - 1}
+                        onClick={() => setWeeklyExamCurrentIdx(i => Math.min(weeklyExamAllQuestions.length - 1, i + 1))}>
+                        Próxima <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
           )}
         </div>
       )}
