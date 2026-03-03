@@ -776,6 +776,24 @@ export function registerSalaRoutes(app: Express) {
     }
   });
 
+  // POST /api/sala/progress/reset — Limpar progresso ao trocar de concurso
+  app.post("/api/sala/progress/reset", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      await db.execute(sql`
+        UPDATE "User"
+        SET "lastStudyContentIds" = '[]'::jsonb,
+            "facilidades"         = '[]'::jsonb,
+            "dificuldades"        = '[]'::jsonb
+        WHERE id = ${student.userId}
+      `);
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("❌ [Sala] Erro ao resetar progresso:", error);
+      return res.status(500).json({ success: false, error: "Erro ao resetar progresso." });
+    }
+  });
+
   // ============================================
   // SIMULADOS
   // ============================================

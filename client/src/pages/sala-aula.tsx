@@ -39,6 +39,7 @@ import {
   Target,
   LogOut,
   Send,
+  AlertTriangle,
   ShieldCheck,
   Scale,
   Building2,
@@ -323,6 +324,9 @@ export default function SalaAula() {
   const [weeklyStatus, setWeeklyStatus] = useState<{
     available: boolean; reason: string; nextAvailableAt?: string;
   } | null>(null);
+  const [showCourseChangeModal, setShowCourseChangeModal] = useState(false);
+  const [pendingConcursoId, setPendingConcursoId] = useState<string | null>(null);
+  const [isSwitchingCourse, setIsSwitchingCourse] = useState(false);
 
   // ── Jornada / Palco ──────────────────────────────────────
   const [showStudyPalco, setShowStudyPalco] = useState(true);
@@ -1080,7 +1084,7 @@ export default function SalaAula() {
     setShowStudyPalco(false);
   };
 
-  const selectConcurso = async (concursoId: string | null) => {
+  const applyNewConcurso = async (concursoId: string | null) => {
     // Atualização otimista: fecha modal e atualiza UI imediatamente
     const found = concursosList.find(c => c.id === concursoId);
     setTargetConcurso(found ? { id: found.id, nome: found.nome, banca: found.banca } : null);
@@ -1106,6 +1110,46 @@ export default function SalaAula() {
     } catch {
       toast({ variant: "destructive", title: "Erro ao salvar concurso" });
       setTargetConcurso(null);
+    }
+  };
+
+  const selectConcurso = (concursoId: string | null) => {
+    // Se já tem concurso ativo e escolheu um diferente → pede confirmação
+    if (student?.targetConcursoId && concursoId && student.targetConcursoId !== concursoId) {
+      setPendingConcursoId(concursoId);
+      setShowConcursoSelector(false);
+      setShowCourseChangeModal(true);
+    } else {
+      applyNewConcurso(concursoId);
+    }
+  };
+
+  const confirmCourseChange = async () => {
+    if (!pendingConcursoId) return;
+    setIsSwitchingCourse(true);
+    try {
+      // 1. Aplica novo concurso
+      await applyNewConcurso(pendingConcursoId);
+
+      // 2. Reseta progresso no backend
+      await fetch("/api/sala/progress/reset", { method: "POST", headers });
+
+      // 3. Limpa estado do cliente
+      setMessages([]);
+      setStudyPlan([]);
+      setSelectedSubject(null);
+      setShowDashboard(true);
+      localStorage.removeItem("passarei_last_subject");
+      sessionStorage.clear();
+
+      // 4. Re-busca matérias e plano de estudo para o novo concurso
+      await fetchSubjects();
+      await fetchStudyPlan();
+
+      setShowCourseChangeModal(false);
+      setPendingConcursoId(null);
+    } finally {
+      setIsSwitchingCourse(false);
     }
   };
 
@@ -1371,6 +1415,35 @@ export default function SalaAula() {
               Decidir depois
             </Button>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ══════════════════════════════════════════
+          CONFIRMAR TROCA DE CONCURSO
+          ══════════════════════════════════════════ */}
+      <Dialog open={showCourseChangeModal} onOpenChange={(open) => { if (!open) { setShowCourseChangeModal(false); setPendingConcursoId(null); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Trocar de Concurso?
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground pt-1">
+              Seu histórico de estudo, facilidades e dificuldades do concurso atual
+              serão <strong>apagados</strong>. Essa ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 pt-2 justify-end">
+            <Button variant="outline" size="sm"
+              onClick={() => { setShowCourseChangeModal(false); setPendingConcursoId(null); }}>
+              Cancelar
+            </Button>
+            <Button size="sm" variant="destructive"
+              disabled={isSwitchingCourse}
+              onClick={confirmCourseChange}>
+              {isSwitchingCourse ? "Trocando..." : "Sim, quero trocar"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1862,6 +1935,11 @@ export default function SalaAula() {
                         <h2 className="text-sm font-semibold truncate">
                           {targetConcurso ? targetConcurso.nome : "Concurso-alvo"}
                         </h2>
+                        {student?.examType && (
+                          <Badge variant="secondary" className="text-[10px] h-4 px-1.5 mb-0.5 font-bold">
+                            {student.examType}
+                          </Badge>
+                        )}
                         {targetConcurso && (
                           <p className="text-[10px] text-primary/60 leading-tight">
                             {targetConcurso.banca} · <span className="underline underline-offset-2">trocar</span>
