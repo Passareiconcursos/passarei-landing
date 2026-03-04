@@ -15,7 +15,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ChevronLeft, PenLine, Loader2, BookOpen, ChevronDown, AlertCircle } from "lucide-react";
+import { ChevronLeft, PenLine, Loader2, BookOpen, ChevronDown, AlertCircle, Edit3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ============================================
@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 // ============================================
 
 interface Template {
-  id: string;
+  id: string | null;
   title: string;
   motivating_text: string;
 }
@@ -74,6 +74,9 @@ export default function SalaRedacao() {
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [essayStatus, setEssayStatus] = useState<EssayStatus | null>(null);
   const [result, setResult] = useState<EssayResult | null>(null);
+  const [showCustomTheme, setShowCustomTheme] = useState(false);
+  const [customTitle, setCustomTitle] = useState("");
+  const [customMotivador, setCustomMotivador] = useState("");
 
   const headers = {
     "Content-Type": "application/json",
@@ -172,8 +175,8 @@ export default function SalaRedacao() {
             size="sm"
             className="h-8 gap-1 text-xs"
             onClick={() => {
-              if (phase === "write") { setPhase("select"); setEssayText(""); setShowMotivador(false); }
-              else if (phase === "result") { setPhase("select"); setResult(null); setEssayText(""); setSelectedTemplate(null); }
+              if (phase === "write") { setPhase("select"); setEssayText(""); setShowMotivador(false); setShowCustomTheme(false); }
+              else if (phase === "result") { setPhase("select"); setResult(null); setEssayText(""); setSelectedTemplate(null); setShowCustomTheme(false); setCustomTitle(""); setCustomMotivador(""); }
               else setLocation("/sala/aula");
             }}
           >
@@ -248,6 +251,7 @@ export default function SalaRedacao() {
                           onClick={() => {
                             if (!essayAvailable) return;
                             setSelectedTemplate(t);
+                            setShowCustomTheme(false);
                             setPhase("write");
                           }}
                         >
@@ -260,6 +264,88 @@ export default function SalaRedacao() {
                           </CardContent>
                         </Card>
                       ))}
+
+                      {/* Opção: Tema Próprio */}
+                      {!showCustomTheme ? (
+                        <Card
+                          className={cn(
+                            "cursor-pointer border-2 border-dashed transition-all active:scale-[0.99]",
+                            essayAvailable
+                              ? "hover:border-violet-400 hover:shadow-md border-border"
+                              : "opacity-60 cursor-not-allowed border-border"
+                          )}
+                          onClick={() => {
+                            if (!essayAvailable) return;
+                            setShowCustomTheme(true);
+                          }}
+                        >
+                          <CardContent className="p-4 flex items-start gap-3">
+                            <Edit3 className="h-4 w-4 text-violet-400 mt-0.5 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium leading-snug">📝 Enviar Tema Próprio</p>
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                Já tem uma redação pronta ou um tema específico? Envie para avaliação.
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        <Card className="border-2 border-violet-300 bg-violet-50/40">
+                          <CardContent className="p-4 space-y-3">
+                            <p className="text-sm font-semibold text-violet-700 flex items-center gap-1.5">
+                              <Edit3 className="h-4 w-4" /> Tema Próprio
+                            </p>
+                            <div>
+                              <label className="text-xs font-medium text-muted-foreground block mb-1">
+                                Título do tema <span className="text-destructive">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={customTitle}
+                                onChange={(e) => setCustomTitle(e.target.value)}
+                                placeholder="Ex: A importância da segurança pública no Brasil"
+                                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-violet-400/40"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-muted-foreground block mb-1">
+                                Texto motivador <span className="text-muted-foreground">(opcional)</span>
+                              </label>
+                              <textarea
+                                value={customMotivador}
+                                onChange={(e) => setCustomMotivador(e.target.value)}
+                                placeholder="Cole aqui um texto de apoio ou contexto para o tema..."
+                                rows={3}
+                                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-violet-400/40 resize-none"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="flex-1 bg-violet-600 hover:bg-violet-700"
+                                disabled={!customTitle.trim()}
+                                onClick={() => {
+                                  setSelectedTemplate({
+                                    id: null,
+                                    title: customTitle.trim(),
+                                    motivating_text: customMotivador.trim(),
+                                  });
+                                  setPhase("write");
+                                }}
+                              >
+                                Usar este tema
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => { setShowCustomTheme(false); setCustomTitle(""); setCustomMotivador(""); }}
+                              >
+                                Cancelar
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
                     </div>
                   )}
                 </div>

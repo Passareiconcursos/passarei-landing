@@ -1192,9 +1192,17 @@ export function registerSalaRoutes(app: Express) {
       let correctAnswer = -1;
       if (questionId && !questionId.startsWith("ai_generated_") && !questionId.startsWith("fallback_")) {
         const qResult = await db.execute(sql`
-          SELECT "correctOption" FROM "Question" WHERE id = ${questionId} LIMIT 1
+          SELECT "correctOption", "correctAnswer" FROM "Question" WHERE id = ${questionId} LIMIT 1
         `) as any[];
-        correctAnswer = qResult[0]?.correctOption ?? -1;
+        if (qResult.length > 0) {
+          const rawOption = qResult[0]?.correctOption;
+          if (rawOption != null) {
+            correctAnswer = Number(rawOption);
+          } else if (qResult[0]?.correctAnswer) {
+            // Fallback: questões pré-Phase5 armazenam letra em "correctAnswer"
+            correctAnswer = ["A", "B", "C", "D", "E"].indexOf(qResult[0].correctAnswer);
+          }
+        }
       }
       const isCorrect = correctAnswer >= 0 && Number(answer) === Number(correctAnswer);
 
