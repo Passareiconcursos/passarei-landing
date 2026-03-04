@@ -7,10 +7,6 @@ import {
   checkUserLimit,
   incrementUserCount,
   isUserActive,
-  generateConcursosKeyboard,
-  generateConcursosByCategoryKeyboard,
-  BOT_CATEGORIES,
-  resetStudyProgress,
 } from "./database";
 import {
   startOnboarding,
@@ -23,16 +19,9 @@ import { startReminderScheduler, handleReminderAnswer } from "./reminder";
 
 const token = process.env.TELEGRAM_BOT_TOKEN || "";
 
-// ============================================
-// ESTADO DE REDAÇÃO (fluxo multi-step)
-// ============================================
-interface RedacaoState {
-  step: "waiting_theme" | "waiting_text";
-  theme?: string;
-  chatId: number;
-}
+const RECURSO_MOVIDO =
+  "🔄 *Recurso Movido*\n\nEsta função agora é exclusiva da nossa Sala de Aula para uma melhor experiência. Acesse o site para continuar!";
 
-const redacaoStates = new Map<string, RedacaoState>();
 let bot: TelegramBot | null = null;
 
 function safeParseJsonBot(value: any, fallback: any): any {
@@ -94,7 +83,6 @@ export async function startTelegramBot() {
           const keyboard = {
             inline_keyboard: [
               [{ text: "🌐 Acessar passarei.com.br", url: "https://passarei.com.br" }],
-              [{ text: "📊 Ver meu progresso", callback_data: "menu_progresso" }],
             ],
           };
           await bot!.sendMessage(chatId, status.message || "Acesso inativo", {
@@ -141,146 +129,6 @@ export async function startTelegramBot() {
           "../telegram/learning-session"
         );
         await startLearningSession(bot!, chatId, telegramId);
-        return;
-      }
-
-      if (data === "menu_concurso") {
-        console.log(`🎯 [Bot] Menu Concurso clicado por ${telegramId}`);
-
-        // VERIFICAR SE USUÁRIO TEM ACESSO
-        const status = await isUserActive(telegramId);
-
-        if (!status.isActive) {
-          console.log(`🚫 [Bot] Usuário ${telegramId} sem acesso para concurso`);
-          const keyboard = {
-            inline_keyboard: [
-              [{ text: "🌐 Acessar passarei.com.br", url: "https://passarei.com.br" }],
-            ],
-          };
-          await bot!.sendMessage(
-            chatId,
-            "❌ *Você precisa de uma conta ativa para escolher concurso.*\n\nAcesse passarei.com.br para ativar sua conta!",
-            {
-              parse_mode: "Markdown",
-              reply_markup: keyboard,
-            },
-          );
-          return;
-        }
-
-        // Mostrar lista de concursos (dinâmico do banco)
-        // Usar prefix "concurso_" para callback_data (tratado no bloco data.startsWith("concurso_"))
-        const keyboard = await generateConcursosKeyboard("concurso_");
-        await bot!.sendMessage(
-          chatId,
-          "🎯 *Escolha seu concurso:*\n\n" +
-            "Selecione o concurso que você está estudando.\n" +
-            "Você pode trocar a qualquer momento usando /concurso novamente.",
-          {
-            parse_mode: "Markdown",
-            reply_markup: keyboard,
-          },
-        );
-        return;
-      }
-
-      if (data === "menu_progresso") {
-        console.log(`📊 [Bot] Menu Progresso clicado por ${telegramId}`);
-        // Buscar e mostrar progresso (código do /progresso)
-        try {
-          const userData = await db.execute(sql`
-            SELECT id, plan, "planStatus", "createdAt", "examType"
-            FROM "User"
-            WHERE "telegramId" = ${telegramId}
-            LIMIT 1
-          `);
-
-          if (!userData || userData.length === 0) {
-            await bot!.sendMessage(
-              chatId,
-              "❌ Usuário não encontrado. Use /start para começar.",
-              { parse_mode: "Markdown" },
-            );
-            return;
-          }
-
-          const user = userData[0];
-          const userId = user.id;
-
-          const stats = await db.execute(sql`
-            SELECT 
-              COUNT(*) as total,
-              SUM(CASE WHEN correct = true THEN 1 ELSE 0 END) as acertos,
-              SUM(CASE WHEN correct = false THEN 1 ELSE 0 END) as erros
-            FROM "user_answers"
-            WHERE "userId" = ${userId}
-          `);
-
-          const total = Number(stats[0]?.total || 0);
-          const acertos = Number(stats[0]?.acertos || 0);
-          const erros = Number(stats[0]?.erros || 0);
-          const taxaAcerto =
-            total > 0 ? ((acertos / total) * 100).toFixed(1) : 0;
-
-          const cadastro = new Date(user.createdAt);
-          const hoje = new Date();
-          const diasDesde = Math.floor(
-            (hoje.getTime() - cadastro.getTime()) / (1000 * 60 * 60 * 24),
-          );
-
-          let emojiTaxa = "📊";
-          if (Number(taxaAcerto) >= 80) emojiTaxa = "🏆";
-          else if (Number(taxaAcerto) >= 60) emojiTaxa = "✅";
-          else if (Number(taxaAcerto) >= 40) emojiTaxa = "⚠️";
-          else if (total > 0) emojiTaxa = "📉";
-
-          let mensagem = `📊 *Seu Progresso*\n\n`;
-
-          const planEmoji =
-            user.plan?.toLowerCase() === "veterano" ? "⭐" : "🎓";
-          const planName = user.plan?.toUpperCase() || "INATIVO";
-          mensagem += `${planEmoji} Plano: *${planName}*\n`;
-          mensagem += `📅 Membro há: *${diasDesde} dia(s)*\n`;
-
-          // Adicionar concurso escolhido
-          if (user.examType) {
-            mensagem += `🎯 Concurso: *${user.examType}*\n`;
-          }
-          mensagem += `\n`;
-
-          mensagem += `📚 *Estatísticas de Estudo:*\n\n`;
-
-          if (total === 0) {
-            mensagem += `⚠️ Você ainda não respondeu nenhuma questão!\n\n`;
-            mensagem += `Use /estudar para começar a praticar! 🚀`;
-          } else {
-            mensagem += `✅ Questões respondidas: *${total}*\n`;
-            mensagem += `${emojiTaxa} Taxa de acerto: *${taxaAcerto}%*\n`;
-            mensagem += `🎯 Acertos: *${acertos}*\n`;
-            mensagem += `❌ Erros: *${erros}*\n\n`;
-
-            if (Number(taxaAcerto) >= 80) {
-              mensagem += `🏆 *Excelente!* Continue assim!\n`;
-            } else if (Number(taxaAcerto) >= 60) {
-              mensagem += `✅ *Bom trabalho!* Você está no caminho certo!\n`;
-            } else if (Number(taxaAcerto) >= 40) {
-              mensagem += `💪 *Continue praticando!* Você vai melhorar!\n`;
-            } else {
-              mensagem += `📚 *Não desista!* Revise os conteúdos e tente novamente!\n`;
-            }
-
-            mensagem += `\nUse /estudar para continuar praticando! 📖`;
-          }
-
-          await bot!.sendMessage(chatId, mensagem, { parse_mode: "Markdown" });
-        } catch (error) {
-          console.error("❌ [Bot] Erro ao buscar progresso:", error);
-          await bot!.sendMessage(
-            chatId,
-            "⚠️ Erro ao buscar seu progresso. Tente novamente em instantes.",
-            { parse_mode: "Markdown" },
-          );
-        }
         return;
       }
 
@@ -415,65 +263,19 @@ export async function startTelegramBot() {
             "📚 *Comandos disponíveis:*\n\n" +
             "▪️ `/estudar` - Iniciar sessão de estudos\n" +
             "▪️ `/parar` - Encerrar sessão e ver relatório\n" +
-            "▪️ `/redacao` - Enviar redação para correção IA\n" +
-            "▪️ `/concurso` - Escolher concurso\n" +
-            "▪️ `/progresso` - Ver suas estatísticas\n" +
             "▪️ `/codigo CODIGO` - Resgatar código promocional\n" +
             "▪️ `/menu` - Menu principal\n\n" +
+            "🌐 *Sala de Aula (site):*\n" +
+            "▪️ Redação com IA\n" +
+            "▪️ Simulados\n" +
+            "▪️ Progresso e desempenho\n" +
+            "▪️ Troca de concurso\n\n" +
             "💬 *Suporte:*\n" +
             "📧 suporte@passarei.com.br\n" +
             "💬 @PassareiSuporte\n\n" +
             "🎓 _Bons estudos!_",
           { parse_mode: "Markdown" },
         );
-        return;
-      }
-
-      if (data === "menu_redacao") {
-        console.log(`📝 [Bot] Menu Redação clicado por ${telegramId}`);
-
-        // Verificar acesso
-        const INTERNAL_URL = `http://localhost:${process.env.PORT || 5000}`;
-        try {
-          const accessRes = await fetch(`${INTERNAL_URL}/api/essays/check-access/${telegramId}`);
-          const access = await accessRes.json();
-
-          if (!access.success || !access.canAccess) {
-            const keyboard = {
-              inline_keyboard: [
-                [{ text: "🌐 Acessar passarei.com.br", url: "https://passarei.com.br" }],
-              ],
-            };
-            await bot!.sendMessage(chatId, `❌ ${access.message || "Sem acesso."}`, {
-              parse_mode: "Markdown",
-              reply_markup: keyboard,
-            });
-            return;
-          }
-
-          let creditInfo = "";
-          if (access.reason === "veterano_free") {
-            creditInfo = `\n📊 Correções gratuitas restantes: *${access.freeRemaining}*`;
-          } else if (access.reason === "paid") {
-            creditInfo = `\n💰 Créditos: R$ ${Number(access.credits).toFixed(2)}`;
-          }
-
-          redacaoStates.set(telegramId, { step: "waiting_theme", chatId });
-
-          await bot!.sendMessage(
-            chatId,
-            `📝 *Correção de Redação com IA*${creditInfo}\n\n` +
-              `Qual é o *tema* da sua redação?\n\n` +
-              `_Exemplo: "A importância da segurança pública no Brasil"_\n\n` +
-              `Para cancelar, envie /cancelar`,
-            { parse_mode: "Markdown" },
-          );
-        } catch (error) {
-          console.error("❌ [Bot] Erro no menu_redacao:", error);
-          await bot!.sendMessage(chatId, "⚠️ Erro ao iniciar. Tente /redacao.", {
-            parse_mode: "Markdown",
-          });
-        }
         return;
       }
 
@@ -490,17 +292,10 @@ export async function startTelegramBot() {
 
         const keyboard = {
           inline_keyboard: [
+            [{ text: "📚 Estudar", callback_data: "menu_estudar" }],
             [
-              { text: "📚 Estudar", callback_data: "menu_estudar" },
-              { text: "📝 Redação", callback_data: "menu_redacao" },
-            ],
-            [
-              { text: "🎯 Concurso", callback_data: "menu_concurso" },
-              { text: "📊 Progresso", callback_data: "menu_progresso" },
-            ],
-            [
-              { text: "💳 Planos", callback_data: "menu_planos" },
-              { text: "💬 Suporte", callback_data: "menu_suporte" },
+              { text: "💎 Planos",  callback_data: "menu_planos" },
+              { text: "🛠️ Suporte", callback_data: "menu_suporte" },
             ],
           ],
         };
@@ -511,151 +306,6 @@ export async function startTelegramBot() {
         );
         return;
       }
-    }
-
-    // 3b. Seleção de categoria de concurso (Nível 1 do /concurso command)
-    if (data.startsWith("cat:concurso_:")) {
-      await bot!.answerCallbackQuery(query.id);
-      const categoryKey = data.replace("cat:concurso_:", "");
-
-      if (categoryKey === "BACK") {
-        const keyboard = await generateConcursosKeyboard("concurso_");
-        await bot!.editMessageText(
-          "🎯 *Escolha seu concurso:*\n\nSelecione a categoria de concurso.",
-          { chat_id: chatId, message_id: query.message?.message_id, parse_mode: "Markdown", reply_markup: keyboard }
-        );
-      } else {
-        const cat = BOT_CATEGORIES.find(c => c.key === categoryKey);
-        const keyboard = await generateConcursosByCategoryKeyboard(categoryKey, "concurso_");
-        await bot!.editMessageText(
-          `🎯 *Escolha seu concurso:*\n\n${cat?.emoji || "📌"} *${cat?.label || categoryKey}*\n\nQual concurso específico?`,
-          { chat_id: chatId, message_id: query.message?.message_id, parse_mode: "Markdown", reply_markup: keyboard }
-        );
-      }
-      return;
-    }
-
-    // 4. Processar concurso
-    if (data.startsWith("concurso_")) {
-      // VERIFICAR SE USUÁRIO TEM ACESSO
-      const status = await isUserActive(telegramId);
-
-      if (!status.isActive) {
-        await bot!.answerCallbackQuery(query.id, {
-          text: "❌ Conta inativa",
-          show_alert: true,
-        });
-        return;
-      }
-
-      const concursoId = data.replace("concurso_", "");
-      console.log(
-        `🎯 [Bot] Concurso escolhido: ${concursoId} por ${telegramId}`,
-      );
-
-      try {
-        // Verificar se já tem um concurso diferente (pedir confirmação)
-        const currentUser = await db.execute(sql`
-          SELECT "examType" FROM "User" WHERE "telegramId" = ${telegramId} LIMIT 1
-        `) as any[];
-
-        const currentExam = currentUser[0]?.examType;
-
-        if (currentExam && currentExam !== concursoId && currentExam !== "OUTRO") {
-          // Já tem concurso diferente - pedir confirmação
-          await bot!.answerCallbackQuery(query.id);
-          const keyboard = {
-            inline_keyboard: [
-              [{ text: "✅ Sim, trocar de concurso", callback_data: `confirmconcurso_${concursoId}` }],
-              [{ text: "❌ Cancelar", callback_data: "cancelconcurso" }],
-            ],
-          };
-          await bot!.sendMessage(
-            chatId,
-            `⚠️ *Atenção!*\n\n` +
-              `Você está estudando para *${currentExam}*.\n\n` +
-              `Ao trocar para *${concursoId}*, seu progresso de estudo será *reiniciado*.\n\n` +
-              `Deseja continuar?`,
-            { parse_mode: "Markdown", reply_markup: keyboard },
-          );
-          return;
-        }
-
-        // Primeiro concurso ou mesmo concurso - aplicar direto
-        await db.execute(sql`
-          UPDATE "User"
-          SET
-            "examType" = ${concursoId},
-            "updatedAt" = NOW()
-          WHERE "telegramId" = ${telegramId}
-        `);
-
-        await resetStudyProgress(telegramId);
-
-        await bot!.answerCallbackQuery(query.id, {
-          text: "✅ Concurso atualizado!",
-        });
-
-        await bot!.sendMessage(
-          chatId,
-          `✅ *Concurso definido!*\n\n` +
-            `Agora você está estudando para: *${concursoId}*\n\n` +
-            `Use /estudar para começar a praticar questões! 📚`,
-          { parse_mode: "Markdown" },
-        );
-      } catch (error) {
-        console.error("❌ Erro ao salvar concurso:", error);
-        await bot!.answerCallbackQuery(query.id, {
-          text: "❌ Erro ao atualizar",
-        });
-      }
-    }
-
-    // 5. Confirmar troca de concurso
-    if (data.startsWith("confirmconcurso_")) {
-      const concursoId = data.replace("confirmconcurso_", "");
-      console.log(`✅ [Bot] Troca de concurso confirmada: ${concursoId} por ${telegramId}`);
-
-      try {
-        await db.execute(sql`
-          UPDATE "User"
-          SET
-            "examType" = ${concursoId},
-            "updatedAt" = NOW()
-          WHERE "telegramId" = ${telegramId}
-        `);
-
-        await resetStudyProgress(telegramId);
-
-        await bot!.answerCallbackQuery(query.id, {
-          text: "✅ Concurso atualizado!",
-        });
-
-        await bot!.sendMessage(
-          chatId,
-          `✅ *Concurso atualizado!*\n\n` +
-            `Agora você está estudando para: *${concursoId}*\n\n` +
-            `🔄 Seu progresso anterior foi reiniciado.\n\n` +
-            `Use /estudar para começar a praticar questões! 📚`,
-          { parse_mode: "Markdown" },
-        );
-      } catch (error) {
-        console.error("❌ Erro ao confirmar troca de concurso:", error);
-        await bot!.answerCallbackQuery(query.id, {
-          text: "❌ Erro ao atualizar",
-        });
-      }
-    }
-
-    if (data === "cancelconcurso") {
-      await bot!.answerCallbackQuery(query.id, {
-        text: "Troca cancelada",
-      });
-      await bot!.sendMessage(
-        chatId,
-        `👍 *Tudo certo!* Você continua no mesmo concurso.\n\nUse /estudar para continuar estudando! 📚`,
-        { parse_mode: "Markdown" },
-      );
     }
   });
 
@@ -782,17 +432,10 @@ export async function startTelegramBot() {
 
     // Menu com botões inline
     const keyboard = [
+      [{ text: "📚 Estudar", callback_data: "menu_estudar" }],
       [
-        { text: "📚 Estudar", callback_data: "menu_estudar" },
-        { text: "📝 Redação", callback_data: "menu_redacao" },
-      ],
-      [
-        { text: "🎯 Concurso", callback_data: "menu_concurso" },
-        { text: "📊 Progresso", callback_data: "menu_progresso" },
-      ],
-      [
-        { text: "💳 Planos", callback_data: "menu_planos" },
-        { text: "💬 Suporte", callback_data: "menu_suporte" },
+        { text: "💎 Planos",  callback_data: "menu_planos" },
+        { text: "🛠️ Suporte", callback_data: "menu_suporte" },
       ],
     ];
 
@@ -820,138 +463,6 @@ export async function startTelegramBot() {
     if (onboardingStates.has(telegramId)) {
       await handleOnboardingMessage(bot!, msg);
       return;
-    }
-
-    // Fluxo de redação (captura tema e texto)
-    if (redacaoStates.has(telegramId) && msg.text && !msg.text.startsWith("/")) {
-      const state = redacaoStates.get(telegramId)!;
-      const chatId = msg.chat.id;
-
-      if (state.step === "waiting_theme") {
-        // Recebeu o tema, agora pedir o texto
-        state.theme = msg.text.trim();
-        state.step = "waiting_text";
-        redacaoStates.set(telegramId, state);
-
-        await bot!.sendMessage(
-          chatId,
-          `📋 Tema: *${state.theme}*\n\n` +
-            `Agora envie o *texto completo* da sua redação.\n\n` +
-            `_Cole todo o texto em uma única mensagem._\n\n` +
-            `Para cancelar, envie /cancelar`,
-          { parse_mode: "Markdown" },
-        );
-        return;
-      }
-
-      if (state.step === "waiting_text") {
-        const essayText = msg.text.trim();
-        const wordCount = essayText.split(/\s+/).length;
-
-        // Validar tamanho mínimo
-        if (wordCount < 50) {
-          await bot!.sendMessage(
-            chatId,
-            `⚠️ Texto muito curto (${wordCount} palavras).\n\nUma redação precisa ter pelo menos 50 palavras. Envie novamente.`,
-            { parse_mode: "Markdown" },
-          );
-          return;
-        }
-
-        // Limpar estado antes de processar
-        const theme = state.theme!;
-        redacaoStates.delete(telegramId);
-
-        await bot!.sendMessage(
-          chatId,
-          `⏳ *Corrigindo sua redação...*\n\n` +
-            `📋 Tema: ${theme}\n` +
-            `📄 ${wordCount} palavras\n\n` +
-            `_Aguarde, a correção leva alguns segundos._`,
-          { parse_mode: "Markdown" },
-        );
-
-        try {
-          // Chamar API interna
-          const INTERNAL_URL = `http://localhost:${process.env.PORT || 5000}`;
-          const response = await fetch(`${INTERNAL_URL}/api/essays/submit`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ telegramId, theme, text: essayText }),
-          });
-
-          const result = await response.json();
-
-          if (result.success && result.correction) {
-            const { scores, feedback } = result.correction;
-
-            // Mensagem principal com notas
-            let msg1 = `📊 *Resultado da Correção*\n\n`;
-            msg1 += `📋 Tema: *${theme}*\n`;
-            msg1 += `📄 Palavras: ${wordCount}\n\n`;
-            msg1 += `🏆 *Nota Total: ${scores.total}/1000*\n\n`;
-            msg1 += `📝 *Competências:*\n`;
-            msg1 += `  1️⃣ Norma culta: *${scores.comp1}/200*\n`;
-            msg1 += `  2️⃣ Compreensão: *${scores.comp2}/200*\n`;
-            msg1 += `  3️⃣ Argumentação: *${scores.comp3}/200*\n`;
-            msg1 += `  4️⃣ Coesão: *${scores.comp4}/200*\n`;
-            msg1 += `  5️⃣ Intervenção: *${scores.comp5}/200*\n`;
-
-            if (result.wasFree) {
-              msg1 += `\n✅ Correção gratuita`;
-            } else if (result.amountPaid > 0) {
-              msg1 += `\n💰 Debitado: R$ ${Number(result.amountPaid).toFixed(2)}`;
-            }
-
-            await bot!.sendMessage(chatId, msg1, { parse_mode: "Markdown" });
-
-            // Feedback geral
-            await bot!.sendMessage(
-              chatId,
-              `💬 *Feedback Geral:*\n\n${feedback.general}`,
-              { parse_mode: "Markdown" },
-            );
-
-            // Feedback por competência (em uma mensagem para não spammar)
-            let msg2 = `📋 *Feedback Detalhado:*\n\n`;
-            msg2 += `*1. Norma culta:* ${feedback.comp1}\n\n`;
-            msg2 += `*2. Compreensão:* ${feedback.comp2}\n\n`;
-            msg2 += `*3. Argumentação:* ${feedback.comp3}\n\n`;
-            msg2 += `*4. Coesão:* ${feedback.comp4}\n\n`;
-            msg2 += `*5. Intervenção:* ${feedback.comp5}`;
-
-            await bot!.sendMessage(chatId, msg2, { parse_mode: "Markdown" });
-
-            // Botões finais
-            const keyboard = {
-              inline_keyboard: [
-                [{ text: "📝 Escrever outra redação", callback_data: "menu_redacao" }],
-                [{ text: "📚 Estudar", callback_data: "menu_estudar" }],
-                [{ text: "📋 Menu", callback_data: "menu_main" }],
-              ],
-            };
-            await bot!.sendMessage(
-              chatId,
-              "O que deseja fazer agora?",
-              { reply_markup: keyboard },
-            );
-          } else {
-            await bot!.sendMessage(
-              chatId,
-              `❌ *Erro na correção.*\n\n${result.error || "Tente novamente."}`,
-              { parse_mode: "Markdown" },
-            );
-          }
-        } catch (error) {
-          console.error("❌ [Bot] Erro ao enviar redação:", error);
-          await bot!.sendMessage(
-            chatId,
-            "⚠️ Erro ao processar sua redação. Tente novamente.",
-            { parse_mode: "Markdown" },
-          );
-        }
-        return;
-      }
     }
 
     if (msg.text?.startsWith("/")) return;
@@ -985,7 +496,6 @@ export async function startTelegramBot() {
         const keyboard = {
           inline_keyboard: [
             [{ text: "🌐 Acessar passarei.com.br", url: "https://passarei.com.br" }],
-            [{ text: "📊 Ver meu progresso", callback_data: "menu_progresso" }],
           ],
         };
         await bot!.sendMessage(chatId, status.message || "Acesso inativo", {
@@ -1040,133 +550,9 @@ export async function startTelegramBot() {
     }
   });
 
-  // Comando /progresso
-  bot.onText(/\/progresso/, async (msg) => {
-    const chatId = msg.chat.id;
-    const telegramId = String(msg.from?.id);
-
-    console.log(`📊 [Bot] Comando /progresso de ${telegramId}`);
-
-    try {
-      // Buscar dados do usuário
-      const userData = await db.execute(sql`
-          SELECT id, plan, "planStatus", "createdAt", "examType",
-            "cargo", "facilidades", "dificuldades", "lastStudyContentIds"
-          FROM "User"
-          WHERE "telegramId" = ${telegramId}
-          LIMIT 1
-        `);
-
-      if (!userData || userData.length === 0) {
-        await bot!.sendMessage(
-          chatId,
-          "❌ Usuário não encontrado. Use /start para começar.",
-          { parse_mode: "Markdown" },
-        );
-        return;
-      }
-
-      const user = userData[0];
-
-      // Buscar estatísticas de respostas
-      const userId = user.id; // ← ADICIONAR ANTES
-
-      const stats = await db.execute(sql`
-        SELECT 
-          COUNT(*) as total,
-          SUM(CASE WHEN correct = true THEN 1 ELSE 0 END) as acertos,
-          SUM(CASE WHEN correct = false THEN 1 ELSE 0 END) as erros
-        FROM "user_answers"
-        WHERE "userId" = ${userId}
-      `);
-
-      const total = Number(stats[0]?.total || 0);
-      const acertos = Number(stats[0]?.acertos || 0);
-      const erros = Number(stats[0]?.erros || 0);
-      const taxaAcerto = total > 0 ? ((acertos / total) * 100).toFixed(1) : 0;
-
-      // Calcular dias desde cadastro (streak simplificado)
-      const cadastro = new Date(user.createdAt);
-      const hoje = new Date();
-      const diasDesde = Math.floor(
-        (hoje.getTime() - cadastro.getTime()) / (1000 * 60 * 60 * 24),
-      );
-
-      // Emoji da taxa de acerto
-      let emojiTaxa = "📊";
-      if (Number(taxaAcerto) >= 80) emojiTaxa = "🏆";
-      else if (Number(taxaAcerto) >= 60) emojiTaxa = "✅";
-      else if (Number(taxaAcerto) >= 40) emojiTaxa = "⚠️";
-      else if (total > 0) emojiTaxa = "📉";
-
-      // Mensagem de progresso
-      let mensagem = `📊 *Seu Progresso*\n\n`;
-
-      // Status do plano
-      const planEmoji = user.plan?.toLowerCase() === "veterano" ? "⭐" : "🎓";
-      const planName = user.plan?.toUpperCase() || "INATIVO";
-      mensagem += `${planEmoji} Plano: *${planName}*\n`;
-      mensagem += `📅 Membro há: *${diasDesde} dia(s)*\n`;
-
-      // Adicionar concurso e cargo
-      if (user.examType) {
-        mensagem += `🎯 Concurso: *${user.examType}*\n`;
-      }
-      if (user.cargo) {
-        mensagem += `💼 Cargo: *${user.cargo}*\n`;
-      }
-      mensagem += `\n`;
-
-      // Pontos fortes e fracos
-      const facilidades = safeParseJsonBot(user.facilidades, []);
-      const dificuldades = safeParseJsonBot(user.dificuldades, []);
-
-      if (facilidades.length > 0 || dificuldades.length > 0) {
-        mensagem += `🧠 *Seu Perfil de Estudos:*\n`;
-        if (facilidades.length > 0) {
-          mensagem += `✅ Pontos fortes: ${facilidades.join(", ")}\n`;
-        }
-        if (dificuldades.length > 0) {
-          mensagem += `🔴 Precisa reforçar: ${dificuldades.join(", ")}\n`;
-        }
-        mensagem += `\n`;
-      }
-
-      // Estatísticas
-      mensagem += `📚 *Estatísticas de Estudo:*\n\n`;
-
-      if (total === 0) {
-        mensagem += `⚠️ Você ainda não respondeu nenhuma questão!\n\n`;
-        mensagem += `Use /estudar para começar a praticar! 🚀`;
-      } else {
-        mensagem += `✅ Questões respondidas: *${total}*\n`;
-        mensagem += `${emojiTaxa} Taxa de acerto: *${taxaAcerto}%*\n`;
-        mensagem += `🎯 Acertos: *${acertos}*\n`;
-        mensagem += `❌ Erros: *${erros}*\n\n`;
-
-        // Motivação baseada na taxa
-        if (Number(taxaAcerto) >= 80) {
-          mensagem += `🏆 *Excelente!* Continue assim!\n`;
-        } else if (Number(taxaAcerto) >= 60) {
-          mensagem += `✅ *Bom trabalho!* Você está no caminho certo!\n`;
-        } else if (Number(taxaAcerto) >= 40) {
-          mensagem += `💪 *Continue praticando!* Você vai melhorar!\n`;
-        } else {
-          mensagem += `📚 *Não desista!* Revise os conteúdos e tente novamente!\n`;
-        }
-
-        mensagem += `\nUse /estudar para continuar praticando! 📖`;
-      }
-
-      await bot!.sendMessage(chatId, mensagem, { parse_mode: "Markdown" });
-    } catch (error) {
-      console.error("❌ [Bot] Erro ao buscar progresso:", error);
-      await bot!.sendMessage(
-        chatId,
-        "⚠️ Erro ao buscar seu progresso. Tente novamente em instantes.",
-        { parse_mode: "Markdown" },
-      );
-    }
+  // Comandos movidos para a Sala de Aula (site) — retornam mensagem de redirecionamento
+  bot.onText(/^\/(redacao|redação|cancelar|concurso|progresso)$/i, async (msg) => {
+    await bot!.sendMessage(msg.chat.id, RECURSO_MOVIDO, { parse_mode: "Markdown" });
   });
 
   // Comando /codigo ou /código - Resgatar código promocional
@@ -1229,7 +615,6 @@ export async function startTelegramBot() {
             const keyboard = {
               inline_keyboard: [
                 [{ text: "📚 Começar a estudar", callback_data: "menu_estudar" }],
-                [{ text: "📊 Ver meu progresso", callback_data: "menu_progresso" }],
               ],
             };
             await bot!.sendMessage(
@@ -1291,85 +676,15 @@ export async function startTelegramBot() {
     );
   });
 
-  // ============================================
-  // Comando /redacao - Enviar redação para correção IA
-  // ============================================
-  bot.onText(/\/redacao/, async (msg) => {
-    const chatId = msg.chat.id;
-    const telegramId = String(msg.from?.id);
-
-    console.log(`📝 [Bot] Comando /redacao de ${telegramId}`);
-
-    try {
-      // Verificar se tem sessão de estudo ativa
-      if (activeSessions.has(telegramId)) {
-        await bot!.sendMessage(
-          chatId,
-          "⚠️ Você tem uma sessão de estudo ativa.\n\nUse /parar para encerrar antes de enviar uma redação.",
-          { parse_mode: "Markdown" },
-        );
-        return;
-      }
-
-      // Verificar acesso via API interna
-      const INTERNAL_URL = `http://localhost:${process.env.PORT || 5000}`;
-      const accessRes = await fetch(`${INTERNAL_URL}/api/essays/check-access/${telegramId}`);
-      const access = await accessRes.json();
-
-      if (!access.success || !access.canAccess) {
-        const keyboard = {
-          inline_keyboard: [
-            [{ text: "🌐 Acessar passarei.com.br", url: "https://passarei.com.br" }],
-          ],
-        };
-        await bot!.sendMessage(
-          chatId,
-          `❌ *Sem acesso à correção de redações.*\n\n${access.message || "Ative seu plano para usar este recurso."}`,
-          { parse_mode: "Markdown", reply_markup: keyboard },
-        );
-        return;
-      }
-
-      // Informar sobre créditos disponíveis
-      let creditInfo = "";
-      if (access.reason === "veterano_free") {
-        creditInfo = `\n📊 Correções gratuitas restantes: *${access.freeRemaining}*`;
-      } else if (access.reason === "paid") {
-        creditInfo = `\n💰 Créditos: R$ ${Number(access.credits).toFixed(2)} (R$ ${Number(access.price).toFixed(2)}/redação)`;
-      }
-
-      // Salvar estado e pedir tema
-      redacaoStates.set(telegramId, { step: "waiting_theme", chatId });
-
-      await bot!.sendMessage(
-        chatId,
-        `📝 *Correção de Redação com IA*${creditInfo}\n\n` +
-          `Qual é o *tema* da sua redação?\n\n` +
-          `_Exemplo: "A importância da segurança pública no Brasil"_\n\n` +
-          `Para cancelar, envie /cancelar`,
-        { parse_mode: "Markdown" },
-      );
-    } catch (error) {
-      console.error("❌ [Bot] Erro no /redacao:", error);
-      await bot!.sendMessage(
-        chatId,
-        "⚠️ Erro ao iniciar correção de redação. Tente novamente.",
-        { parse_mode: "Markdown" },
-      );
-    }
-  });
-
-  // Comando /cancelar - cancelar redação em andamento
-  bot.onText(/\/cancelar/, async (msg) => {
-    const telegramId = String(msg.from?.id);
-    if (redacaoStates.has(telegramId)) {
-      redacaoStates.delete(telegramId);
-      await bot!.sendMessage(
-        msg.chat.id,
-        "❌ Envio de redação cancelado.",
-        { parse_mode: "Markdown" },
-      );
-    }
-  });
 }
 export { bot };
+
+/** Envia uma mensagem via Bot para um chatId Telegram (fire-and-forget seguro). */
+export async function sendTelegramMessage(chatId: number | string, text: string): Promise<void> {
+  if (!bot || !chatId) return;
+  try {
+    await bot.sendMessage(Number(chatId), text, { parse_mode: "Markdown" });
+  } catch (err) {
+    console.error("[Bot] Erro ao enviar notificação:", err);
+  }
+}

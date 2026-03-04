@@ -10,6 +10,7 @@ import { db } from "../db";
 import { sql } from "drizzle-orm";
 import { requireStudentAuth, getStudentProfile, type StudentJWTPayload } from "./auth-student";
 import { correctEssay } from "./services/ai-engine";
+import { sendTelegramMessage } from "./telegram/bot";
 
 // Services (shared with Telegram bot)
 import {
@@ -804,6 +805,19 @@ export function registerSalaRoutes(app: Express) {
             .catch((e: any) => console.error("[Worker] Erro no prepareEdital:", e));
         }
       }
+
+      // Notificação Telegram (fire-and-forget — não bloqueia o response)
+      db.execute(sql`
+        SELECT "telegramId" FROM "User" WHERE id = ${student.userId} LIMIT 1
+      `).then((rows: any[]) => {
+        const telegramId = (rows as any[])[0]?.telegramId;
+        if (telegramId) {
+          sendTelegramMessage(
+            telegramId,
+            "🔄 *Curso Atualizado!*\n\nSeu plano de estudos foi reiniciado no site para o novo concurso selecionado.",
+          );
+        }
+      }).catch(() => { /* silencioso */ });
 
       const profile = await getStudentProfile(student.userId);
       return res.json({ success: true, profile });
