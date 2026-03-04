@@ -5,6 +5,7 @@
  */
 
 import type { Express } from "express";
+import bcrypt from "bcrypt";
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
 import { requireAuth } from "../middleware-supabase";
@@ -144,6 +145,61 @@ export function registerUsersRoutes(app: Express) {
         success: false,
         error: "Erro ao buscar usuários.",
       });
+    }
+  });
+
+  // PUT /api/admin/users/:userId/email — Alterar e-mail do aluno
+  app.put("/api/admin/users/:userId/email", requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { newEmail } = req.body;
+      const admin = (req as any).admin;
+
+      if (!newEmail || !newEmail.includes("@")) {
+        return res.status(400).json({ success: false, error: "E-mail inválido." });
+      }
+
+      // Verificar unicidade
+      const existing = await db.execute(sql`
+        SELECT id FROM "User" WHERE email = ${newEmail} AND id != ${userId} LIMIT 1
+      `) as any[];
+      if (existing.length > 0) {
+        return res.status(409).json({ success: false, error: "Este e-mail já está em uso por outro usuário." });
+      }
+
+      await db.execute(sql`
+        UPDATE "User" SET email = ${newEmail}, "updatedAt" = NOW() WHERE id = ${userId}
+      `);
+
+      console.log(`✏️ [Admin] E-mail do usuário ${userId} alterado para ${newEmail} por ${admin?.email || "?"}`);
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating user email:", error);
+      return res.status(500).json({ success: false, error: "Erro ao atualizar e-mail." });
+    }
+  });
+
+  // PUT /api/admin/users/:userId/password — Redefinir senha do aluno
+  app.put("/api/admin/users/:userId/password", requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { newPassword } = req.body;
+      const admin = (req as any).admin;
+
+      if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ success: false, error: "Senha deve ter no mínimo 6 caracteres." });
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      await db.execute(sql`
+        UPDATE "User" SET "passwordHash" = ${passwordHash}, "updatedAt" = NOW() WHERE id = ${userId}
+      `);
+
+      console.log(`🔑 [Admin] Senha do usuário ${userId} redefinida por ${admin?.email || "?"}`);
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating user password:", error);
+      return res.status(500).json({ success: false, error: "Erro ao atualizar senha." });
     }
   });
 

@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -18,8 +20,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { GraduationCap, Search, Loader2, ChevronLeft, ChevronRight, LogIn } from "lucide-react";
+import { GraduationCap, Search, Loader2, ChevronLeft, ChevronRight, LogIn, Pencil, Eye, EyeOff, KeyRound, Mail } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
 interface User {
@@ -50,11 +53,20 @@ interface UsersResponse {
 }
 
 export default function EducUsers() {
+  const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [impersonating, setImpersonating] = useState<string | null>(null);
+
+  // Edit credentials modal
+  const [editingUser, setEditingUser] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   const handleImpersonate = async (userId: string, userName: string) => {
     if (!confirm(`Acessar a Sala de Aula como "${userName}"?\n\nIsso vai abrir uma nova aba com a visão do aluno.`)) return;
@@ -69,6 +81,46 @@ export default function EducUsers() {
       alert(`Erro: ${err.message || "Falha ao iniciar shadow mode"}`);
     } finally {
       setImpersonating(null);
+    }
+  };
+
+  const handleUpdateEmail = async () => {
+    if (!editingUser || !newEmail.includes("@")) return;
+    setIsUpdatingEmail(true);
+    try {
+      const res = await fetch(`/api/admin/users/${editingUser.id}/email`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newEmail }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      toast({ title: "E-mail atualizado", description: `Novo e-mail: ${newEmail}` });
+      setEditingUser({ ...editingUser, email: newEmail });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Erro", description: err.message || "Falha ao atualizar e-mail." });
+    } finally {
+      setIsUpdatingEmail(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!editingUser || newPassword.length < 6) return;
+    setIsUpdatingPassword(true);
+    try {
+      const res = await fetch(`/api/admin/users/${editingUser.id}/password`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      toast({ title: "Senha redefinida", description: `Senha do aluno ${editingUser.name || editingUser.email} atualizada.` });
+      setNewPassword("");
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Erro", description: err.message || "Falha ao redefinir senha." });
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -224,7 +276,7 @@ export default function EducUsers() {
                       <TableHead>Progresso</TableHead>
                       <TableHead>Último Acesso</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Suporte</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -257,18 +309,34 @@ export default function EducUsers() {
                         <TableCell>{formatDate(user.lastActiveAt)}</TableCell>
                         <TableCell>{getStatusBadge(user.isActive, user.plan)}</TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs gap-1"
-                            disabled={impersonating === user.id}
-                            onClick={() => handleImpersonate(user.id, user.name || user.email)}
-                          >
-                            {impersonating === user.id
-                              ? <Loader2 className="h-3 w-3 animate-spin" />
-                              : <LogIn className="h-3 w-3" />}
-                            Entrar
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs gap-1"
+                              disabled={impersonating === user.id}
+                              onClick={() => handleImpersonate(user.id, user.name || user.email)}
+                            >
+                              {impersonating === user.id
+                                ? <Loader2 className="h-3 w-3 animate-spin" />
+                                : <LogIn className="h-3 w-3" />}
+                              Entrar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs gap-1"
+                              onClick={() => {
+                                setEditingUser({ id: user.id, name: user.name || "", email: user.email });
+                                setNewEmail(user.email);
+                                setNewPassword("");
+                                setShowPassword(false);
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Editar
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -308,6 +376,79 @@ export default function EducUsers() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Modal: Editar Credenciais do Aluno ── */}
+      <Dialog open={!!editingUser} onOpenChange={(open) => {
+        if (!open) { setEditingUser(null); setNewEmail(""); setNewPassword(""); setShowPassword(false); }
+      }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-4 w-4 text-primary" /> Editar Aluno
+            </DialogTitle>
+            <DialogDescription>
+              {editingUser?.name || editingUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 pt-1">
+            {/* ── Alterar Senha ── */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <KeyRound className="h-3.5 w-3.5" /> Nova Senha
+              </p>
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Mínimo 6 caracteres"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <Button
+                size="sm"
+                className="w-full"
+                disabled={isUpdatingPassword || newPassword.length < 6}
+                onClick={handleUpdatePassword}
+              >
+                {isUpdatingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar Senha"}
+              </Button>
+            </div>
+
+            <Separator />
+
+            {/* ── Alterar E-mail ── */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5" /> Novo E-mail
+              </p>
+              <Input
+                type="email"
+                placeholder="novo@email.com"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                disabled={isUpdatingEmail || !newEmail.includes("@") || newEmail === editingUser?.email}
+                onClick={handleUpdateEmail}
+              >
+                {isUpdatingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar E-mail"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
