@@ -15,8 +15,11 @@ import {
   loginStudent,
   requireStudentAuth,
   getStudentProfile,
+  generateStudentToken,
   type StudentJWTPayload,
 } from "./auth-student";
+import { sendTelegramMessage } from "./telegram/bot";
+import { sendEmail } from "./email/resend";
 
 export function registerSalaAuthRoutes(app: Express) {
   console.log("🎓 Registrando rotas de auth da Sala de Aula...");
@@ -184,6 +187,129 @@ export function registerSalaAuthRoutes(app: Express) {
     } catch (err) {
       console.error("❌ [Auth] change-email:", err);
       return res.status(500).json({ success: false, error: "Erro ao alterar e-mail." });
+    }
+  });
+
+  // POST /api/sala/auth/forgot-password — Gera código e envia via Telegram ou E-mail
+  app.post("/api/sala/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ success: false, error: "E-mail obrigatório." });
+
+      const rows = await db.execute(sql`
+        SELECT id, name, "telegramId" FROM "User" WHERE email = ${email.toLowerCase()} LIMIT 1
+      `) as any[];
+
+      // Resposta genérica mesmo se não existir (não vazar informação)
+      if (!rows[0]) return res.json({ success: true, method: "email" });
+
+      const user = rows[0];
+
+      // Invalida códigos anteriores pendentes
+      await db.execute(sql`
+        UPDATE password_reset_codes SET used_at = NOW()
+        WHERE user_id = ${user.id} AND used_at IS NULL
+      `);
+
+      // Gera código de 6 dígitos
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+      await db.execute(sql`
+        INSERT INTO password_reset_codes (user_id, code, expires_at)
+        VALUES (${user.id}, ${code}, ${expiresAt})
+      `);
+
+      let method: "telegram" | "email" = "email";
+
+      // Prioridade: Telegram
+      if (user.telegramId) {
+        try {
+          await sendTelegramMessage(
+            user.telegramId,
+            `🔐 *Recuperação de Acesso*\n\nSeu código de verificação é:\n\n*${code}*\n\n⏰ Válido por 15 minutos.\nUse-o no site para redefinir sua senha.`
+          );
+          method = "telegram";
+        } catch {
+          // Fallback para e-mail
+        }
+      }
+
+      // Fallback: E-mail
+      if (method === "email") {
+        const { resetPasswordHtml } = await import("./email/templates/reset-password");
+        await sendEmail({
+          to: email,
+          subject: "Passarei — Código de recuperação de senha",
+          html: resetPasswordHtml(user.name || "Estudante", code),
+        });
+      }
+
+      console.log(`🔐 [Auth] forgot-password: ${email} → ${method}`);
+      return res.json({ success: true, method });
+    } catch (err) {
+      console.error("❌ [Auth] forgot-password:", err);
+      return res.status(500).json({ success: false, error: "Erro ao processar recuperação." });
+    }
+  });
+
+  // POST /api/sala/auth/reset-password — Valida código e redefine senha
+  app.post("/api/sala/auth/reset-password", async (req, res) => {
+    try {
+      const { email, code, newPassword } = req.body;
+      if (!email || !code || !newPassword)
+        return res.status(400).json({ success: false, error: "Todos os campos são obrigatórios." });
+
+      // Validar regras da senha
+      if (
+        newPassword.length < 6 ||
+        !/[a-zA-Z]/.test(newPassword) ||
+        !/[0-9]/.test(newPassword)
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "Senha deve ter no mínimo 6 caracteres com pelo menos uma letra e um número.",
+        });
+      }
+
+      const userRows = await db.execute(sql`
+        SELECT id, email, name, plan FROM "User" WHERE email = ${email.toLowerCase()} LIMIT 1
+      `) as any[];
+      if (!userRows[0])
+        return res.status(400).json({ success: false, error: "Código inválido ou expirado." });
+
+      const user = userRows[0];
+
+      const codeRows = await db.execute(sql`
+        SELECT id FROM password_reset_codes
+        WHERE user_id = ${user.id}
+          AND code = ${code}
+          AND expires_at > NOW()
+          AND used_at IS NULL
+        LIMIT 1
+      `) as any[];
+      if (!codeRows[0])
+        return res.status(400).json({ success: false, error: "Código inválido ou expirado." });
+
+      const hash = await bcrypt.hash(newPassword, 10);
+
+      await db.execute(sql`
+        UPDATE "User" SET "passwordHash" = ${hash}, "updatedAt" = NOW() WHERE id = ${user.id}
+      `);
+      await db.execute(sql`
+        UPDATE password_reset_codes SET used_at = NOW()
+        WHERE user_id = ${user.id} AND code = ${code}
+      `);
+
+      // Login automático após redefinição
+      const profile = await getStudentProfile(user.id);
+      const token = generateStudentToken(profile!);
+
+      console.log(`✅ [Auth] reset-password: ${email} redefiniu senha com sucesso`);
+      return res.json({ success: true, token, profile });
+    } catch (err) {
+      console.error("❌ [Auth] reset-password:", err);
+      return res.status(500).json({ success: false, error: "Erro ao redefinir senha." });
     }
   });
 }

@@ -44,6 +44,7 @@ export async function runAutoMigrations() {
   await run("backfillCertoErrado",  backfillCertoErrado);
   await run("essayCooldown",        migrateEssayCooldown);
   await run("redacaoTemplates",     migrateRedacaoTemplates);
+  await run("passwordResetCodes",   migratePasswordResetCodes);
 
   console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
@@ -1571,4 +1572,21 @@ async function backfillCorrectOption() {
   } else {
     console.log("  ✅ [Backfill] correctOption: todas as questões já estavam corretas");
   }
+}
+
+// ============================================
+// PASSWORD RESET CODES — tabela para recuperação de senha
+// ============================================
+async function migratePasswordResetCodes() {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS password_reset_codes (
+      id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+      user_id     TEXT        NOT NULL,
+      code        VARCHAR(6)  NOT NULL,
+      expires_at  TIMESTAMP   NOT NULL,
+      created_at  TIMESTAMP   DEFAULT NOW(),
+      used_at     TIMESTAMP
+    )
+  `);
+  console.log("  ✅ password_reset_codes OK");
 }
