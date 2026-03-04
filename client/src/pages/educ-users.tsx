@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { GraduationCap, Search, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { GraduationCap, Search, Loader2, ChevronLeft, ChevronRight, LogIn } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -34,6 +34,8 @@ interface User {
   createdAt: string;
   totalQuestions: number;
   isActive: boolean;
+  concursoName: string;
+  examType: string | null;
 }
 
 interface UsersResponse {
@@ -52,6 +54,23 @@ export default function EducUsers() {
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [impersonating, setImpersonating] = useState<string | null>(null);
+
+  const handleImpersonate = async (userId: string, userName: string) => {
+    if (!confirm(`Acessar a Sala de Aula como "${userName}"?\n\nIsso vai abrir uma nova aba com a visão do aluno.`)) return;
+    setImpersonating(userId);
+    try {
+      const res = await fetch(`/api/admin/impersonate/${userId}`, { method: "POST" });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      localStorage.setItem("passarei_student_token", data.token);
+      window.open("/sala/aula", "_blank");
+    } catch (err: any) {
+      alert(`Erro: ${err.message || "Falha ao iniciar shadow mode"}`);
+    } finally {
+      setImpersonating(null);
+    }
+  };
 
   const queryParams = new URLSearchParams({
     page: page.toString(),
@@ -201,9 +220,11 @@ export default function EducUsers() {
                       <TableHead>Aluno</TableHead>
                       <TableHead>Telegram</TableHead>
                       <TableHead>Plano</TableHead>
-                      <TableHead>Questões</TableHead>
+                      <TableHead>Concurso</TableHead>
+                      <TableHead>Progresso</TableHead>
                       <TableHead>Último Acesso</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Suporte</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -220,10 +241,35 @@ export default function EducUsers() {
                         </TableCell>
                         <TableCell>{getPlanBadge(user.plan)}</TableCell>
                         <TableCell>
-                          <span className="font-medium">{user.totalQuestions}</span>
+                          <span className="text-xs text-muted-foreground">{user.concursoName || "-"}</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className="h-full bg-primary rounded-full"
+                                style={{ width: `${Math.min(100, Math.round((user.totalQuestions / 500) * 100))}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground">{user.totalQuestions}</span>
+                          </div>
                         </TableCell>
                         <TableCell>{formatDate(user.lastActiveAt)}</TableCell>
                         <TableCell>{getStatusBadge(user.isActive, user.plan)}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs gap-1"
+                            disabled={impersonating === user.id}
+                            onClick={() => handleImpersonate(user.id, user.name || user.email)}
+                          >
+                            {impersonating === user.id
+                              ? <Loader2 className="h-3 w-3 animate-spin" />
+                              : <LogIn className="h-3 w-3" />}
+                            Entrar
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

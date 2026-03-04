@@ -1,13 +1,14 @@
 /**
  * Admin Users Routes — Alunos e beta testers
  *
- * Rotas: /api/admin/users, /api/admin/beta-testers
+ * Rotas: /api/admin/users, /api/admin/beta-testers, /api/admin/impersonate/:userId
  */
 
 import type { Express } from "express";
 import { db } from "../../db";
 import { sql } from "drizzle-orm";
 import { requireAuth } from "../middleware-supabase";
+import { getStudentProfile, generateStudentToken } from "../auth-student";
 
 export function registerUsersRoutes(app: Express) {
   // GET /api/admin/beta-testers - List users who redeemed promo codes
@@ -95,7 +96,10 @@ export function registerUsersRoutes(app: Express) {
           "planEndDate",
           last_active_at,
           "createdAt",
-          "totalQuestionsAnswered"
+          "totalQuestionsAnswered",
+          "examType",
+          target_concurso_id,
+          (SELECT nome FROM concursos WHERE id::text = target_concurso_id LIMIT 1) as concurso_name
         FROM "User"
         ${sql.raw(whereConditions)}
         ORDER BY last_active_at DESC NULLS LAST
@@ -119,6 +123,8 @@ export function registerUsersRoutes(app: Express) {
           createdAt: u.createdAt,
           totalQuestions: u.totalQuestionsAnswered || 0,
           isActive,
+          examType: u.examType || null,
+          concursoName: u.concurso_name || u.examType || "-",
         };
       });
 
@@ -138,6 +144,30 @@ export function registerUsersRoutes(app: Express) {
         success: false,
         error: "Erro ao buscar usuários.",
       });
+    }
+  });
+
+  // POST /api/admin/impersonate/:userId — Shadow Mode (Acessar Sala como Aluno)
+  app.post("/api/admin/impersonate/:userId", requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      if (!userId) return res.status(400).json({ success: false, error: "userId obrigatório." });
+
+      const profile = await getStudentProfile(userId);
+      if (!profile) return res.status(404).json({ success: false, error: "Aluno não encontrado." });
+
+      const token = generateStudentToken(profile);
+      const admin = (req as any).admin;
+      console.log(`⚠️ [Admin Shadow] Admin ${admin?.email || "?"} acessando sala do aluno ${profile.email} (${userId})`);
+
+      return res.json({
+        success: true,
+        token,
+        profile: { id: profile.id, name: profile.name, email: profile.email },
+      });
+    } catch (error) {
+      console.error("Error impersonating user:", error);
+      return res.status(500).json({ success: false, error: "Erro ao gerar acesso de suporte." });
     }
   });
 }

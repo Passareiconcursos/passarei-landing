@@ -144,6 +144,29 @@ export function registerDashboardRoutes(app: Express) {
         AND (last_active_at IS NULL OR last_active_at <= ${weekAgo})
       `);
 
+      // Engajamento global: total de questões respondidas por todos os usuários
+      const engagementResult = await db.execute(sql`
+        SELECT COALESCE(SUM("totalQuestionsAnswered"), 0) as total FROM "User"
+      `) as any[];
+      const totalQuestionsGlobal = Number((engagementResult as any[])[0]?.total || 0);
+
+      // Redações: por status (tabela essays pode não existir em ambientes novos)
+      let essaysCorrected = 0;
+      let essaysCorrecting = 0;
+      let essaysTotal = 0;
+      try {
+        const essaysResult = await db.execute(sql`
+          SELECT status, COUNT(*) as count FROM essays GROUP BY status
+        `) as any[];
+        const essaysByStatus: Record<string, number> = {};
+        for (const row of essaysResult as any[]) {
+          essaysByStatus[row.status] = Number(row.count || 0);
+        }
+        essaysCorrected  = essaysByStatus["CORRECTED"]  || 0;
+        essaysCorrecting = essaysByStatus["CORRECTING"] || 0;
+        essaysTotal = Object.values(essaysByStatus).reduce((a, b) => a + b, 0);
+      } catch { /* tabela essays não existe ainda */ }
+
       return res.json({
         success: true,
         stats: {
@@ -170,6 +193,8 @@ export function registerDashboardRoutes(app: Express) {
             stalledLeads: Number((stalledLeadsResult as any[])[0]?.count || 0),
             inactiveUsers: Number((inactiveUsersResult as any[])[0]?.count || 0),
           },
+          engagement: { totalQuestions: totalQuestionsGlobal },
+          essays: { total: essaysTotal, corrected: essaysCorrected, correcting: essaysCorrecting },
         },
       });
     } catch (error) {
@@ -178,6 +203,41 @@ export function registerDashboardRoutes(app: Express) {
         success: false,
         error: "Erro ao buscar estatísticas do dashboard.",
       });
+    }
+  });
+
+  // GET /api/admin/db-status - Monitoramento do banco de dados
+  app.get("/api/admin/db-status", requireAuth, async (req, res) => {
+    try {
+      const counts = await db.execute(sql`
+        SELECT
+          (SELECT COUNT(*) FROM "User")     as users,
+          (SELECT COUNT(*) FROM "Question") as questions,
+          (SELECT COUNT(*) FROM leads)      as leads,
+          (SELECT COALESCE((SELECT COUNT(*) FROM essays), 0))    as essays,
+          (SELECT COALESCE((SELECT COUNT(*) FROM simulados), 0)) as simulados
+      `) as any[];
+      const row = (counts as any[])[0] || {};
+      const dbUrl = process.env.DATABASE_URL || "";
+      const dbMasked = dbUrl
+        ? (dbUrl.split("@")[1]?.split("/")[0] || "conectado")
+        : "não configurado";
+
+      return res.json({
+        success: true,
+        status: dbUrl ? "ok" : "error",
+        host: dbMasked,
+        tables: {
+          users:     Number(row.users     || 0),
+          questions: Number(row.questions || 0),
+          leads:     Number(row.leads     || 0),
+          essays:    Number(row.essays    || 0),
+          simulados: Number(row.simulados || 0),
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching DB status:", error);
+      return res.status(500).json({ success: false, error: "Erro ao consultar banco." });
     }
   });
 }

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Users, UserCheck, DollarSign, TrendingUp, Loader2, AlertTriangle, CheckCircle, ArrowRight } from "lucide-react";
+import { Users, UserCheck, DollarSign, Activity, PenLine, Loader2, AlertTriangle, CheckCircle, ArrowRight, Database } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 
@@ -14,11 +14,25 @@ interface DashboardStats {
   conversion: string;
   funnel: { monthLeads: number; monthFree: number; monthPaid: number };
   alerts: { stalledLeads: number; inactiveUsers: number };
+  engagement: { totalQuestions: number };
+  essays: { total: number; corrected: number; correcting: number };
+}
+
+interface DbStatus {
+  success: boolean;
+  status: string;
+  host: string;
+  tables: Record<string, number>;
 }
 
 export default function AdminDashboard() {
   const { data, isLoading, isError } = useQuery<{ success: boolean; stats: DashboardStats }>({
     queryKey: ["/api/admin/dashboard-stats"],
+  });
+
+  const { data: dbStatus } = useQuery<DbStatus>({
+    queryKey: ["/api/admin/db-status"],
+    refetchInterval: 60_000,
   });
 
   const stats = data?.stats;
@@ -100,25 +114,30 @@ export default function AdminDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">MRR</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Engajamento Global</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(stats?.mrr || 0)}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.users.calouro || 0} Calouro · {stats?.users.veterano || 0} Veterano
-              </p>
+              <div className="text-2xl font-bold">
+                {(stats?.engagement?.totalQuestions || 0).toLocaleString("pt-BR")}
+              </div>
+              <p className="text-xs text-muted-foreground">questões respondidas (total)</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Conversão</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Redações</CardTitle>
+              <PenLine className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.conversion || "0%"}</div>
-              <p className="text-xs text-muted-foreground">Lead → Pago (mês)</p>
+              <div className="text-2xl font-bold">{stats?.essays?.total || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                <span className="text-green-600">{stats?.essays?.corrected || 0} corrigidas</span>
+                {(stats?.essays?.correcting || 0) > 0 && (
+                  <span className="text-amber-600"> · {stats?.essays?.correcting} em análise</span>
+                )}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -209,6 +228,32 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* DB Monitor */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                Banco de Dados
+              </CardTitle>
+              <Badge className={dbStatus?.status === "ok" ? "bg-green-500 hover:bg-green-500" : "bg-red-500 hover:bg-red-500"}>
+                {dbStatus?.status === "ok" ? "Online" : dbStatus ? "Erro" : "—"}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">{dbStatus?.host || "verificando..."}</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-5 gap-2 text-center">
+              {Object.entries(dbStatus?.tables || { users: "—", questions: "—", leads: "—", essays: "—", simulados: "—" }).map(([table, count]) => (
+                <div key={table} className="rounded-lg border p-2">
+                  <div className="font-bold text-base">{typeof count === "number" ? count.toLocaleString("pt-BR") : count}</div>
+                  <div className="text-[10px] text-muted-foreground capitalize">{table}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Quick Actions */}
         <Card>

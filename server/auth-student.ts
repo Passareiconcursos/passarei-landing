@@ -237,7 +237,7 @@ export async function getStudentProfile(userId: string): Promise<StudentProfile 
 // HELPERS
 // ============================================
 
-function generateStudentToken(profile: StudentProfile): string {
+export function generateStudentToken(profile: StudentProfile): string {
   const payload: StudentJWTPayload = {
     userId: profile.id,
     email: profile.email,
