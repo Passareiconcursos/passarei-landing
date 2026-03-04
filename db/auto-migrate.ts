@@ -45,6 +45,7 @@ export async function runAutoMigrations() {
   await run("essayCooldown",        migrateEssayCooldown);
   await run("redacaoTemplates",     migrateRedacaoTemplates);
   await run("passwordResetCodes",   migratePasswordResetCodes);
+  await run("globalLogout",         migrateGlobalLogout);
 
   console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
@@ -1589,4 +1590,14 @@ async function migratePasswordResetCodes() {
     )
   `);
   console.log("  ✅ password_reset_codes OK");
+}
+
+// ============================================
+// GLOBAL LOGOUT — coluna para invalidar tokens anteriores
+// ============================================
+async function migrateGlobalLogout() {
+  await db.execute(sql`
+    ALTER TABLE "User" ADD COLUMN IF NOT EXISTS last_global_logout_at TIMESTAMP
+  `);
+  console.log("  ✅ last_global_logout_at OK");
 }

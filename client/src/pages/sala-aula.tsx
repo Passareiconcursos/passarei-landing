@@ -49,8 +49,17 @@ import {
   User,
   KeyRound,
   Mail,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { sortByNucleoDuro, isNucleoDuro } from "@/lib/pedagogia";
+
+function getInitials(name?: string | null): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 // ============================================
 // SUBJECT NAME FORMATTER
@@ -308,6 +317,9 @@ export default function SalaAula() {
   const [profileNewEmail, setProfileNewEmail] = useState("");
   const [profileEmailPw, setProfileEmailPw] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmEmailPw, setShowConfirmEmailPw] = useState(false);
   const [lastStudiedSubjectId, setLastStudiedSubjectId] = useState<string | null>(
     () => localStorage.getItem("passarei_last_subject") ?? null
   );
@@ -1217,6 +1229,8 @@ export default function SalaAula() {
       setShowDashboard(true);
       localStorage.removeItem("passarei_last_subject");
       sessionStorage.clear();
+      setActiveSimulado(null);
+      setSimuladoTimeRemaining(0);
 
       // 4. Re-busca matérias e plano de estudo para o novo concurso
       await fetchSubjects();
@@ -1648,20 +1662,45 @@ export default function SalaAula() {
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
                 <KeyRound className="h-3.5 w-3.5" /> Alterar Senha
               </p>
-              <input
-                type="password"
-                placeholder="Senha atual"
-                value={profileCurrentPw}
-                onChange={(e) => setProfileCurrentPw(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-              <input
-                type="password"
-                placeholder="Nova senha (mín. 8 caracteres)"
-                value={profileNewPw}
-                onChange={(e) => setProfileNewPw(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
+              <div className="relative">
+                <input
+                  type={showCurrentPw ? "text" : "password"}
+                  placeholder="Senha atual"
+                  value={profileCurrentPw}
+                  onChange={(e) => setProfileCurrentPw(e.target.value)}
+                  className="w-full px-3 py-2 pr-10 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+                <button type="button" onClick={() => setShowCurrentPw(!showCurrentPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {showCurrentPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={showNewPw ? "text" : "password"}
+                  placeholder="Nova senha (mín. 8 caracteres)"
+                  value={profileNewPw}
+                  onChange={(e) => setProfileNewPw(e.target.value)}
+                  className="w-full px-3 py-2 pr-10 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+                <button type="button" onClick={() => setShowNewPw(!showNewPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {profileNewPw.length > 0 && (
+                <div className="flex gap-3 text-[11px]">
+                  {[
+                    { label: "8+ caracteres", ok: profileNewPw.length >= 8 },
+                    { label: "1 letra",       ok: /[a-zA-Z]/.test(profileNewPw) },
+                    { label: "1 número",      ok: /[0-9]/.test(profileNewPw) },
+                  ].map(({ label, ok }) => (
+                    <span key={label} className={ok ? "text-green-600" : "text-muted-foreground"}>
+                      {ok ? "✓" : "○"} {label}
+                    </span>
+                  ))}
+                </div>
+              )}
               <Button size="sm" className="w-full" disabled={profileLoading || !profileCurrentPw || !profileNewPw}
                 onClick={async () => {
                   setProfileLoading(true);
@@ -1698,13 +1737,19 @@ export default function SalaAula() {
                 onChange={(e) => setProfileNewEmail(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
-              <input
-                type="password"
-                placeholder="Confirme sua senha"
-                value={profileEmailPw}
-                onChange={(e) => setProfileEmailPw(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmEmailPw ? "text" : "password"}
+                  placeholder="Confirme sua senha"
+                  value={profileEmailPw}
+                  onChange={(e) => setProfileEmailPw(e.target.value)}
+                  className="w-full px-3 py-2 pr-10 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+                <button type="button" onClick={() => setShowConfirmEmailPw(!showConfirmEmailPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {showConfirmEmailPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               <Button size="sm" variant="outline" className="w-full" disabled={profileLoading || !profileNewEmail || !profileEmailPw}
                 onClick={async () => {
                   setProfileLoading(true);
@@ -1724,6 +1769,44 @@ export default function SalaAula() {
                   finally { setProfileLoading(false); }
                 }}>
                 {profileLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar novo e-mail"}
+              </Button>
+            </div>
+
+            <Separator />
+
+            {/* ── Zona de Segurança ── */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5" /> Segurança
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-destructive border-destructive/30 hover:bg-destructive/5"
+                disabled={profileLoading}
+                onClick={async () => {
+                  if (!confirm("Isso vai encerrar sua sessão em todos os dispositivos. Continuar?")) return;
+                  setProfileLoading(true);
+                  try {
+                    const res = await fetch("/api/sala/auth/logout-all", {
+                      method: "POST",
+                      headers: { Authorization: `Bearer ${token}` },
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      toast({ title: "Sessões encerradas", description: "Você saiu de todos os dispositivos." });
+                      logout();
+                    } else {
+                      toast({ variant: "destructive", title: "Erro", description: data.error });
+                    }
+                  } catch {
+                    toast({ variant: "destructive", title: "Erro de conexão" });
+                  } finally {
+                    setProfileLoading(false);
+                  }
+                }}
+              >
+                Sair de todos os dispositivos
               </Button>
             </div>
           </div>
@@ -2017,8 +2100,9 @@ export default function SalaAula() {
                 </SheetHeader>
                 <div className="mt-4 space-y-1">
                   <div className="flex items-center gap-3 px-2 py-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary text-sm">
-                      {student?.name?.[0]?.toUpperCase() || "?"}
+                    <div className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-white text-sm shrink-0"
+                      style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}>
+                      {getInitials(student?.name)}
                     </div>
                     <div>
                       <p className="text-sm font-medium">{student?.name}</p>

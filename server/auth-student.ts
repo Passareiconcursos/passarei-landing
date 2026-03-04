@@ -170,7 +170,7 @@ export async function loginStudent(
 // MIDDLEWARE — Protege rotas /api/sala/*
 // ============================================
 
-export function requireStudentAuth(req: Request, res: Response, next: NextFunction) {
+export async function requireStudentAuth(req: Request, res: Response, next: NextFunction) {
   // Try Bearer token first, then cookie
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith("Bearer ")
@@ -181,13 +181,28 @@ export function requireStudentAuth(req: Request, res: Response, next: NextFuncti
     return res.status(401).json({ success: false, error: "Token não fornecido." });
   }
 
+  let payload: StudentJWTPayload & { iat?: number };
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as StudentJWTPayload;
-    (req as any).student = payload;
-    next();
+    payload = jwt.verify(token, JWT_SECRET) as StudentJWTPayload & { iat?: number };
   } catch (error) {
     return res.status(401).json({ success: false, error: "Token inválido ou expirado." });
   }
+
+  // Verificar se token foi emitido antes de um logout global
+  try {
+    const rows = await db.execute(sql`
+      SELECT last_global_logout_at FROM "User" WHERE id = ${payload.userId} LIMIT 1
+    `) as any[];
+    const lastLogout = rows[0]?.last_global_logout_at;
+    if (lastLogout && payload.iat && payload.iat * 1000 < new Date(lastLogout).getTime()) {
+      return res.status(401).json({ success: false, error: "Sessão encerrada. Faça login novamente." });
+    }
+  } catch {
+    // Se a coluna ainda não existe (antes da migração), ignora
+  }
+
+  (req as any).student = payload;
+  next();
 }
 
 // ============================================

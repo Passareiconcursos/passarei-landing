@@ -312,4 +312,22 @@ export function registerSalaAuthRoutes(app: Express) {
       return res.status(500).json({ success: false, error: "Erro ao redefinir senha." });
     }
   });
+
+  // POST /api/sala/auth/logout-all — Invalida todos os tokens anteriores
+  app.post("/api/sala/auth/logout-all", requireStudentAuth, async (req, res) => {
+    try {
+      const student = (req as any).student as StudentJWTPayload;
+      await db.execute(sql`
+        UPDATE "User"
+        SET last_global_logout_at = NOW(), "updatedAt" = NOW()
+        WHERE id = ${student.userId}
+      `);
+      res.clearCookie("studentToken");
+      console.log(`🔐 [Auth] logout-all: userId=${student.userId}`);
+      return res.json({ success: true });
+    } catch (err) {
+      console.error("❌ [Auth] logout-all:", err);
+      return res.status(500).json({ success: false, error: "Erro ao encerrar sessões." });
+    }
+  });
 }
