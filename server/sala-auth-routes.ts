@@ -124,6 +124,9 @@ export function registerSalaAuthRoutes(app: Express) {
     if (newPassword.length < 8) {
       return res.status(400).json({ success: false, error: "A nova senha deve ter no mínimo 8 caracteres." });
     }
+    if (!/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      return res.status(400).json({ success: false, error: "A nova senha deve conter ao menos 1 letra e 1 número." });
+    }
 
     try {
       const rows = await db.execute(sql`
@@ -183,7 +186,11 @@ export function registerSalaAuthRoutes(app: Express) {
         UPDATE "User" SET email = ${newEmail.toLowerCase()}, "updatedAt" = NOW() WHERE id = ${student.userId}
       `);
 
-      return res.json({ success: true, message: "E-mail alterado com sucesso.", newEmail: newEmail.toLowerCase() });
+      // Gera novo JWT com e-mail atualizado para o frontend atualizar a sessão sem deslogar
+      const updatedProfile = await getStudentProfile(student.userId);
+      const newToken = updatedProfile ? generateStudentToken(updatedProfile) : null;
+
+      return res.json({ success: true, token: newToken, newEmail: newEmail.toLowerCase() });
     } catch (err) {
       console.error("❌ [Auth] change-email:", err);
       return res.status(500).json({ success: false, error: "Erro ao alterar e-mail." });

@@ -279,7 +279,7 @@ function getAreaIcon(grupo: string) {
 // ============================================
 
 export default function SalaAula() {
-  const { token, student, updateProfile, logout } = useStudentAuth();
+  const { token, student, updateProfile, logout, updateToken } = useStudentAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -1760,7 +1760,8 @@ export default function SalaAula() {
                     });
                     const data = await res.json();
                     if (data.success) {
-                      toast({ title: "E-mail alterado!", description: `Novo e-mail: ${data.newEmail}` });
+                      if (data.token) updateToken(data.token);
+                      toast({ title: "E-mail atualizado!", description: `Novo e-mail: ${data.newEmail}. Use-o no próximo login.` });
                       setProfileNewEmail(""); setProfileEmailPw("");
                     } else {
                       toast({ variant: "destructive", title: "Erro", description: data.error });

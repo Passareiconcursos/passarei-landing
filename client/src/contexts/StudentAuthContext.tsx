@@ -27,6 +27,7 @@ interface StudentAuthContextType {
   logout: () => void;
   refresh: () => Promise<void>;
   updateProfile: (profile: StudentProfile) => void;
+  updateToken: (newToken: string) => void;
 }
 
 interface RegisterData {
@@ -132,6 +133,11 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
     setStudent(profile);
   };
 
+  const updateToken = (newToken: string) => {
+    localStorage.setItem(TOKEN_KEY, newToken);
+    setToken(newToken);
+  };
+
   return (
     <StudentAuthContext.Provider
       value={{
@@ -144,6 +150,7 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
         logout,
         refresh: fetchProfile,
         updateProfile,
+        updateToken,
       }}
     >
       {children}
