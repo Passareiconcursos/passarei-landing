@@ -678,8 +678,9 @@ export function registerSalaRoutes(app: Express) {
       `) as any[];
       const totalQuestionsAnswered = Number(distinctCountResult[0]?.total || 0);
 
-      // Contar questões respondidas no curso atual (por matérias do concurso-alvo)
+      // Contar questões respondidas e disponíveis no curso atual (por matérias do concurso-alvo)
       let totalQuestionsInCurrentCourse = 0;
+      let totalQuestionsAvailableInCourse = 0;
       if (u.target_concurso_id) {
         const concursoRows = await db.execute(sql`
           SELECT lista_materias_json FROM concursos WHERE id = ${u.target_concurso_id} LIMIT 1
@@ -695,14 +696,22 @@ export function registerSalaRoutes(app: Express) {
           const subjectIds: string[] = subjectRows.map((s: any) => s.id);
 
           if (subjectIds.length > 0) {
-            const courseCountResult = await db.execute(sql`
-              SELECT COUNT(DISTINCT qa."questionId")::int AS total
-              FROM "QuestionAttempt" qa
-              JOIN "Question" q ON q.id = qa."questionId"
-              WHERE qa."userId" = ${student.userId}
-                AND q."subjectId" = ANY(${subjectIds})
-            `) as any[];
+            const [courseCountResult, availableCountResult] = await Promise.all([
+              db.execute(sql`
+                SELECT COUNT(DISTINCT qa."questionId")::int AS total
+                FROM "QuestionAttempt" qa
+                JOIN "Question" q ON q.id = qa."questionId"
+                WHERE qa."userId" = ${student.userId}
+                  AND q."subjectId" = ANY(${subjectIds})
+              `) as Promise<any[]>,
+              db.execute(sql`
+                SELECT COUNT(DISTINCT q.id)::int AS total
+                FROM "Question" q
+                WHERE q."subjectId" = ANY(${subjectIds})
+              `) as Promise<any[]>,
+            ]);
             totalQuestionsInCurrentCourse = Number(courseCountResult[0]?.total || 0);
+            totalQuestionsAvailableInCourse = Number(availableCountResult[0]?.total || 0);
           }
         }
       }
@@ -734,6 +743,7 @@ export function registerSalaRoutes(app: Express) {
         stats: {
           totalQuestionsAnswered,
           totalQuestionsInCurrentCourse,
+          totalQuestionsAvailableInCourse,
           daysSinceFirstInteraction,
           plan: u.plan,
           planStatus: u.planStatus,
@@ -2063,7 +2073,7 @@ export function registerSalaRoutes(app: Express) {
         SELECT
           "totalQuestionsAnswered", "totalEssaysSubmitted",
           streak_days, best_streak, last_streak_date,
-          name
+          name, target_concurso_id
         FROM "User"
         WHERE id = ${student.userId}
         LIMIT 1
@@ -2072,11 +2082,11 @@ export function registerSalaRoutes(app: Express) {
       if (userResult.length === 0) return res.status(404).json({ success: false });
       const u = userResult[0];
 
-      // XP: questões * 10 + redações * 50
+      // XP: questões * 10 + redações * 50 (mantido para level/xp do aluno)
       const xp = (Number(u.totalQuestionsAnswered) || 0) * 10 + (Number(u.totalEssaysSubmitted) || 0) * 50;
       const level = Math.floor(xp / 1000) + 1;
       const xpInCurrentLevel = xp - (level - 1) * 1000;
-      const xpForNextLevel = 1000; // each level = 1000 XP
+      const xpForNextLevel = 1000;
 
       // Streak validity: lost if last_streak_date is not today or yesterday
       const today = new Date().toISOString().slice(0, 10);
@@ -2084,26 +2094,106 @@ export function registerSalaRoutes(app: Express) {
       const streakActive = u.last_streak_date === today || u.last_streak_date === yesterday;
       const streakDays = streakActive ? (Number(u.streak_days) || 0) : 0;
 
-      // Top 10 by XP
-      const topUsers = await db.execute(sql`
-        SELECT
-          name,
-          ("totalQuestionsAnswered" * 10 + COALESCE("totalEssaysSubmitted", 0) * 50) as xp,
-          COALESCE(streak_days, 0) as streak_days,
-          last_streak_date
-        FROM "User"
-        WHERE "totalQuestionsAnswered" > 0
-        ORDER BY xp DESC
-        LIMIT 10
+      // Score do aluno atual: (taxa_acerto × total_questoes) / streak
+      // = correct_answers / streak_days  (se streak=0 ou questoes=0 → score=0)
+      const currentUserCorrectResult = await db.execute(sql`
+        SELECT COUNT(DISTINCT CASE WHEN qa."isCorrect" = true THEN qa."questionId" END)::int as correct
+        FROM "QuestionAttempt" qa
+        WHERE qa."userId" = ${student.userId}
       `) as any[];
+      const currentUserCorrect = Number(currentUserCorrectResult[0]?.correct || 0);
+      const currentUserScore = (streakDays > 0 && currentUserCorrect > 0)
+        ? currentUserCorrect / streakDays
+        : 0;
 
-      // User's rank among all users
-      const rankResult = await db.execute(sql`
-        SELECT COUNT(*) + 1 as rank
-        FROM "User"
-        WHERE ("totalQuestionsAnswered" * 10 + COALESCE("totalEssaysSubmitted", 0) * 50) > ${xp}
-          AND "totalQuestionsAnswered" > 0
-      `) as any[];
+      // Ranking e top 10 filtrados pelo mesmo concurso-alvo
+      // Fórmula: (taxa_acerto × total_questoes) / streak = correct / streak (0 se sem streak)
+      const targetConcursoId = u.target_concurso_id || null;
+
+      const topUsers = targetConcursoId
+        ? await db.execute(sql`
+            SELECT
+              u.name,
+              u.streak_days,
+              u.last_streak_date,
+              ("totalQuestionsAnswered" * 10 + COALESCE("totalEssaysSubmitted", 0) * 50) as xp,
+              COUNT(DISTINCT CASE WHEN qa."isCorrect" = true THEN qa."questionId" END)::int as correct_answers
+            FROM "User" u
+            LEFT JOIN "QuestionAttempt" qa ON qa."userId" = u.id
+            WHERE u.target_concurso_id = ${targetConcursoId}
+              AND u."totalQuestionsAnswered" > 0
+            GROUP BY u.id, u.name, u.streak_days, u.last_streak_date, u."totalQuestionsAnswered", u."totalEssaysSubmitted"
+            ORDER BY
+              CASE
+                WHEN COALESCE(u.streak_days, 0) > 0
+                  AND COUNT(DISTINCT CASE WHEN qa."isCorrect" = true THEN qa."questionId" END) > 0
+                THEN COUNT(DISTINCT CASE WHEN qa."isCorrect" = true THEN qa."questionId" END)::float / u.streak_days
+                ELSE 0
+              END DESC
+            LIMIT 10
+          `) as any[]
+        : await db.execute(sql`
+            SELECT
+              u.name,
+              u.streak_days,
+              u.last_streak_date,
+              ("totalQuestionsAnswered" * 10 + COALESCE("totalEssaysSubmitted", 0) * 50) as xp,
+              COUNT(DISTINCT CASE WHEN qa."isCorrect" = true THEN qa."questionId" END)::int as correct_answers
+            FROM "User" u
+            LEFT JOIN "QuestionAttempt" qa ON qa."userId" = u.id
+            WHERE u."totalQuestionsAnswered" > 0
+            GROUP BY u.id, u.name, u.streak_days, u.last_streak_date, u."totalQuestionsAnswered", u."totalEssaysSubmitted"
+            ORDER BY
+              CASE
+                WHEN COALESCE(u.streak_days, 0) > 0
+                  AND COUNT(DISTINCT CASE WHEN qa."isCorrect" = true THEN qa."questionId" END) > 0
+                THEN COUNT(DISTINCT CASE WHEN qa."isCorrect" = true THEN qa."questionId" END)::float / u.streak_days
+                ELSE 0
+              END DESC
+            LIMIT 10
+          `) as any[];
+
+      // Rank do aluno no concurso-alvo
+      const rankResult = targetConcursoId
+        ? await db.execute(sql`
+            SELECT COUNT(*) + 1 as rank
+            FROM (
+              SELECT
+                u.id,
+                u.streak_days,
+                COUNT(DISTINCT CASE WHEN qa."isCorrect" = true THEN qa."questionId" END)::int as correct_answers
+              FROM "User" u
+              LEFT JOIN "QuestionAttempt" qa ON qa."userId" = u.id
+              WHERE u.target_concurso_id = ${targetConcursoId}
+                AND u."totalQuestionsAnswered" > 0
+                AND u.id != ${student.userId}
+              GROUP BY u.id, u.streak_days
+            ) sub
+            WHERE CASE
+              WHEN COALESCE(sub.streak_days, 0) > 0 AND sub.correct_answers > 0
+              THEN sub.correct_answers::float / sub.streak_days
+              ELSE 0
+            END > ${currentUserScore}
+          `) as any[]
+        : await db.execute(sql`
+            SELECT COUNT(*) + 1 as rank
+            FROM (
+              SELECT
+                u.id,
+                u.streak_days,
+                COUNT(DISTINCT CASE WHEN qa."isCorrect" = true THEN qa."questionId" END)::int as correct_answers
+              FROM "User" u
+              LEFT JOIN "QuestionAttempt" qa ON qa."userId" = u.id
+              WHERE u."totalQuestionsAnswered" > 0
+                AND u.id != ${student.userId}
+              GROUP BY u.id, u.streak_days
+            ) sub
+            WHERE CASE
+              WHEN COALESCE(sub.streak_days, 0) > 0 AND sub.correct_answers > 0
+              THEN sub.correct_answers::float / sub.streak_days
+              ELSE 0
+            END > ${currentUserScore}
+          `) as any[];
 
       return res.json({
         success: true,
@@ -2117,11 +2207,12 @@ export function registerSalaRoutes(app: Express) {
         topUsers: topUsers.map((t: any) => {
           const tXp = Number(t.xp);
           const tStreakActive = t.last_streak_date === today || t.last_streak_date === yesterday;
+          const tStreak = tStreakActive ? (Number(t.streak_days) || 0) : 0;
           return {
             name: t.name ? (t.name.split(" ")[0] || "Aluno") : "Aluno",
             xp: tXp,
             level: Math.floor(tXp / 1000) + 1,
-            streak: tStreakActive ? Number(t.streak_days) : 0,
+            streak: tStreak,
           };
         }),
       });

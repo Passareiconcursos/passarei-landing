@@ -291,7 +291,7 @@ export default function SalaAula() {
   const [currentContent, setCurrentContent] = useState<ContentItem | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<QuestionItem | null>(null);
   const [questionCorrectIndex, setQuestionCorrectIndex] = useState<number | null>(null);
-  const [stats, setStats] = useState<{ totalQuestionsAnswered: number; totalQuestionsInCurrentCourse: number; daysSinceFirstInteraction: number; bySubject: SubjectStat[] } | null>(null);
+  const [stats, setStats] = useState<{ totalQuestionsAnswered: number; totalQuestionsInCurrentCourse: number; totalQuestionsAvailableInCourse: number; daysSinceFirstInteraction: number; bySubject: SubjectStat[] } | null>(null);
   const [studyPlan, setStudyPlan] = useState<{ subjectId: string; subjectName: string; totalContent: number; studiedContent: number; percentage: number; isDifficulty: boolean }[]>([]);
   const [simulados, setSimulados] = useState<SimuladoItem[]>([]);
   const [isVeterano, setIsVeterano] = useState(false);
@@ -1224,7 +1224,7 @@ export default function SalaAula() {
       // 2. Reseta progresso no backend
       await fetch("/api/sala/progress/reset", { method: "POST", headers });
 
-      // 3. Limpa estado do cliente
+      // 3. Limpa estado do cliente (reset absoluto — sem dados do curso anterior)
       setMessages([]);
       setStudyPlan([]);
       setSelectedSubject(null);
@@ -1233,11 +1233,18 @@ export default function SalaAula() {
       sessionStorage.clear();
       setActiveSimulado(null);
       setSimuladoTimeRemaining(0);
+      setStats(null);
+      setEditalProgress(null);
+      setGamification(null);
+      setSm2DueCount(0);
+      setSm2Items([]);
 
       // 4. Re-busca matérias, plano de estudo e estatísticas para o novo concurso
       await fetchSubjects();
       await fetchStudyPlan();
-      fetchStats(); // Atualiza totalQuestionsAnswered e outras métricas zeradas
+      await fetchStats();
+      await fetchEditalProgress();
+      await fetchGamification();
 
       setShowCourseChangeModal(false);
       setPendingConcursoId(null);
@@ -1595,11 +1602,11 @@ export default function SalaAula() {
                 );
               })()}
 
-              {/* ── Desempenho por Matéria ── */}
+              {/* ── Progresso por Matéria ── */}
               {stats && stats.bySubject.length > 0 ? (
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                    Desempenho por Matéria
+                    Progresso por Matéria
                   </p>
                   <div className="space-y-2.5">
                     {[...stats.bySubject]
@@ -2164,36 +2171,36 @@ export default function SalaAula() {
                   onClick={() => setShowConcursoSelector(true)}
                 >
                   <CardContent className="pt-4 pb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex-1 min-w-0">
-                        <h2 className="text-sm font-semibold truncate">
-                          {targetConcurso ? targetConcurso.nome : "Concurso-alvo"}
-                        </h2>
-                        {targetConcurso && (
-                          <p className="text-[10px] text-primary/60 leading-tight">
-                            {targetConcurso.banca} · <span className="underline underline-offset-2">trocar</span>
+                    {(() => {
+                      const answered = stats?.totalQuestionsInCurrentCourse ?? 0;
+                      const available = stats?.totalQuestionsAvailableInCourse ?? 0;
+                      const qPct = available > 0 ? Math.round(answered / available * 100) : 0;
+                      return (
+                        <>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex-1 min-w-0">
+                              <h2 className="text-sm font-semibold truncate">
+                                {targetConcurso ? targetConcurso.nome : "Concurso-alvo"}
+                              </h2>
+                              {targetConcurso && (
+                                <p className="text-[10px] text-primary/60 leading-tight">
+                                  {targetConcurso.banca} · <span className="underline underline-offset-2">trocar</span>
+                                </p>
+                              )}
+                            </div>
+                            <span className="text-lg font-bold text-primary shrink-0 ml-2">{qPct}%</span>
+                          </div>
+                          <Progress value={qPct} className="h-2 mb-1" />
+                          <p className="text-xs text-muted-foreground">
+                            {!targetConcurso
+                              ? "Toque aqui para definir seu concurso-alvo"
+                              : available > 0
+                              ? `${answered} de ${available} questões respondidas no edital`
+                              : "Nenhuma questão respondida neste edital ainda"}
                           </p>
-                        )}
-                      </div>
-                      {isLoadingProgress ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
-                      ) : (
-                        <span className="text-lg font-bold text-primary shrink-0 ml-2">{editalProgress?.percentage ?? 0}%</span>
-                      )}
-                    </div>
-                    <Progress
-                      value={isLoadingProgress ? undefined : (editalProgress?.percentage ?? 0)}
-                      className={cn("h-2 mb-1", isLoadingProgress && "animate-pulse")}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {isLoadingProgress
-                        ? "Calculando progresso..."
-                        : !targetConcurso
-                        ? "Toque aqui para definir seu concurso-alvo"
-                        : editalProgress && editalProgress.totalCount > 0
-                        ? `${editalProgress.studiedCount} de ${editalProgress.totalCount} tópicos estudados`
-                        : "Nenhum tópico deste edital estudado ainda"}
-                    </p>
+                        </>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -2396,18 +2403,31 @@ export default function SalaAula() {
                     );
                   })()}
 
-                  {/* Card 4 — Desempenho → abre Raio-X */}
+                  {/* Card 4 — Progresso → abre Raio-X */}
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
                     <Card className="cursor-pointer hover:shadow-md hover:border-sky-300 transition-all active:scale-95 h-full"
                       onClick={() => setShowRaioX(true)}>
                       <CardContent className="p-4 flex flex-col gap-2">
                         <BarChart3 className="h-7 w-7 text-sky-500" />
-                        <p className="text-sm font-semibold leading-tight">Desempenho</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {stats
-                            ? `${stats.totalQuestionsAnswered} questões respondidas`
-                            : "Carregando..."}
-                        </p>
+                        <p className="text-sm font-semibold leading-tight">Progresso</p>
+                        {stats ? (() => {
+                          const totalBySubject = stats.bySubject.reduce((a, s) => a + s.total, 0);
+                          const correctBySubject = stats.bySubject.reduce((a, s) => a + s.correct, 0);
+                          const globalRate = totalBySubject > 0 ? Math.round(correctBySubject / totalBySubject * 100) : 0;
+                          return (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[11px] text-muted-foreground tabular-nums">{stats.totalQuestionsAnswered} questões</span>
+                              <span className={cn("text-[11px] tabular-nums font-medium",
+                                globalRate >= 70 ? "text-green-600" : globalRate >= 50 ? "text-yellow-600" : "text-muted-foreground"
+                              )}>{globalRate}% acertos</span>
+                              {gamification && (
+                                <span className="text-[11px] text-primary font-semibold tabular-nums">#{gamification.rank} ranking</span>
+                              )}
+                            </div>
+                          );
+                        })() : (
+                          <p className="text-[11px] text-muted-foreground">Carregando...</p>
+                        )}
                       </CardContent>
                     </Card>
                   </motion.div>
