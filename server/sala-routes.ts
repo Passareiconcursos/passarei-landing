@@ -711,7 +711,10 @@ export function registerSalaRoutes(app: Express) {
                 WHERE q."subjectId" = ANY(${subjectIds})
               `) as Promise<any[]>,
             ]);
-            totalQuestionsInCurrentCourse = Number(courseCountResult[0]?.total || 0);
+            const qaCount = Number(courseCountResult[0]?.total || 0);
+            // Math.max garante que questões do bot (que incrementam totalQuestionsAnswered mas
+            // não criam QuestionAttempt) também sejam contabilizadas no progresso do curso
+            totalQuestionsInCurrentCourse = Math.max(qaCount, Number(u.totalQuestionsAnswered || 0));
             totalQuestionsAvailableInCourse = Number(availableCountResult[0]?.total || 0);
           }
         }
@@ -1987,9 +1990,9 @@ export function registerSalaRoutes(app: Express) {
 
       const q = Math.max(0, Math.min(5, Number(quality)));
 
-      // Get current SM2 params
+      // Get current SM2 params (incluindo content_id para persistência posterior)
       const current = await db.execute(sql`
-        SELECT "ease_factor","interval","repetitions","times_correct","times_incorrect","total_reviews"
+        SELECT "ease_factor","interval","repetitions","times_correct","times_incorrect","total_reviews","content_id"
         FROM "sm2_reviews"
         WHERE "id" = ${reviewId} AND "user_id" = ${student.userId}
         LIMIT 1
@@ -2018,6 +2021,51 @@ export function registerSalaRoutes(app: Express) {
           "updated_at" = NOW()
         WHERE "id" = ${reviewId}
       `);
+
+      // Acerto no Reforço SM2 → alimentar contadores de desbloqueio (Simulado + XP)
+      if (isCorrect && c.content_id) {
+        try {
+          // 1. Incrementar totalQuestionsAnswered (XP e contador global)
+          await db.execute(sql`
+            UPDATE "User"
+            SET "totalQuestionsAnswered" = COALESCE("totalQuestionsAnswered", 0) + 1,
+                "updatedAt" = NOW()
+            WHERE id = ${student.userId}
+          `);
+
+          // 2. Buscar subjectId do conteúdo revisado
+          const contentRows = await db.execute(sql`
+            SELECT "subjectId" FROM "Content" WHERE id = ${c.content_id} LIMIT 1
+          `) as any[];
+
+          if (contentRows.length > 0 && contentRows[0].subjectId) {
+            const subjectId = contentRows[0].subjectId;
+
+            // 3. Buscar qualquer questão real do mesmo subject
+            const questionRows = await db.execute(sql`
+              SELECT id FROM "Question"
+              WHERE "subjectId" = ${subjectId}
+              LIMIT 1
+            `) as any[];
+
+            if (questionRows.length > 0) {
+              const questionId = questionRows[0].id;
+              const qaId = `qa${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`.slice(0, 25);
+
+              // 4. Criar QuestionAttempt marcado como SM2_REVIEW — alimenta totalQuestionsInCurrentCourse
+              await db.execute(sql`
+                INSERT INTO "QuestionAttempt" (
+                  "id", "userId", "questionId", "userAnswer",
+                  "isCorrect", "attemptType", "reviewAttempt", "createdAt"
+                ) VALUES (
+                  ${qaId}, ${student.userId}, ${questionId}, '0',
+                  true, 'SM2_REVIEW', true, NOW()
+                )
+              `);
+            }
+          }
+        } catch (_e) { /* não-fatal: persistência de acerto SM2 */ }
+      }
 
       return res.json({
         success: true,
