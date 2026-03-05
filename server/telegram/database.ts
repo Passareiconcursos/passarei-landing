@@ -1774,6 +1774,36 @@ export async function recordReminderSent(
 }
 
 /**
+ * Conta quantos lembretes do tipo LEMBRETE_ESTUDO foram enviados hoje para o usuário.
+ * Usado para aplicar o limite de 2 lembretes por dia.
+ */
+export async function getDailyReminderCount(telegramId: string): Promise<number> {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+
+    const userResult = await db.execute(sql`
+      SELECT "id" FROM "User" WHERE "telegramId" = ${telegramId} LIMIT 1
+    `) as any[];
+
+    if (userResult.length === 0) return 0;
+    const userId = (userResult[0] as any).id;
+
+    const result = await db.execute(sql`
+      SELECT COUNT(*)::int as count
+      FROM "Notification"
+      WHERE "userId" = ${userId}
+        AND "type" = 'LEMBRETE_ESTUDO'
+        AND DATE("scheduledFor") = ${today}
+    `) as any[];
+
+    return parseInt(result[0]?.count || "0");
+  } catch (error) {
+    console.error("❌ [Reminder] Erro ao contar lembretes diários:", error);
+    return 0; // na dúvida, não bloquear
+  }
+}
+
+/**
  * Salva progresso do estudo (conteúdos já vistos)
  */
 export async function saveStudyProgress(

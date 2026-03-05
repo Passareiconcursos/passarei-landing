@@ -11,6 +11,7 @@ import { sql } from "drizzle-orm";
 import { requireStudentAuth, getStudentProfile, type StudentJWTPayload } from "./auth-student";
 import { correctEssay } from "./services/ai-engine";
 import { sendTelegramMessage } from "./telegram/bot";
+import { activeSessions } from "./telegram/learning-session";
 
 // Services (shared with Telegram bot)
 import {
@@ -877,6 +878,16 @@ export function registerSalaRoutes(app: Express) {
       await db.execute(sql`
         DELETE FROM "QuestionAttempt" WHERE "userId" = ${student.userId}
       `);
+      // Limpa sessão ativa do Bot (em memória) para o mesmo usuário,
+      // evitando que o bot continue servindo conteúdo do curso anterior.
+      const telegramRows = await db.execute(sql`
+        SELECT "telegramId" FROM "User" WHERE id = ${student.userId} LIMIT 1
+      `) as any[];
+      const telegramId = telegramRows[0]?.telegramId;
+      if (telegramId && activeSessions.has(telegramId)) {
+        activeSessions.delete(telegramId);
+        console.log(`🔄 [Reset] Sessão do bot limpa para telegramId ${telegramId}`);
+      }
       return res.json({ success: true });
     } catch (error) {
       console.error("❌ [Sala] Erro ao resetar progresso:", error);

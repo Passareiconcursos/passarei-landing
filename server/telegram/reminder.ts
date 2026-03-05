@@ -3,6 +3,7 @@ import {
   getUsersForReminder,
   hasReminderToday,
   recordReminderSent,
+  getDailyReminderCount,
   SCHEDULE_HOURS,
   checkQuestionAccess,
 } from "./database";
@@ -13,8 +14,11 @@ import { sql } from "drizzle-orm";
 // Intervalo do scheduler: verificar a cada 30 minutos
 const CHECK_INTERVAL_MS = 30 * 60 * 1000;
 
-// Tempo mínimo de inatividade para enviar lembrete (15 minutos)
-const ACTIVITY_THRESHOLD_MS = 15 * 60 * 1000;
+// Tempo mínimo de inatividade para enviar lembrete (60 minutos)
+const ACTIVITY_THRESHOLD_MS = 60 * 60 * 1000;
+
+// Máximo de lembretes de estudo por dia por aluno
+const MAX_DAILY_REMINDERS = 2;
 
 // Armazena questão pendente por telegramId para callback curto
 const pendingReminderQuestions = new Map<
@@ -93,7 +97,16 @@ async function checkAndSendReminders(bot: TelegramBot) {
     // Enviar lembretes com intervalo entre cada um (evitar rate limit do Telegram)
     for (const user of users) {
       try {
-        // Verificar deduplicação no banco
+        // Verificar cap diário: máximo de 2 lembretes por dia
+        const dailyCount = await getDailyReminderCount(user.telegramId);
+        if (dailyCount >= MAX_DAILY_REMINDERS) {
+          console.log(
+            `🔕 [Reminder] ${user.telegramId} já recebeu ${dailyCount} lembretes hoje, silenciando`,
+          );
+          continue;
+        }
+
+        // Verificar deduplicação no banco (por turno)
         const alreadySent = await hasReminderToday(
           user.telegramId,
           currentHour,
@@ -105,7 +118,7 @@ async function checkAndSendReminders(bot: TelegramBot) {
           continue;
         }
 
-        // FIX 0.5: Verificar se o usuário está ativo recentemente (últimos 15 min)
+        // Verificar se o usuário está ativo recentemente (últimos 60 min)
         const isRecentlyActive = await checkRecentActivity(user.telegramId);
         if (isRecentlyActive) {
           console.log(
