@@ -831,12 +831,19 @@ export function registerSalaRoutes(app: Express) {
   app.post("/api/sala/progress/reset", requireStudentAuth, async (req, res) => {
     try {
       const student = (req as any).student as StudentJWTPayload;
+      // Limpa histórico de conteúdo, preferências e total de questões do User
       await db.execute(sql`
         UPDATE "User"
-        SET "lastStudyContentIds" = '[]'::jsonb,
-            "facilidades"         = '[]'::jsonb,
-            "dificuldades"        = '[]'::jsonb
+        SET "lastStudyContentIds"   = '[]'::jsonb,
+            "facilidades"           = '[]'::jsonb,
+            "dificuldades"          = '[]'::jsonb,
+            "totalQuestionsAnswered" = 0,
+            "updatedAt"             = NOW()
         WHERE id = ${student.userId}
+      `);
+      // Apaga revisões SM2 acumuladas do concurso anterior
+      await db.execute(sql`
+        DELETE FROM sm2_reviews WHERE user_id = ${student.userId}
       `);
       return res.json({ success: true });
     } catch (error) {

@@ -1232,9 +1232,10 @@ export default function SalaAula() {
       setActiveSimulado(null);
       setSimuladoTimeRemaining(0);
 
-      // 4. Re-busca matérias e plano de estudo para o novo concurso
+      // 4. Re-busca matérias, plano de estudo e estatísticas para o novo concurso
       await fetchSubjects();
       await fetchStudyPlan();
+      fetchStats(); // Atualiza totalQuestionsAnswered e outras métricas zeradas
 
       setShowCourseChangeModal(false);
       setPendingConcursoId(null);
