@@ -1230,6 +1230,7 @@ export default function SalaAula() {
       setSelectedSubject(null);
       setShowDashboard(true);
       localStorage.removeItem("passarei_last_subject");
+      setLastStudiedSubjectId(null);
       sessionStorage.clear();
       setActiveSimulado(null);
       setSimuladoTimeRemaining(0);

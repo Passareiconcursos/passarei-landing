@@ -854,14 +854,18 @@ export function registerSalaRoutes(app: Express) {
   app.post("/api/sala/progress/reset", requireStudentAuth, async (req, res) => {
     try {
       const student = (req as any).student as StudentJWTPayload;
-      // Limpa histórico de conteúdo, preferências e total de questões do User
+      // Limpa histórico de conteúdo, preferências, questões e gamificação do User
       await db.execute(sql`
         UPDATE "User"
-        SET "lastStudyContentIds"   = '[]'::jsonb,
-            "facilidades"           = '[]'::jsonb,
-            "dificuldades"          = '[]'::jsonb,
+        SET "lastStudyContentIds"    = '[]'::jsonb,
+            "facilidades"            = '[]'::jsonb,
+            "dificuldades"           = '[]'::jsonb,
             "totalQuestionsAnswered" = 0,
-            "updatedAt"             = NOW()
+            "totalEssaysSubmitted"   = 0,
+            streak_days              = 0,
+            last_streak_date         = NULL,
+            best_streak              = 0,
+            "updatedAt"              = NOW()
         WHERE id = ${student.userId}
       `);
       // Apaga revisões SM2 acumuladas do concurso anterior
