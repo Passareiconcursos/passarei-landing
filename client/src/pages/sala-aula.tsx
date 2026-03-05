@@ -160,6 +160,7 @@ interface QuestionItem {
   text: string;
   options: string[];
   banca?: string;
+  explanation?: string | null;
 }
 
 interface SubjectStat {
@@ -1064,6 +1065,28 @@ export default function SalaAula() {
     }
     setAnsweredIndex(optionIndex);
 
+    // B2 — Zero Delay: feedback renderizado imediatamente com dados locais do GET.
+    // O aluno vê acerto/erro + explicação no mesmo milissegundo do clique,
+    // sem depender da latência de rede do POST.
+    const localCorrectIndex = questionCorrectIndex;
+    const isCorrect = localCorrectIndex !== null
+      ? optionIndex === localCorrectIndex
+      : false;
+
+    addMessage("answer", {
+      isCorrect,
+      correctAnswer: localCorrectIndex,
+      userAnswer: optionIndex,
+      explanation: currentQuestion.explanation ?? null,
+    });
+    if (isCorrect) {
+      setCelebrateCorrect(true);
+      setTimeout(() => setCelebrateCorrect(false), 1400);
+    }
+
+    // B3 — Limpeza de Fluxo: POST serve exclusivamente para bookkeeping
+    // (XP, streak, SM2, QuestionAttempt). Não atualiza a interface — o feedback
+    // já foi exibido acima. O toast de erro preserva o fluxo de estudo fluido.
     try {
       const res = await fetch("/api/sala/question/answer", {
         method: "POST",
@@ -1071,31 +1094,19 @@ export default function SalaAula() {
         body: JSON.stringify({
           questionId: currentQuestion.id,
           userAnswer: optionIndex,
-          correctIndex: questionCorrectIndex,
+          correctIndex: localCorrectIndex,
           contentId: currentContent?.id,
           contentTitle: currentContent?.title,
           contentText: currentContent?.body?.slice(0, 500),
         }),
       });
       const data = await res.json();
-
       if (data.success) {
-        setQuestionCorrectIndex(data.correctAnswer);
-        addMessage("answer", {
-          isCorrect: data.isCorrect,
-          correctAnswer: data.correctAnswer,
-          userAnswer: optionIndex,
-          explanation: data.explanation,
-        });
-        if (data.isCorrect) {
-          setCelebrateCorrect(true);
-          setTimeout(() => setCelebrateCorrect(false), 1400);
-        }
         fetchStats();
-        fetchGamification(); // Refresh XP + streak
+        fetchGamification();
       }
     } catch {
-      toast({ variant: "destructive", title: "Erro ao enviar resposta" });
+      toast({ variant: "destructive", title: "Erro ao salvar resposta" });
     }
   };
 

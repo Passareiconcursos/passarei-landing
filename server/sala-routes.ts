@@ -369,6 +369,23 @@ export function registerSalaRoutes(app: Express) {
       const student = (req as any).student as StudentJWTPayload;
       const { contentId, subjectId, topicId, contentTitle, contentText } = req.query;
 
+      // A1 — Fidelidade Total: resolver subjectId e topicId reais do banco via contentId.
+      // Garante que qualquer fallback de questão use a matéria do conteúdo estudado,
+      // independente do valor enviado pelo cliente.
+      let resolvedSubjectId = subjectId as string;
+      let resolvedTopicId   = (topicId as string) || null;
+      if (contentId) {
+        try {
+          const contentRows = await db.execute(sql`
+            SELECT "subjectId", "topicId" FROM "Content" WHERE id = ${contentId as string} LIMIT 1
+          `) as any[];
+          if (contentRows.length > 0) {
+            resolvedSubjectId = contentRows[0].subjectId ?? resolvedSubjectId;
+            resolvedTopicId   = contentRows[0].topicId   ?? resolvedTopicId;
+          }
+        } catch (_e) { /* não bloquear fluxo principal */ }
+      }
+
       // 1. Check access
       const access = await checkQuestionAccess(student.userId, "userId");
       if (!access.canAccess) {
@@ -382,11 +399,11 @@ export function registerSalaRoutes(app: Express) {
         });
       }
 
-      // 2. Get question (4-tier matching)
+      // 2. Get question (4-tier matching) — usa subjectId/topicId resolvidos do banco
       const question = await getQuestionForContent(
         contentId as string,
-        subjectId as string,
-        (topicId as string) || null,
+        resolvedSubjectId,
+        resolvedTopicId,
         [], // usedQuestionIds - could be tracked in session
         contentText ? { title: contentTitle as string, text: contentText as string, examType: "POLICIA_FEDERAL" } : undefined,
       );
@@ -434,10 +451,19 @@ export function registerSalaRoutes(app: Express) {
         })()
         ?? [];
 
-      // correctOption é enviado para o cliente para que o estado local seja
-      // inicializado antes da resposta. É necessário para questões AI-fallback
-      // (não persistidas) cujo gabarito não pode ser verificado no servidor.
-      const correctOption: number | null = question.correctOption ?? null;
+      // A2 — Gabarito Blindado: correctOption sempre como índice numérico (0–4).
+      // Questões Prisma legadas podem ter correctOption=NULL mas correctAnswer='B'.
+      // O fallback indexOf garante que o frontend nunca receba null onde há gabarito.
+      let correctOption: number | null = question.correctOption ?? null;
+      if (correctOption === null && question.correctAnswer) {
+        const idx = ["A","B","C","D","E"].indexOf(String(question.correctAnswer));
+        if (idx >= 0) correctOption = idx;
+      }
+
+      // A3 — Explicação Antecipada: enviada junto com a questão para que o frontend
+      // possa renderizar o feedback instantaneamente, sem aguardar o POST de resposta.
+      // O campo se chama exatamente "explanation" para casar com a interface QuestionItem.
+      const explanation: string | null = question.explanation ?? null;
 
       return res.json({
         success: true,
@@ -447,6 +473,7 @@ export function registerSalaRoutes(app: Express) {
           options: qOptions,
           banca,
           correctOption,
+          explanation,
         },
         remaining: remaining != null ? remaining - 1 : undefined,
       });
