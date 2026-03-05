@@ -433,6 +433,11 @@ export function registerSalaRoutes(app: Express) {
         })()
         ?? [];
 
+      // correctOption é enviado para o cliente para que o estado local seja
+      // inicializado antes da resposta. É necessário para questões AI-fallback
+      // (não persistidas) cujo gabarito não pode ser verificado no servidor.
+      const correctOption: number | null = question.correctOption ?? null;
+
       return res.json({
         success: true,
         question: {
@@ -440,7 +445,7 @@ export function registerSalaRoutes(app: Express) {
           text: qText,
           options: qOptions,
           banca,
-          // NOTE: Don't send correct answer yet
+          correctOption,
         },
         remaining: remaining != null ? remaining - 1 : undefined,
       });
@@ -503,6 +508,14 @@ export function registerSalaRoutes(app: Express) {
           // Guardar explicação da questão Drizzle para usar como fallback antes da IA
           (req as any)._drizzleExplanation = drizzleQ[0].explanation ?? null;
         }
+      }
+
+      // Segurança: se correctAnswer não foi resolvido (-1 ou fora do range 0-4),
+      // usa o hint enviado pelo cliente (correctIndex do GET response) como último recurso.
+      // Em modo estudo (não prova), isso é aceitável — evita gabarito "?".
+      if ((correctAnswer < 0 || correctAnswer > 4) && req.body.correctIndex != null) {
+        const hint = Number(req.body.correctIndex);
+        if (hint >= 0 && hint <= 4) correctAnswer = hint;
       }
 
       const isCorrect = Number(userAnswer) === Number(correctAnswer);
@@ -844,6 +857,11 @@ export function registerSalaRoutes(app: Express) {
       // Apaga revisões SM2 acumuladas do concurso anterior
       await db.execute(sql`
         DELETE FROM sm2_reviews WHERE user_id = ${student.userId}
+      `);
+      // Apaga histórico de tentativas de questões para que as estatísticas
+      // "Por matéria" e o progresso do edital comecem do zero no novo concurso.
+      await db.execute(sql`
+        DELETE FROM "QuestionAttempt" WHERE "userId" = ${student.userId}
       `);
       return res.json({ success: true });
     } catch (error) {

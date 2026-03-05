@@ -1039,7 +1039,9 @@ export default function SalaAula() {
 
       if (data.success && data.question) {
         setCurrentQuestion(data.question);
-        setQuestionCorrectIndex(null);
+        // Inicializa o índice correto a partir do response para que questões
+        // AI-fallback (sem ID persistido) possam ter o gabarito validado pelo cliente.
+        setQuestionCorrectIndex(data.question.correctOption ?? null);
         setAnsweredIndex(null);
         if (data.remaining != null) setRemaining(data.remaining);
         addMessage("question", data.question);
