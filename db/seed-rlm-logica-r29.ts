@@ -15,7 +15,7 @@ const contents = [
   {
     id: "rlm_lp_c01",
     title: "Conceito de Proposição",
-    difficulty: "EASY",
+    difficulty: "FACIL",
     mnemonic: "POVE: Proposição é Oração com Valor lógico Exclusivo (V ou F). Perguntas, ordens e paradoxos estão fora.",
     keyPoint:
       "• Proposição: sentença declarativa com valor lógico único (V ou F)\n" +
@@ -51,7 +51,7 @@ const contents = [
   {
     id: "rlm_lp_c02",
     title: "Conectivos E (∧) e OU (∨): Conjunção e Disjunção",
-    difficulty: "EASY",
+    difficulty: "FACIL",
     mnemonic: "E-xige tudo (∧ só é V quando AMBAS V). OU basta um (∨ é F apenas quando AMBAS F).",
     keyPoint:
       "• Conjunção (p ∧ q): VERDADEIRA somente quando p e q são ambas verdadeiras\n" +
@@ -88,7 +88,7 @@ const contents = [
   {
     id: "rlm_lp_c03",
     title: "Condicional (p → q): Se... Então",
-    difficulty: "MEDIUM",
+    difficulty: "MEDIO",
     mnemonic: "Só V→F dá F. Vera Fischer: a condicional MENTE apenas quando a premissa é V e a conclusão é F.",
     keyPoint:
       "• Condicional (p → q): falsa SOMENTE quando p=V e q=F\n" +
@@ -130,7 +130,7 @@ const contents = [
   {
     id: "rlm_lp_c04",
     title: "Bicondicional (p ↔ q) e Ou Exclusivo (p ⊻ q)",
-    difficulty: "MEDIUM",
+    difficulty: "MEDIO",
     mnemonic: "BI-iguais dão V (↔ é V quando p e q têm o MESMO valor). XOR-opostos dão V (⊻ é V quando têm valores DIFERENTES).",
     keyPoint:
       "• Bicondicional (p ↔ q): V quando p e q têm o MESMO valor lógico (VV ou FF)\n" +
@@ -165,7 +165,7 @@ const contents = [
   {
     id: "rlm_lp_c05",
     title: "Tabelas-Verdade: Cálculo de Linhas, Tautologia e Equivalência",
-    difficulty: "MEDIUM",
+    difficulty: "MEDIO",
     mnemonic: "2^n linhas (n = número de variáveis). TAUTO = sempre V. CONTRA = sempre F. CONTIN = às vezes V, às vezes F.",
     keyPoint:
       "• Tabela com n variáveis tem 2^n linhas (1→2, 2→4, 3→8, 4→16)\n" +
@@ -211,7 +211,7 @@ const contents = [
   {
     id: "rlm_lp_c06",
     title: "Negação de Proposições: De Morgan e Quantificadores",
-    difficulty: "HARD",
+    difficulty: "DIFICIL",
     mnemonic: "De Morgan: troca o conectivo (e↔ou) e nega tudo. Quantificadores: Todo↔Algum não; Nenhum↔Algum.",
     keyPoint:
       "• ¬(p ∧ q) = ¬p ∨ ¬q (De Morgan 1 — nega conjunção, troca para ou)\n" +
@@ -290,7 +290,7 @@ const questions = [
       "Ordens ('Feche!'), perguntas ('Você gosta?'), exclamações ('Que lindo!') e " +
       "sentenças abertas ('x+3=7', valor depende de x) NÃO são proposições. " +
       "Apenas a alternativa C apresenta dois exemplos válidos.",
-    difficulty: "EASY",
+    difficulty: "FACIL",
     questionType: "MULTIPLE_CHOICE",
   },
   // ── Q02 — rlm_lp_c01 — CERTO/ERRADO ──
@@ -317,7 +317,7 @@ const questions = [
       "Embora seja declarativa, o paradoxo não tem valor lógico DEFINIDO — condição indispensável para ser proposição. " +
       "Uma sentença que contradiz a si mesma não pode ser V nem F de forma consistente. " +
       "Resposta correta: ERRADO.",
-    difficulty: "EASY",
+    difficulty: "FACIL",
     questionType: "CERTO_ERRADO",
   },
   // ── Q03 — rlm_lp_c02 — Múltipla Escolha ──
@@ -346,7 +346,7 @@ const questions = [
       "Releia as tabelas: p∧q = V∧F = F (conjunção exige ambos V). " +
       "¬p = F pois p=V. ¬p∨q = F∨F = F. A disjunção final de dois F é F. " +
       "Cuidado: ¬p não é V quando p=V — é exatamente o oposto.",
-    difficulty: "MEDIUM",
+    difficulty: "MEDIO",
     questionType: "MULTIPLE_CHOICE",
   },
   // ── Q04 — rlm_lp_c02 — CERTO/ERRADO ──
@@ -371,7 +371,7 @@ const questions = [
     explanationWrong:
       "Este item está CERTO. A afirmação descreve corretamente a disjunção inclusiva. " +
       "F∨F=F é o único caso falso. Não confunda com a conjunção (∧), que é falsa em 3 dos 4 casos.",
-    difficulty: "EASY",
+    difficulty: "FACIL",
     questionType: "CERTO_ERRADO",
   },
   // ── Q05 — rlm_lp_c03 — Múltipla Escolha ──
@@ -402,7 +402,7 @@ const questions = [
       "p→q é falsa SOMENTE com p=V e q=F. " +
       "Se a condicional é falsa, o antecedente DEVE ser verdadeiro e o consequente DEVE ser falso. " +
       "Qualquer outra combinação tornaria a condicional verdadeira.",
-    difficulty: "MEDIUM",
+    difficulty: "MEDIO",
     questionType: "MULTIPLE_CHOICE",
   },
   // ── Q06 — rlm_lp_c03 — CERTO/ERRADO ──
@@ -431,7 +431,7 @@ const questions = [
       "Este item está CERTO. A contrapositiva e a condicional são equivalentes (mesma tabela-verdade). " +
       "Verifique: p=V,q=F → p→q=F e ¬q→¬p=V→F=F. Iguais! " +
       "Já q→p=F→V=V ≠ F. Portanto a recíproca não é equivalente.",
-    difficulty: "MEDIUM",
+    difficulty: "MEDIO",
     questionType: "CERTO_ERRADO",
   },
   // ── Q07 — rlm_lp_c04 — Múltipla Escolha ──
@@ -462,7 +462,7 @@ const questions = [
       "F↔F=V (ambos F → mesmo valor → bicondicional verdadeiro). " +
       "O oposto do bicondicional é o ou exclusivo (⊻), pois p⊻q ≡ ¬(p↔q). " +
       "Quando o bicondicional é V, o ⊻ é F, e vice-versa.",
-    difficulty: "MEDIUM",
+    difficulty: "MEDIO",
     questionType: "MULTIPLE_CHOICE",
   },
   // ── Q08 — rlm_lp_c04 — CERTO/ERRADO ──
@@ -489,7 +489,7 @@ const questions = [
       "O bicondicional é FALSO quando as proposições têm valores diferentes. " +
       "'Estuda todo dia' (V) e 'não passa' (F): V↔F = F. " +
       "O item está ERRADO ao afirmar que seria verdadeiro nessa situação.",
-    difficulty: "MEDIUM",
+    difficulty: "MEDIO",
     questionType: "CERTO_ERRADO",
   },
   // ── Q09 — rlm_lp_c05 — Múltipla Escolha ──
@@ -519,7 +519,7 @@ const questions = [
       "p→q e ¬p∨q têm tabelas-verdade idênticas (são equivalentes). " +
       "O bicondicional de fórmulas equivalentes é TAUTOLOGIA (sempre V), nunca contradição nem contingência. " +
       "Verifique linha a linha: em todos os casos, ambos os lados do ↔ têm o mesmo valor.",
-    difficulty: "HARD",
+    difficulty: "DIFICIL",
     questionType: "MULTIPLE_CHOICE",
   },
   // ── Q10 — rlm_lp_c05 — CERTO/ERRADO ──
@@ -546,7 +546,7 @@ const questions = [
     explanationWrong:
       "Este item está CERTO. 4 variáveis → 2⁴=16 linhas. " +
       "Fórmula verdadeira em todas as linhas = tautologia. Ambas as afirmações são corretas.",
-    difficulty: "EASY",
+    difficulty: "FACIL",
     questionType: "CERTO_ERRADO",
   },
   // ── Q11 — rlm_lp_c06 — Múltipla Escolha ──
@@ -578,7 +578,7 @@ const questions = [
       "Processo correto: (1) ¬(Todo A é X) = 'Algum A não é X'; " +
       "(2) De Morgan na disjunção: ¬(p∨q) = ¬p∧¬q — o 'ou' vira 'e'. " +
       "A resposta correta é 'algum... não... E não...' (opção B).",
-    difficulty: "HARD",
+    difficulty: "DIFICIL",
     questionType: "MULTIPLE_CHOICE",
   },
   // ── Q12 — rlm_lp_c06 — CERTO/ERRADO ──
@@ -607,7 +607,7 @@ const questions = [
       "'Tinha motivo E não cometeu o crime' é o correto. " +
       "¬p∨¬q seria De Morgan aplicado a uma conjunção (p∧q), não à condicional. " +
       "Este item está ERRADO.",
-    difficulty: "HARD",
+    difficulty: "DIFICIL",
     questionType: "CERTO_ERRADO",
   },
 ];
