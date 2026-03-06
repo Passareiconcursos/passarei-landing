@@ -365,16 +365,10 @@ export interface EssayCorrectionResult {
 
 const MODEL_HAIKU = "claude-haiku-4-5-20251001";
 
-// Erros que justificam tentar o modelo de fallback
-function isRetryableEssayError(error: any): boolean {
+// Erros que NÃO devem ser tentados no fallback (falhas permanentes de autenticação)
+function isPermanentAuthError(error: any): boolean {
   const status = error?.status ?? error?.statusCode ?? 0;
-  const errType = error?.error?.type ?? error?.type ?? "";
-  const code = error?.code ?? "";
-  return (
-    status === 429 || status === 503 || status === 529 ||
-    errType === "overloaded_error" ||
-    code === "ETIMEDOUT" || code === "ECONNRESET"
-  );
+  return status === 401 || status === 403;
 }
 
 export async function correctEssay(
@@ -477,8 +471,10 @@ Retorne APENAS o JSON abaixo (sem texto adicional):
 
       const isLast = modelId === candidates[candidates.length - 1].id;
 
-      if (!isLast && isRetryableEssayError(error)) {
-        console.warn(`⚠️ [AI Engine] Redação ${label} indisponível (status=${status} type=${errType}) — tentando fallback...`);
+      // Tenta fallback para qualquer erro, EXCETO erros permanentes de autenticação
+      // (401/403 usam a mesma chave — tentar outro modelo não resolve)
+      if (!isLast && !isPermanentAuthError(error)) {
+        console.warn(`⚠️ [AI Engine] Redação ${label} falhou (status=${status} type=${errType}) — tentando fallback Haiku...`);
         continue;
       }
 
