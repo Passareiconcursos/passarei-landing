@@ -1102,6 +1102,12 @@ export default function SalaAula() {
       });
       const data = await res.json();
       if (data.success) {
+        // Gabarito Blindado: POST retorna correctAnswer autoritativo.
+        // Se o GET não tinha correctOption (questão legada), atualiza agora
+        // para que o card de resposta mostre a letra correta em vez de "?".
+        if (data.correctAnswer != null && localCorrectIndex === null) {
+          setQuestionCorrectIndex(data.correctAnswer);
+        }
         fetchStats();
         fetchGamification();
       }
@@ -3280,8 +3286,8 @@ function MessageBubble({
       );
     }
 
-    const userLetter    = ["A", "B", "C", "D", "E"][data.userAnswer]    ?? "?";
-    const correctLetter = ["A", "B", "C", "D", "E"][data.correctAnswer] ?? "?";
+    const userLetter    = ["A", "B", "C", "D", "E"][data.userAnswer]                  ?? "?";
+    const correctLetter = ["A", "B", "C", "D", "E"][data.correctAnswer ?? correctIndex] ?? "?";
     return (
       <Card className="border-l-4 border-l-red-500 bg-red-50/50 w-full min-w-0">
         <CardContent className="pt-4 pb-4 px-3 sm:px-6 space-y-3">
