@@ -719,51 +719,58 @@ export function registerSalaRoutes(app: Express) {
         const nomes = materias.map((m: any) => m.name || "").filter(Boolean);
 
         if (nomes.length > 0) {
-          // Normalização robusta: mesma lógica do edital/progress (toSubjectCode + aliases + wildcard)
-          const toCode = (s: string) =>
-            s.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase()
-              .replace(/\s+/g, "_").replace(/[^A-Z0-9_]/g, "");
-          const aliases: Record<string, string> = {
-            "LINGUA_PORTUGUESA": "PORTUGUES",
-            "DIREITO_CONSTITUCIONAL": "DIR_CONSTITUCIONAL",
-            "DIREITO_PROCESSUAL_PENAL": "PROCESSUAL_PENAL",
-            "NOCOES_DE_DIREITO_ADMINISTRATIVO": "DIREITO_ADMINISTRATIVO",
-            "NOCOES_DE_INFORMATICA": "INFORMATICA",
-          };
-          const subjectIds: string[] = [];
-          for (const nome of nomes) {
-            let rows = await db.execute(sql`
-              SELECT id FROM "Subject" WHERE name ILIKE ${"%" + nome + "%"} LIMIT 1
-            `) as any[];
-            if (!rows[0]) {
-              const aliased = aliases[toCode(nome)] ?? toCode(nome);
-              rows = await db.execute(sql`
-                SELECT id FROM "Subject" WHERE name ILIKE ${"%" + aliased + "%"} LIMIT 1
+          try {
+            // Normalização robusta: mesma lógica do edital/progress (toSubjectCode + aliases + wildcard)
+            const toCode = (s: string) =>
+              s.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase()
+                .replace(/\s+/g, "_").replace(/[^A-Z0-9_]/g, "");
+            const aliases: Record<string, string> = {
+              "LINGUA_PORTUGUESA": "PORTUGUES",
+              "DIREITO_CONSTITUCIONAL": "DIR_CONSTITUCIONAL",
+              "DIREITO_PROCESSUAL_PENAL": "PROCESSUAL_PENAL",
+              "NOCOES_DE_DIREITO_ADMINISTRATIVO": "DIREITO_ADMINISTRATIVO",
+              "NOCOES_DE_INFORMATICA": "INFORMATICA",
+            };
+            const subjectIds: string[] = [];
+            for (const nome of nomes) {
+              let rows = await db.execute(sql`
+                SELECT id FROM "Subject" WHERE name ILIKE ${"%" + nome + "%"} LIMIT 1
               `) as any[];
+              if (!rows[0]) {
+                const aliased = aliases[toCode(nome)] ?? toCode(nome);
+                rows = await db.execute(sql`
+                  SELECT id FROM "Subject" WHERE name ILIKE ${"%" + aliased + "%"} LIMIT 1
+                `) as any[];
+              }
+              if (rows[0]?.id) subjectIds.push(rows[0].id);
             }
-            if (rows[0]?.id) subjectIds.push(rows[0].id);
-          }
 
-          if (subjectIds.length > 0) {
-            const [courseCountResult, availableCountResult] = await Promise.all([
-              db.execute(sql`
-                SELECT COUNT(DISTINCT qa."questionId")::int AS total
-                FROM "QuestionAttempt" qa
-                JOIN "Question" q ON q.id = qa."questionId"
-                WHERE qa."userId" = ${student.userId}
-                  AND q."subjectId" = ANY(${subjectIds})
-              `) as Promise<any[]>,
-              db.execute(sql`
-                SELECT COUNT(DISTINCT q.id)::int AS total
-                FROM "Question" q
-                WHERE q."subjectId" = ANY(${subjectIds})
-              `) as Promise<any[]>,
-            ]);
-            const qaCount = Number(courseCountResult[0]?.total || 0);
-            // Math.max garante que questões do bot (que incrementam totalQuestionsAnswered mas
-            // não criam QuestionAttempt) também sejam contabilizadas no progresso do curso
-            totalQuestionsInCurrentCourse = Math.max(qaCount, Number(u.totalQuestionsAnswered || 0));
-            totalQuestionsAvailableInCourse = Number(availableCountResult[0]?.total || 0);
+            if (subjectIds.length > 0) {
+              // Constrói IN clause seguro — evita problemas de serialização de array com Drizzle
+              const idList = subjectIds.map(id => `'${id.replace(/'/g, "''")}'`).join(", ");
+              const [courseCountResult, availableCountResult] = await Promise.all([
+                db.execute(sql.raw(`
+                  SELECT COUNT(DISTINCT qa."questionId")::int AS total
+                  FROM "QuestionAttempt" qa
+                  JOIN "Question" q ON q.id = qa."questionId"
+                  WHERE qa."userId" = '${student.userId.replace(/'/g, "''")}'
+                    AND q."subjectId" IN (${idList})
+                `)) as Promise<any[]>,
+                db.execute(sql.raw(`
+                  SELECT COUNT(DISTINCT q.id)::int AS total
+                  FROM "Question" q
+                  WHERE q."subjectId" IN (${idList})
+                `)) as Promise<any[]>,
+              ]);
+              const qaCount = Number(courseCountResult[0]?.total || 0);
+              // Math.max garante que questões do bot (que incrementam totalQuestionsAnswered mas
+              // não criam QuestionAttempt) também sejam contabilizadas no progresso do curso
+              totalQuestionsInCurrentCourse = Math.max(qaCount, Number(u.totalQuestionsAnswered || 0));
+              totalQuestionsAvailableInCourse = Number(availableCountResult[0]?.total || 0);
+            }
+          } catch (subjectErr) {
+            console.error("⚠️ [Stats] Erro ao calcular questões do curso — usando fallback 0:", subjectErr);
+            // Não propaga — stats principais (totalQuestionsAnswered) ainda são retornadas
           }
         }
       }
