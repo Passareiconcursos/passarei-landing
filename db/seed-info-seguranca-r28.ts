@@ -692,16 +692,6 @@ async function main() {
   // ── Phase 5: Questions ──────────────────────────────────────────────────────
   console.log("[ Phase 5 ] Inserindo questoes...");
 
-  // Phase 5 column guarantees for Question
-  const questionColGuarantees = [
-    sql`ALTER TABLE "Question" ADD COLUMN IF NOT EXISTS "explanationCorrect" TEXT`,
-    sql`ALTER TABLE "Question" ADD COLUMN IF NOT EXISTS "explanationWrong" TEXT`,
-    sql`ALTER TABLE "Question" ADD COLUMN IF NOT EXISTS "correctAnswer" TEXT`,
-  ];
-  for (const stmt of questionColGuarantees) {
-    try { await db.execute(stmt); } catch (_e) { /* coluna ja existe */ }
-  }
-
   for (const q of questions) {
     const exists = await questionExists(q.id);
     if (exists) {
@@ -714,27 +704,23 @@ async function main() {
       console.warn(`  AVISO: contentId nao resolvido para questao ${q.id} (contentTitle: '${q.contentTitle}')`);
     }
 
-    const optA = q.alternatives.find(a => a.letter === "A")?.text ?? "";
-    const optB = q.alternatives.find(a => a.letter === "B")?.text ?? "";
-    const optC = q.alternatives.find(a => a.letter === "C")?.text ?? "";
-    const optD = q.alternatives.find(a => a.letter === "D")?.text ?? "";
-    const optE = q.alternatives.find(a => a.letter === "E")?.text ?? null;
+    const alternativesJson = JSON.stringify(q.alternatives);
 
     await db.execute(sql`
       INSERT INTO "Question" (
-        id, statement, "optionA", "optionB", "optionC", "optionD", "optionE",
-        "correctAnswer", "correctOption",
-        explanation, "explanationCorrect", "explanationWrong",
-        difficulty, "questionType",
+        "id", "statement", "alternatives", "correctAnswer", "correctOption",
+        "explanation", "explanationCorrect", "explanationWrong",
         "subjectId", "topicId", "contentId",
-        "isActive", "timesUsed", "createdAt", "updatedAt"
+        "isActive", "difficulty",
+        "timesUsed", "questionType",
+        "createdAt", "updatedAt"
       ) VALUES (
-        ${q.id}, ${q.statement}, ${optA}, ${optB}, ${optC}, ${optD}, ${optE},
-        ${q.correctAnswer}, ${q.correctOption},
+        ${q.id}, ${q.statement}, ${alternativesJson}::jsonb, ${q.correctAnswer}, ${q.correctOption},
         ${q.explanation}, ${q.explanationCorrect}, ${q.explanationWrong},
-        ${q.difficulty}, ${q.questionType},
         ${subjectId}, ${topicId}, ${resolvedContentId},
-        true, 0, NOW(), NOW()
+        true, ${q.difficulty},
+        0, ${q.questionType},
+        NOW(), NOW()
       )
     `);
     console.log(`  OK Questao inserida: ${q.id} [${q.difficulty}] → content: ${resolvedContentId ?? "ORFAO"}`);
