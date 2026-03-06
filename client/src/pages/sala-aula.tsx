@@ -2271,10 +2271,10 @@ export default function SalaAula() {
                               </div>
                               <div className="space-y-1.5 mt-1">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-[10px] font-medium tabular-nums text-emerald-900/40">{totalInCourse}/15 questões</span>
-                                  <span className="text-[10px] text-emerald-900/30">{Math.round(Math.min(totalInCourse / 15, 1) * 100)}%</span>
+                                  <span className="text-[10px] font-medium tabular-nums text-emerald-900/40">{stats?.totalQuestionsAnswered ?? 0}/15 questões</span>
+                                  <span className="text-[10px] text-emerald-900/30">{Math.round(Math.min((stats?.totalQuestionsAnswered ?? 0) / 15, 1) * 100)}%</span>
                                 </div>
-                                <Progress value={Math.round(Math.min(totalInCourse / 15, 1) * 100)} className="h-1 bg-emerald-900/10 [&>div]:bg-emerald-700/40" />
+                                <Progress value={Math.round(Math.min((stats?.totalQuestionsAnswered ?? 0) / 15, 1) * 100)} className="h-1 bg-emerald-900/10 [&>div]:bg-emerald-700/40" />
                                 <p className="text-[9px] text-muted-foreground/60 leading-snug">Atinja sua cota de estudos para desbloquear</p>
                               </div>
                             </CardContent>
