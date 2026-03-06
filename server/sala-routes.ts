@@ -715,13 +715,34 @@ export function registerSalaRoutes(app: Express) {
         `) as any[];
         const raw = concursoRows[0]?.lista_materias_json;
         const materias: any[] = Array.isArray(raw) ? raw : (typeof raw === "string" ? JSON.parse(raw) : []);
-        const nomes = materias.map((m: any) => m.nome || "").filter(Boolean);
+        // EditalMateria usa campo "name" (não "nome") — corrige bug que retornava nomes=[] sempre
+        const nomes = materias.map((m: any) => m.name || "").filter(Boolean);
 
         if (nomes.length > 0) {
-          const subjectRows = await db.execute(sql`
-            SELECT id FROM "Subject" WHERE name ILIKE ANY(${nomes})
-          `) as any[];
-          const subjectIds: string[] = subjectRows.map((s: any) => s.id);
+          // Normalização robusta: mesma lógica do edital/progress (toSubjectCode + aliases + wildcard)
+          const toCode = (s: string) =>
+            s.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase()
+              .replace(/\s+/g, "_").replace(/[^A-Z0-9_]/g, "");
+          const aliases: Record<string, string> = {
+            "LINGUA_PORTUGUESA": "PORTUGUES",
+            "DIREITO_CONSTITUCIONAL": "DIR_CONSTITUCIONAL",
+            "DIREITO_PROCESSUAL_PENAL": "PROCESSUAL_PENAL",
+            "NOCOES_DE_DIREITO_ADMINISTRATIVO": "DIREITO_ADMINISTRATIVO",
+            "NOCOES_DE_INFORMATICA": "INFORMATICA",
+          };
+          const subjectIds: string[] = [];
+          for (const nome of nomes) {
+            let rows = await db.execute(sql`
+              SELECT id FROM "Subject" WHERE name ILIKE ${"%" + nome + "%"} LIMIT 1
+            `) as any[];
+            if (!rows[0]) {
+              const aliased = aliases[toCode(nome)] ?? toCode(nome);
+              rows = await db.execute(sql`
+                SELECT id FROM "Subject" WHERE name ILIKE ${"%" + aliased + "%"} LIMIT 1
+              `) as any[];
+            }
+            if (rows[0]?.id) subjectIds.push(rows[0].id);
+          }
 
           if (subjectIds.length > 0) {
             const [courseCountResult, availableCountResult] = await Promise.all([

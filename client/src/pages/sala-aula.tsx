@@ -2190,7 +2190,7 @@ export default function SalaAula() {
                 >
                   <CardContent className="pt-4 pb-4">
                     {(() => {
-                      const answered = stats?.totalQuestionsInCurrentCourse ?? 0;
+                      const answered = stats?.totalQuestionsAnswered ?? 0;
                       const available = stats?.totalQuestionsAvailableInCourse ?? 0;
                       const qPct = available > 0 ? Math.round(answered / available * 100) : 0;
                       return (
