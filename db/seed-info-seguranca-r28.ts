@@ -652,31 +652,22 @@ async function main() {
   // ── Phase 3: Contents ───────────────────────────────────────────────────────
   console.log("[ Phase 3 ] Inserindo atomos de conteudo...");
 
-  // Phase 5 column guarantees for Content
-  const contentColGuarantees = [
-    sql`ALTER TABLE "Content" ADD COLUMN IF NOT EXISTS "mnemonic" TEXT`,
-    sql`ALTER TABLE "Content" ADD COLUMN IF NOT EXISTS "keyPoint" TEXT`,
-    sql`ALTER TABLE "Content" ADD COLUMN IF NOT EXISTS "practicalExample" TEXT`,
-  ];
-  for (const stmt of contentColGuarantees) {
-    try { await db.execute(stmt); } catch (_e) { /* coluna ja existe */ }
-  }
-
   for (const c of contents) {
     const exists = await contentExists(c.title, subjectId);
     if (exists) {
       console.log(`  skip  Conteudo ja existe: ${c.title}`);
       continue;
     }
+    const wordCount = c.textContent.split(/\s+/).filter(Boolean).length;
     await db.execute(sql`
       INSERT INTO "Content" (
         id, title, "textContent", "subjectId", "topicId",
         "mnemonic", "keyPoint", "practicalExample",
-        difficulty, "isActive", "createdAt", "updatedAt"
+        difficulty, "wordCount", "isActive", "createdAt", "updatedAt"
       ) VALUES (
         ${c.id}, ${c.title}, ${c.textContent}, ${subjectId}, ${topicId},
         ${c.mnemonic}, ${c.keyPoint}, ${c.practicalExample},
-        ${c.difficulty}, true, NOW(), NOW()
+        ${c.difficulty}, ${wordCount}, true, NOW(), NOW()
       )
     `);
     console.log(`  OK Conteudo inserido: ${c.title} (${c.id})`);
