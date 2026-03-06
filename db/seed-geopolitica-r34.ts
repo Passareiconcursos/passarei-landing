@@ -938,7 +938,9 @@ async function main() {
     );
   }
 
-  // 2. Resolver Topic
+  // 2. Resolver Topic — tenta o subject, depois qualquer topic disponível
+  let topicId: string | null = null;
+
   const topicRows = (await db.execute(sql`
     SELECT id FROM "Topic"
     WHERE "subjectId" = ${subjectId}
@@ -946,11 +948,23 @@ async function main() {
     LIMIT 1
   `)) as any[];
 
-  if (!topicRows[0]) {
-    throw new Error("Nenhum Topic encontrado para este Subject.");
+  if (topicRows[0]) {
+    topicId = topicRows[0].id;
+    console.log(`Topic encontrado (subject próprio): ${topicId}`);
+  } else {
+    // Fallback: qualquer topic disponível no banco
+    const anyTopicRows = (await db.execute(sql`
+      SELECT id FROM "Topic"
+      ORDER BY "createdAt"
+      LIMIT 1
+    `)) as any[];
+
+    if (!anyTopicRows[0]) {
+      throw new Error("Nenhum Topic encontrado no banco. Cadastre ao menos um Topic antes de rodar este seed.");
+    }
+    topicId = anyTopicRows[0].id;
+    console.log(`Topic (fallback global): ${topicId}`);
   }
-  const topicId = topicRows[0].id;
-  console.log(`Topic encontrado: ${topicId}`);
 
   // 3. Inserir Conteúdos
   console.log("\n--- Inserindo Conteúdos ---");
