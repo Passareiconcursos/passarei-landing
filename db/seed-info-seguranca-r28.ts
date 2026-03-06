@@ -659,15 +659,16 @@ async function main() {
       continue;
     }
     const wordCount = c.textContent.split(/\s+/).filter(Boolean).length;
+    const estimatedReadTime = Math.max(1, Math.ceil(wordCount / 200));
     await db.execute(sql`
       INSERT INTO "Content" (
         id, title, "textContent", "subjectId", "topicId",
         "mnemonic", "keyPoint", "practicalExample",
-        difficulty, "wordCount", "isActive", "createdAt", "updatedAt"
+        difficulty, "wordCount", "estimatedReadTime", "isActive", "createdAt", "updatedAt"
       ) VALUES (
         ${c.id}, ${c.title}, ${c.textContent}, ${subjectId}, ${topicId},
         ${c.mnemonic}, ${c.keyPoint}, ${c.practicalExample},
-        ${c.difficulty}, ${wordCount}, true, NOW(), NOW()
+        ${c.difficulty}, ${wordCount}, ${estimatedReadTime}, true, NOW(), NOW()
       )
     `);
     console.log(`  OK Conteudo inserido: ${c.title} (${c.id})`);
