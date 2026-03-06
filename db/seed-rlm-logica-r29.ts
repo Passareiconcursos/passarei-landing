@@ -291,7 +291,7 @@ const questions = [
       "sentenças abertas ('x+3=7', valor depende de x) NÃO são proposições. " +
       "Apenas a alternativa C apresenta dois exemplos válidos.",
     difficulty: "FACIL",
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
   },
   // ── Q02 — rlm_lp_c01 — CERTO/ERRADO ──
   {
@@ -347,7 +347,7 @@ const questions = [
       "¬p = F pois p=V. ¬p∨q = F∨F = F. A disjunção final de dois F é F. " +
       "Cuidado: ¬p não é V quando p=V — é exatamente o oposto.",
     difficulty: "MEDIO",
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
   },
   // ── Q04 — rlm_lp_c02 — CERTO/ERRADO ──
   {
@@ -403,7 +403,7 @@ const questions = [
       "Se a condicional é falsa, o antecedente DEVE ser verdadeiro e o consequente DEVE ser falso. " +
       "Qualquer outra combinação tornaria a condicional verdadeira.",
     difficulty: "MEDIO",
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
   },
   // ── Q06 — rlm_lp_c03 — CERTO/ERRADO ──
   {
@@ -463,7 +463,7 @@ const questions = [
       "O oposto do bicondicional é o ou exclusivo (⊻), pois p⊻q ≡ ¬(p↔q). " +
       "Quando o bicondicional é V, o ⊻ é F, e vice-versa.",
     difficulty: "MEDIO",
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
   },
   // ── Q08 — rlm_lp_c04 — CERTO/ERRADO ──
   {
@@ -520,7 +520,7 @@ const questions = [
       "O bicondicional de fórmulas equivalentes é TAUTOLOGIA (sempre V), nunca contradição nem contingência. " +
       "Verifique linha a linha: em todos os casos, ambos os lados do ↔ têm o mesmo valor.",
     difficulty: "DIFICIL",
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
   },
   // ── Q10 — rlm_lp_c05 — CERTO/ERRADO ──
   {
@@ -579,7 +579,7 @@ const questions = [
       "(2) De Morgan na disjunção: ¬(p∨q) = ¬p∧¬q — o 'ou' vira 'e'. " +
       "A resposta correta é 'algum... não... E não...' (opção B).",
     difficulty: "DIFICIL",
-    questionType: "MULTIPLE_CHOICE",
+    questionType: "MULTIPLA_ESCOLHA",
   },
   // ── Q12 — rlm_lp_c06 — CERTO/ERRADO ──
   {
