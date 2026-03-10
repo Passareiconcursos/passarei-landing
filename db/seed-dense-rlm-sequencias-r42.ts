@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "./index";
 import { sql } from "drizzle-orm";
 
 // R42 — DENSIFICAÇÃO: RLM Sequências, Conjuntos e Associação
