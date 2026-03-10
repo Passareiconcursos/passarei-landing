@@ -2,12 +2,6 @@ import { Check, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Comparativo() {
-  const scrollToCTA = () => {
-    document
-      .getElementById("cta-final")
-      ?.scrollIntoView({ behavior: "smooth" });
-  };
-
   const features = [
     {
       name: "Preço mensal",
@@ -277,7 +271,7 @@ export function Comparativo() {
         <div className="text-center">
           <Button
             size="lg"
-            onClick={scrollToCTA}
+            onClick={() => window.location.href = "/sala/login?source=comparativo"}
             className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
             data-testid="button-comparativo-cta"
           >

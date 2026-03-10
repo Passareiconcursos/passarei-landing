@@ -2,12 +2,6 @@ import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Depoimentos() {
-  const scrollToCTA = () => {
-    document
-      .getElementById("cta-final")
-      ?.scrollIntoView({ behavior: "smooth" });
-  };
-
   const testimonials = [
     {
       stars: 5,
@@ -136,7 +130,7 @@ export function Depoimentos() {
         <div className="text-center">
           <Button
             size="lg"
-            onClick={scrollToCTA}
+            onClick={() => window.location.href = "/sala/login?source=depoimentos"}
             className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
             data-testid="button-depoimentos-cta"
           >

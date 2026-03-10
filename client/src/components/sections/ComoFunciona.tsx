@@ -1,12 +1,6 @@
 import { Button } from "@/components/ui/button";
 
 export function ComoFunciona() {
-  const scrollToCTA = () => {
-    document
-      .getElementById("cta-final")
-      ?.scrollIntoView({ behavior: "smooth" });
-  };
-
   const steps = [
     {
       number: "1️⃣",
@@ -90,7 +84,7 @@ export function ComoFunciona() {
           <div className="w-full px-4 md:px-0">
             <Button
               size="lg"
-              onClick={scrollToCTA}
+              onClick={() => window.location.href = "/sala/login?source=como_funciona"}
               className="w-full md:w-auto bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
               data-testid="button-como-funciona-cta"
             >

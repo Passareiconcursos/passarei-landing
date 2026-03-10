@@ -14,17 +14,6 @@ export function Header() {
     }
   };
 
-  const scrollToCTA = () => {
-    if (window.location.pathname === "/") {
-      document
-        .getElementById("cta-final")
-        ?.scrollIntoView({ behavior: "smooth" });
-      setMobileMenuOpen(false);
-    } else {
-      window.location.href = "/#cta-final";
-    }
-  };
-
   const menuItems = [
     { label: "Como Funciona", id: "como-funciona" },
     { label: "Depoimentos", id: "depoimentos" },
@@ -80,7 +69,7 @@ export function Header() {
                 Login
               </a>
               <Button
-                onClick={scrollToCTA}
+                onClick={() => window.location.href = "/sala/login?source=header_cta"}
                 className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-3 rounded-lg font-semibold text-base hover:scale-105 transition-all shadow-md hover:shadow-lg"
                 aria-label="Começar teste grátis"
               >
@@ -126,7 +115,7 @@ export function Header() {
                 Login — Sala de Aula
               </a>
               <Button
-                onClick={scrollToCTA}
+                onClick={() => window.location.href = "/sala/login?source=header_cta"}
                 className="bg-[#18cb96] hover:bg-[#14b584] text-white w-full py-3 rounded-lg font-semibold"
               >
                 Teste Grátis

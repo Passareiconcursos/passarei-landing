@@ -1,31 +1,6 @@
-import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { MiniChat } from "@/components/MiniChat";
 
 export function Hero() {
-  const [showMiniChat, setShowMiniChat] = useState(false);
-  const modalRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-
-  const closeMiniChat = useCallback(() => {
-    setShowMiniChat(false);
-    triggerRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    if (!showMiniChat) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeMiniChat();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [showMiniChat, closeMiniChat]);
-
   const scrollToHowItWorks = () => {
     document
       .getElementById("como-funciona")
@@ -53,49 +28,34 @@ export function Hero() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
               <Button
-                ref={triggerRef}
                 size="lg"
-                onClick={() => setShowMiniChat(true)}
+                onClick={() => window.location.href = "/sala/login?source=hero_21q"}
                 className="bg-[#18cb96] hover:bg-[#14b584] text-white px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
                 <span className="text-2xl mr-2">🎁</span>21 Questões Grátis
-              </Button>
-
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() =>
-                  window.open("https://t.me/PassareiBot", "_blank")
-                }
-                className="border-2 border-[#18cb96] text-[#18cb96] hover:bg-green-50 px-8 py-6 text-lg font-semibold"
-              >
-                <Play className="mr-2 w-5 h-5" />
-                Iniciar no Telegram
               </Button>
             </div>
 
             {/* Badge de avaliação - Mobile */}
             <div className="lg:hidden mb-8">
-              {!showMiniChat && (
-                <div className="inline-block bg-white rounded-lg shadow-md p-4 border border-gray-100">
-                  <div className="flex items-start gap-3 text-left">
-                    <div>
-                      <div className="text-yellow-500 text-xl mb-1">
-                        ⭐⭐⭐⭐⭐
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        4.9/5 - Avaliação de +1.200 alunos
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        ✅ +2.847 candidatos estudando agora
-                      </p>
-                      <p className="text-sm text-primary font-semibold">
-                        🏆 377 aprovações confirmadas em 2025
-                      </p>
+              <div className="inline-block bg-white rounded-lg shadow-md p-4 border border-gray-100">
+                <div className="flex items-start gap-3 text-left">
+                  <div>
+                    <div className="text-yellow-500 text-xl mb-1">
+                      ⭐⭐⭐⭐⭐
                     </div>
+                    <p className="text-sm text-muted-foreground">
+                      4.9/5 - Avaliação de +1.200 alunos
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      ✅ +2.847 candidatos estudando agora
+                    </p>
+                    <p className="text-sm text-primary font-semibold">
+                      🏆 377 aprovações confirmadas em 2025
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Badge de avaliação - Desktop */}
@@ -117,11 +77,11 @@ export function Hero() {
             </div>
           </div>
 
-          {/* Coluna da direita - Mockup (MiniChat abre em modal) */}
+          {/* Coluna da direita - Mockup */}
           <div className="flex justify-center" aria-hidden="true">
             <div
               className="relative max-w-[300px] mx-auto cursor-pointer group"
-              onClick={() => setShowMiniChat(true)}
+              onClick={() => window.location.href = "/sala/login?source=hero_mockup"}
             >
               {/* Mockup do celular */}
               <div className="relative bg-black rounded-[3rem] p-3 shadow-2xl group-hover:shadow-3xl transition-all duration-300 group-hover:scale-[1.02]">
@@ -132,11 +92,7 @@ export function Hero() {
                   style={{ height: "520px" }}
                 >
                   <div className="bg-[#18cb96] text-white px-4 py-3 flex items-center gap-3 sticky top-0 z-20">
-                    {/* LOGO: Substitua aqui pela sua imagem */}
                     <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      {/* Opção 1: Usar imagem */}
-                      {/* <img src="/logo-icon.png" alt="Passarei" className="w-8 h-8" /> */}
-                      {/* Opção 2: Usar letra */}
                       <span className="text-[#18cb96] font-bold text-lg">
                         P
                       </span>
@@ -223,46 +179,6 @@ export function Hero() {
           </div>
         </div>
       </div>
-
-      {/* Modal do Mini-Chat - Desktop e Mobile */}
-      {showMiniChat && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Chat Passarei"
-          ref={modalRef}
-          onClick={(e) => { if (e.target === e.currentTarget) closeMiniChat(); }}
-        >
-          <div className="relative w-full max-w-md">
-            <button
-              onClick={closeMiniChat}
-              className="absolute -top-3 -right-3 z-10 bg-white text-gray-700 hover:text-red-500 hover:bg-red-50 rounded-full w-10 h-10 flex items-center justify-center shadow-lg border-2 border-gray-200 hover:border-red-300 transition-all duration-200"
-              aria-label="Fechar chat"
-              autoFocus
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-
-            <MiniChat />
-          </div>
-        </div>
-      )}
-
     </section>
   );
 }
