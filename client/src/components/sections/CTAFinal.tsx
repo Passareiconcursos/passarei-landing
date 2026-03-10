@@ -22,19 +22,19 @@ export function CTAFinal() {
           </div>
 
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-            Comece a estudar agora na Sala de Aula!
+            Acesse sua sala e comece a estudar!
           </h2>
 
           <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-2xl mx-auto">
-            Acesse a plataforma e resolva 21 questões grátis com correção
-            detalhada por IA. O Telegram fica acessível de dentro da Sala.
+            Acesse a plataforma e receba 21 questões grátis com correções. O
+            Telegram é acessível de dentro da Sala.
           </p>
 
           {/* Benefícios */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 max-w-3xl mx-auto">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-white">
               <BookOpen className="w-8 h-8 mx-auto mb-2 text-white" />
-              <p className="text-sm font-medium">Estude agora pelo celular</p>
+              <p className="text-sm font-medium">Estude pelo celular</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-white">
               <Clock className="w-8 h-8 mx-auto mb-2 text-white" />
@@ -42,11 +42,11 @@ export function CTAFinal() {
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-white">
               <Rocket className="w-8 h-8 mx-auto mb-2 text-white" />
-              <p className="text-sm font-medium">Conteúdo personalizado</p>
+              <p className="text-sm font-medium">Conteúdo das Bancas</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-white">
               <CheckCircle className="w-8 h-8 mx-auto mb-2 text-white" />
-              <p className="text-sm font-medium">IA reforça seu APRENDIZADO</p>
+              <p className="text-sm font-medium">Método Validado</p>
             </div>
           </div>
 
