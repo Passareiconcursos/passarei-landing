@@ -1,16 +1,6 @@
-import { useState } from "react";
-import { MiniChat } from "@/components/MiniChat";
 import { Button } from "@/components/ui/button";
 
 export function ParaQuemE() {
-  const [showMiniChat, setShowMiniChat] = useState(false);
-
-  const scrollToForm = () => {
-    document
-      .getElementById("lead-form")
-      ?.scrollIntoView({ behavior: "smooth" });
-  };
-
   const features = [
     {
       emoji: "🎯",
@@ -92,22 +82,9 @@ export function ParaQuemE() {
             </div>
           ))}
         </div>
-        {showMiniChat && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="relative w-full max-w-2xl">
-              <button
-                onClick={() => setShowMiniChat(false)}
-                className="absolute top-2 right-2 text-white hover:text-gray-300 bg-black/50 rounded-full w-10 h-10 flex items-center justify-center text-xl"
-              >
-                ✕ Fechar
-              </button>
-              <MiniChat />
-            </div>
-          </div>
-        )}
         <div className="text-center">
           <Button
-            onClick={() => setShowMiniChat(true)}
+            onClick={() => window.location.href = "/sala/login?source=para_quem_e"}
             className="bg-[#18cb96] hover:bg-[#15b386] text-white px-8 py-4 rounded-full font-semibold transition-colors shadow-lg hover:shadow-xl"
           >
             🎯 Experimentar Grátis

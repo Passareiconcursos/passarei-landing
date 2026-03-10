@@ -51,16 +51,18 @@ export function CTAFinal() {
           </div>
 
           {/* Botão principal */}
-          <Button
-            size="lg"
-            onClick={() =>
-              (window.location.href = "/sala/login?source=cta_final")
-            }
-            className="bg-white hover:bg-gray-100 text-[#0088cc] px-10 py-7 text-xl font-bold shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-300 rounded-full"
-          >
-            <Rocket className="w-7 h-7 mr-3" aria-hidden="true" />
-            Acessar 21 Questões Grátis
-          </Button>
+          <div className="mb-8">
+            <Button
+              size="lg"
+              onClick={() =>
+                (window.location.href = "/sala/login?source=cta_final")
+              }
+              className="bg-white hover:bg-gray-100 text-[#0088cc] px-10 py-7 text-xl font-bold shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-300 rounded-full"
+            >
+              <Rocket className="w-7 h-7 mr-3" aria-hidden="true" />
+              Acessar 21 Questões Grátis
+            </Button>
+          </div>
 
           {/* Badge de garantia */}
           <div className="mt-8 inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3">
