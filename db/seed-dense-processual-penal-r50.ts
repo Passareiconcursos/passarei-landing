@@ -1689,9 +1689,9 @@ async function main() {
   console.log("\n🚀 Seed R50 — Direito Processual Penal\n");
 
   // 1. Encontrar Subject
-  const subjectId = await findSubject("processual penal");
+  const subjectId = await findSubject("PROCESSUAL_PENAL");
   if (!subjectId) {
-    console.error("❌ Subject 'Processual Penal' não encontrado. Verifique o banco.");
+    console.error("❌ Subject 'PROCESSUAL_PENAL' não encontrado. Verifique o banco.");
     process.exit(1);
   }
   console.log(`  ✅ Subject encontrado: ${subjectId}`);
