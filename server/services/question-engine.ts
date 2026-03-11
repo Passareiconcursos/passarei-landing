@@ -47,6 +47,9 @@ export async function getQuestionForSubject(
 
     const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
 
+    // Blindagem gabarito: excluir questões sem resposta definida
+    const hasAnswerClause = sql`AND (q."correctOption" IS NOT NULL OR (q."correctAnswer" IS NOT NULL AND q."correctAnswer" != ''))`;
+
     const result = await db.execute(sql`
       SELECT q.* FROM "Question" q
       WHERE q."subjectId" = ${subjectId}
@@ -54,6 +57,7 @@ export async function getQuestionForSubject(
         ${usedClause}
         ${difficultyClause}
         ${reviewClause}
+        ${hasAnswerClause}
       ORDER BY q."timesUsed" ASC, RANDOM()
       LIMIT 1
     `) as any[];
@@ -138,6 +142,9 @@ export async function getQuestionForContent(
   let effectiveTopicId = topicId;
   try {
     const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
+    // Blindagem gabarito: nunca servir questão sem resposta definida.
+    // Questões com correctOption=NULL e correctAnswer=NULL/'' causam gabarito "?".
+    const hasAnswerClause = sql`AND (q."correctOption" IS NOT NULL OR (q."correctAnswer" IS NOT NULL AND q."correctAnswer" != ''))`;
 
     // Garantir topicId: se não veio no parâmetro, buscar no banco pelo contentId
     if (!effectiveTopicId && contentId) {
@@ -159,6 +166,7 @@ export async function getQuestionForContent(
         WHERE q."contentId" = ${contentId}
           AND q."isActive" = true
           ${reviewClause}
+          ${hasAnswerClause}
         ORDER BY q."timesUsed" ASC, RANDOM()
         LIMIT 1
       `) as any[];
@@ -182,6 +190,7 @@ export async function getQuestionForContent(
         WHERE q."topicId" = ${effectiveTopicId}
           AND q."isActive" = true
           ${reviewClause}
+          ${hasAnswerClause}
         ORDER BY q."timesUsed" ASC, RANDOM()
         LIMIT 1
       `) as any[];
@@ -280,11 +289,13 @@ export async function getQuestionForContent(
     if (effectiveTopicId) {
       try {
         const reviewClause = sql`AND (q."reviewStatus" IS NULL OR q."reviewStatus" != 'REJEITADO')`;
+        const hasAnswerClauseLast = sql`AND (q."correctOption" IS NOT NULL OR (q."correctAnswer" IS NOT NULL AND q."correctAnswer" != ''))`;
         const t3aLast = await db.execute(sql`
           SELECT q.* FROM "Question" q
           WHERE q."topicId" = ${effectiveTopicId}
             AND q."isActive" = true
             ${reviewClause}
+            ${hasAnswerClauseLast}
           ORDER BY q."timesUsed" ASC, RANDOM()
           LIMIT 1
         `) as any[];

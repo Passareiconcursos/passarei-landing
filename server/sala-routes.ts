@@ -540,8 +540,10 @@ export function registerSalaRoutes(app: Express) {
 
       // Segurança: se correctAnswer não foi resolvido (-1 ou fora do range 0-4),
       // usa o hint enviado pelo cliente (correctIndex do GET response) como último recurso.
-      // Em modo estudo (não prova), isso é aceitável — evita gabarito "?".
-      if ((correctAnswer < 0 || correctAnswer > 4) && req.body.correctIndex != null) {
+      // CUIDADO: req.body.correctIndex pode ser JSON null — Number(null)=0 seria gabarito falso.
+      // Usar !== null && !== undefined para só aceitar valores numéricos reais.
+      if ((correctAnswer < 0 || correctAnswer > 4) &&
+          req.body.correctIndex !== null && req.body.correctIndex !== undefined) {
         const hint = Number(req.body.correctIndex);
         if (hint >= 0 && hint <= 4) correctAnswer = hint;
       }

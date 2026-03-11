@@ -13,6 +13,9 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
+  // Timeout explícito para evitar que o Railway corte a conexão (default SDK = 10min).
+  // Haiku responde em <5s; 20s é margem segura antes do timeout Railway de ~30s.
+  timeout: 20_000,
 });
 
 const MODEL = "claude-sonnet-4-6";
