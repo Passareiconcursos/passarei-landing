@@ -42,7 +42,13 @@ export function registerSalaAuthRoutes(app: Express) {
       });
     }
 
-    const result = await registerStudent({ email, password, name, phone, examType, cargo, state });
+    let result;
+    try {
+      result = await registerStudent({ email, password, name, phone, examType, cargo, state });
+    } catch (err: any) {
+      console.error("❌ [Register Route] Erro inesperado:", err?.message ?? err);
+      return res.status(500).json({ success: false, error: "Erro interno ao processar registro." });
+    }
 
     if (!result.success) {
       return res.status(400).json({ success: false, error: result.error });

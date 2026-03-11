@@ -5,6 +5,7 @@
  * Usa a tabela "User" (Prisma legacy) com coluna password_hash.
  */
 
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import type { Request, Response, NextFunction } from "express";
@@ -83,17 +84,18 @@ export async function registerStudent(data: {
     // New user
     const passwordHash = await bcrypt.hash(data.password, 10);
     const now = new Date().toISOString();
+    const newId = crypto.randomUUID();
 
     const result = await db.execute(sql`
       INSERT INTO "User" (
-        email, "passwordHash", name, phone,
+        id, email, "passwordHash", name, phone,
         "examType", cargo, state, plan, "planStatus",
         "firstInteractionDate", "firstDayFreeUsed",
         "dailyContentCount", "lastContentDate",
         "totalQuestionsAnswered", "totalSpent", credits,
         "createdAt", "updatedAt"
       ) VALUES (
-        ${data.email}, ${passwordHash}, ${data.name}, ${data.phone || null},
+        ${newId}, ${data.email}, ${passwordHash}, ${data.name}, ${data.phone || null},
         ${data.examType || null}, ${data.cargo || null}, ${data.state || null},
         'FREE', 'active',
         ${now}, 0,
@@ -110,7 +112,12 @@ export async function registerStudent(data: {
 
     return { success: true, token, profile: profile! };
   } catch (error: any) {
-    console.error("❌ [Student Auth] Erro no registro:", error);
+    console.error("❌ [Student Auth] Erro no registro:", {
+      message: error?.message,
+      code: error?.code,
+      detail: error?.detail,
+      stack: error?.stack,
+    });
     return { success: false, error: "Erro interno ao registrar." };
   }
 }
@@ -161,7 +168,12 @@ export async function loginStudent(
 
     return { success: true, token, profile: profile! };
   } catch (error: any) {
-    console.error("❌ [Student Auth] Erro no login:", error);
+    console.error("❌ [Student Auth] Erro no login:", {
+      message: error?.message,
+      code: error?.code,
+      detail: error?.detail,
+      stack: error?.stack,
+    });
     return { success: false, error: "Erro interno ao fazer login." };
   }
 }
