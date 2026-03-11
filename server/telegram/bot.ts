@@ -293,10 +293,7 @@ export async function startTelegramBot() {
         const keyboard = {
           inline_keyboard: [
             [{ text: "📚 Estudar", callback_data: "menu_estudar" }],
-            [
-              { text: "💎 Planos",  callback_data: "menu_planos" },
-              { text: "🛠️ Suporte", callback_data: "menu_suporte" },
-            ],
+            [{ text: "🛠️ Suporte", callback_data: "menu_suporte" }],
           ],
         };
         await bot!.sendMessage(
@@ -433,10 +430,7 @@ export async function startTelegramBot() {
     // Menu com botões inline
     const keyboard = [
       [{ text: "📚 Estudar", callback_data: "menu_estudar" }],
-      [
-        { text: "💎 Planos",  callback_data: "menu_planos" },
-        { text: "🛠️ Suporte", callback_data: "menu_suporte" },
-      ],
+      [{ text: "🛠️ Suporte", callback_data: "menu_suporte" }],
     ];
 
     const planInfo = hasActivePlan
