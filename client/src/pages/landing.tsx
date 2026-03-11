@@ -19,29 +19,31 @@ export default function Landing() {
         Pular para o conteúdo
       </a>
       <Header />
-      <Hero />
-      <Concursos />
-      <div id="social-proof">
-        <SocialProof />
-      </div>
-      <ParaQuemE />
-      <Beneficios />
-      <div id="como-funciona">
-        <ComoFunciona />
-      </div>
-      <Comparativo />
-      <div id="planos">
-        <Pricing />
-      </div>
-      <div id="depoimentos">
-        <Depoimentos />
-      </div>
-      <div id="faq">
-        <FAQ />
-      </div>
-      <div id="cta-final">
-        <CTAFinal />
-      </div>
+      <main id="conteudo-principal">
+        <Hero />
+        <Concursos />
+        <div id="social-proof">
+          <SocialProof />
+        </div>
+        <ParaQuemE />
+        <Beneficios />
+        <div id="como-funciona">
+          <ComoFunciona />
+        </div>
+        <Comparativo />
+        <div id="planos">
+          <Pricing />
+        </div>
+        <div id="depoimentos">
+          <Depoimentos />
+        </div>
+        <div id="faq">
+          <FAQ />
+        </div>
+        <div id="cta-final">
+          <CTAFinal />
+        </div>
+      </main>
       <Footer />
     </div>
   );

@@ -18,7 +18,7 @@ export function Hero() {
               data-testid="hero-title"
               style={{ contain: "content" }}
             >
-              A tecnologia que coloca você dentro das corporações policiais.
+              A plataforma de questões e simulados para Carreiras Policiais.
             </h1>
 
             <p className="text-xl md:text-2xl text-gray-600 mb-8">
