@@ -1217,8 +1217,6 @@ const questions: Question[] = [
     difficulty: "DIFICIL",
     questionType: "MULTIPLA_ESCOLHA",
   },
-];
-
 
   // ── dpp_pr_c01 — Prisão em Flagrante (8q) ───────────────────────────────
   {
