@@ -711,17 +711,30 @@ async function migrateConcursosTables() {
         { name: "Criminalística",          weight: 1, questions:  5, topics: [] },
       ] },
     // ── POLÍCIA RODOVIÁRIA FEDERAL (CEBRASPE) ────────────────────────────────
+    // Edital PRF 2021/2025 — Cebraspe — 120 questões C/E — 1 cargo
+    // Bloco I (55q): LP, RLM, Info, Física, Ética, Geopolítica, LE
+    // Bloco II (30q): Legislação de Trânsito
+    // Bloco III (35q): Dir. Const, Dir. Adm, Dir. Penal, DPP, Leg. Especial, DH
     { nome: "Polícia Rodoviária Federal", sigla: "PRF", esfera: "FEDERAL", exam_type: "PRF",
       banca: "CEBRASPE", cargo_padrao: "Policial Rodoviário Federal", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
-        { name: "Matemática", weight: 1, questions: 5, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
-        { name: "Legislação de Trânsito", weight: 3, questions: 20, topics: [] },
-        { name: "Direito Administrativo", weight: 1, questions: 5, topics: [] },
-        { name: "Informática", weight: 1, questions: 5, topics: [] },
-        { name: "Atualidades", weight: 1, questions: 5, topics: [] },
+        // Bloco I
+        { name: "Língua Portuguesa",        weight: 3, questions: 20, topics: [] },
+        { name: "Raciocínio Lógico",        weight: 2, questions: 10, topics: [] },
+        { name: "Informática",              weight: 1, questions:  5, topics: [] },
+        { name: "Física",                   weight: 1, questions:  5, topics: [] },
+        { name: "Ética no Serviço Público", weight: 1, questions:  5, topics: [] },
+        { name: "Geopolítica",              weight: 1, questions:  5, topics: [] },
+        { name: "Língua Estrangeira",       weight: 1, questions:  5, topics: [] },
+        // Bloco II
+        { name: "Legislação de Trânsito",   weight: 3, questions: 30, topics: [] },
+        // Bloco III
+        { name: "Direito Constitucional",   weight: 2, questions: 10, topics: [] },
+        { name: "Direito Administrativo",   weight: 1, questions:  5, topics: [] },
+        { name: "Direito Penal",            weight: 1, questions:  5, topics: [] },
+        { name: "Direito Processual Penal", weight: 1, questions:  5, topics: [] },
+        { name: "Legislação Especial",      weight: 2, questions:  5, topics: [] },
+        { name: "Direitos Humanos",         weight: 1, questions:  5, topics: [] },
       ] },
     // ── AGENTE ADMIN PRF — NÍVEL MÉDIO ───────────────────────────────────────
     { nome: "PRF - Agente Administrativo", sigla: "PRF_ADMIN", esfera: "FEDERAL", exam_type: "PRF",
