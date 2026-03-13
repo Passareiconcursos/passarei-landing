@@ -737,14 +737,23 @@ async function migrateConcursosTables() {
         { name: "Direitos Humanos",         weight: 1, questions:  5, topics: [] },
       ] },
     // ── AGENTE ADMIN PRF — NÍVEL MÉDIO ───────────────────────────────────────
+    // Edital PRF 2014 — FUNCAB — 60 questões — Agente Administrativo Classe A
+    // Conhecimentos Básicos (24q): LP 12, Ética 6, RLM 6
+    // Conhecimentos Específicos (36q): Dir.Const 6, Dir.Adm 6, Adm 6, Arq 6, Info 6, Leg.PRF 6
     { nome: "PRF - Agente Administrativo", sigla: "PRF_ADMIN", esfera: "FEDERAL", exam_type: "PRF",
-      banca: "CEBRASPE", cargo_padrao: "Agente Administrativo PRF (Nível Médio)", estado: null,
+      banca: "FUNCAB", cargo_padrao: "Agente Administrativo PRF (Nível Médio)", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 2, questions: 20, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
-        { name: "Noções de Direito Administrativo", weight: 1, questions: 15, topics: [] },
-        { name: "Informática", weight: 2, questions: 20, topics: [] },
-        { name: "Atualidades", weight: 1, questions: 10, topics: [] },
+        // Conhecimentos Básicos
+        { name: "Língua Portuguesa",              weight: 3, questions: 12, topics: [] },
+        { name: "Ética e Conduta Pública",        weight: 1, questions:  6, topics: [] },
+        { name: "Raciocínio Lógico",              weight: 1, questions:  6, topics: [] },
+        // Conhecimentos Específicos
+        { name: "Direito Constitucional",         weight: 2, questions:  6, topics: [] },
+        { name: "Direito Administrativo",         weight: 2, questions:  6, topics: [] },
+        { name: "Noções de Administração",        weight: 1, questions:  6, topics: [] },
+        { name: "Arquivologia",                   weight: 1, questions:  6, topics: [] },
+        { name: "Informática",                    weight: 1, questions:  6, topics: [] },
+        { name: "Legislação Especial",            weight: 2, questions:  6, topics: [] },
       ] },
     // ── AGENTE ADMIN PF — NÍVEL MÉDIO ────────────────────────────────────────
     { nome: "Polícia Federal - Agente Administrativo", sigla: "PF_ADMIN", esfera: "FEDERAL", exam_type: "PF",
