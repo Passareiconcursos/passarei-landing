@@ -806,15 +806,26 @@ async function migrateConcursosTables() {
         { name: "Legislação Tributária",                    weight: 2, questions: 15, topics: [] },
       ] },
     // ── POLÍCIA PENAL FEDERAL / DEPEN (CEBRASPE) ────────────────────────────
+    // Edital DEPEN 2020 Nº 1 — Agente Federal de Execução Penal (Nível Médio) — 120q C/E
+    // Bloco I: Conhecimentos Básicos (30q) | Bloco II: Específicos (50q) | Bloco III: Complementares (40q)
     { nome: "Polícia Penal Federal", sigla: "PPF", esfera: "FEDERAL", exam_type: "PP_FEDERAL",
-      banca: "CEBRASPE", cargo_padrao: "Policial Penal Federal", estado: null,
+      banca: "CEBRASPE", cargo_padrao: "Agente Federal de Execução Penal", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Direito Constitucional", weight: 2, questions: 20, topics: [] },
-        { name: "Direito Penal", weight: 2, questions: 20, topics: [] },
-        { name: "Direito Processual Penal", weight: 2, questions: 20, topics: [] },
-        { name: "Direito Administrativo", weight: 1, questions: 15, topics: [] },
-        { name: "Legislação de Execução Penal", weight: 2, questions: 10, topics: [] },
+        // Bloco I — Conhecimentos Básicos (30q)
+        { name: "Língua Portuguesa",                              weight: 2, questions: 10, topics: [] },
+        { name: "Ética no Serviço Público",                       weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico",                              weight: 2, questions:  5, topics: [] },
+        { name: "Informática",                                    weight: 1, questions:  5, topics: [] },
+        // Bloco II — Conhecimentos Específicos (50q)
+        { name: "Direito Constitucional",                         weight: 3, questions: 10, topics: [] },
+        { name: "Direito Administrativo",                         weight: 3, questions: 10, topics: [] },
+        { name: "Direito Penal",                                  weight: 3, questions: 10, topics: [] },
+        { name: "Direito Processual Penal",                       weight: 3, questions: 10, topics: [] },
+        { name: "Direitos Humanos e Participação Social",         weight: 2, questions:  5, topics: [] },
+        { name: "Legislação Especial",                            weight: 2, questions:  5, topics: [] },
+        // Bloco III — Conhecimentos Complementares (40q)
+        { name: "Execução Penal",                                 weight: 3, questions: 20, topics: [] },
+        { name: "Legislação e Regulamentação DEPEN",              weight: 2, questions: 20, topics: [] },
       ] },
     // ── POLÍCIA LEGISLATIVA FEDERAL / CÂMARA (CEBRASPE) ─────────────────────
     { nome: "Polícia Legislativa Federal", sigla: "PLF", esfera: "FEDERAL", exam_type: "PL_FEDERAL",
