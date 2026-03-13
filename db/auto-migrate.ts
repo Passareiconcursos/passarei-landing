@@ -877,6 +877,55 @@ async function migrateConcursosTables() {
         { name: "Direito Internacional Público",                  weight: 2, questions: 20, topics: [] },
         { name: "Direito Penal",                                  weight: 2, questions: 15, topics: [] },
       ] },
+    // ── ABIN — Oficial Técnico de Inteligência (CEBRASPE) ────────────────────
+    // Edital ABIN 2018 — Cargo 2: Oficial Técnico — P1=60q + P2=90q C/E
+    // P2 Área 1 (mais comum): perfil Admin/Finanças/Contabilidade
+    { nome: "ABIN - Oficial Técnico de Inteligência", sigla: "ABIN_OTI", esfera: "FEDERAL", exam_type: "ABIN",
+      banca: "CEBRASPE", cargo_padrao: "Oficial Técnico de Inteligência", estado: null,
+      materias: [
+        // P1 — Conhecimentos Gerais (60q — comuns a todos os cargos)
+        { name: "Língua Portuguesa",                              weight: 2, questions: 15, topics: [] },
+        { name: "Língua Inglesa / Espanhola",                     weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico",                              weight: 2, questions: 10, topics: [] },
+        { name: "Direito Constitucional",                         weight: 2, questions: 10, topics: [] },
+        { name: "Direito Administrativo",                         weight: 1, questions: 10, topics: [] },
+        { name: "Atividade de Inteligência e Legislação",         weight: 3, questions:  5, topics: [] },
+        // P2 — Conhecimentos Específicos Área 1 (90q)
+        { name: "Administração Pública",                          weight: 3, questions: 20, topics: [] },
+        { name: "Administração Financeira e Orçamentária",        weight: 2, questions: 20, topics: [] },
+        { name: "Gestão de Pessoas nas Organizações",             weight: 2, questions: 15, topics: [] },
+        { name: "Contabilidade Aplicada ao Setor Público",        weight: 2, questions: 15, topics: [] },
+        { name: "Contabilidade Geral",                            weight: 2, questions: 10, topics: [] },
+        { name: "Noções de Economia",                             weight: 1, questions: 10, topics: [] },
+      ] },
+    // ── ABIN — Agente de Inteligência (CEBRASPE) ─────────────────────────────
+    // Edital ABIN 2018 — Cargo 3: Agente de Inteligência — P1=50q + P2=70q C/E
+    { nome: "ABIN - Agente de Inteligência", sigla: "ABIN_AGT", esfera: "FEDERAL", exam_type: "ABIN",
+      banca: "CEBRASPE", cargo_padrao: "Agente de Inteligência", estado: null,
+      materias: [
+        // P1 — Conhecimentos Básicos (50q)
+        { name: "Língua Portuguesa",                              weight: 2, questions: 15, topics: [] },
+        { name: "Língua Inglesa / Espanhola",                     weight: 1, questions:  5, topics: [] },
+        { name: "Raciocínio Lógico",                              weight: 2, questions: 10, topics: [] },
+        { name: "Direito Constitucional",                         weight: 2, questions:  5, topics: [] },
+        { name: "Direito Administrativo",                         weight: 1, questions:  5, topics: [] },
+        { name: "Atividade de Inteligência e Legislação",         weight: 3, questions: 10, topics: [] },
+        // P2 — Conhecimentos Específicos (70q)
+        { name: "Legislação de Interesse da Inteligência",        weight: 3, questions: 20, topics: [] },
+        { name: "Ciências Humanas (História/Geografia/Política)", weight: 2, questions: 30, topics: [] },
+        { name: "Atualidades e Geopolítica",                      weight: 1, questions: 20, topics: [] },
+      ] },
+    // ── ABIN — Agente Técnico de Inteligência (CEBRASPE) ─────────────────────
+    // TODO: aguardando edital específico — placeholder baseado na estrutura do Agente
+    { nome: "ABIN - Agente Técnico de Inteligência", sigla: "ABIN_ATI", esfera: "FEDERAL", exam_type: "ABIN",
+      banca: "CEBRASPE", cargo_padrao: "Agente Técnico de Inteligência", estado: null,
+      materias: [
+        { name: "Língua Portuguesa",                              weight: 2, questions: 15, topics: [] },
+        { name: "Raciocínio Lógico",                              weight: 2, questions: 10, topics: [] },
+        { name: "Atividade de Inteligência e Legislação",         weight: 3, questions: 10, topics: [] },
+        { name: "Informática / Tecnologia",                       weight: 2, questions: 15, topics: [] },
+        { name: "Conhecimentos Técnicos Específicos",             weight: 3, questions: 70, topics: [] },
+      ] },
     // ── ANAC (CEBRASPE) ───────────────────────────────────────────────────────
     { nome: "Agência Nacional de Aviação Civil", sigla: "ANAC", esfera: "FEDERAL", exam_type: "ANAC",
       banca: "CEBRASPE", cargo_padrao: "Especialista em Regulação de Aviação Civil", estado: null,
