@@ -828,16 +828,23 @@ async function migrateConcursosTables() {
         { name: "Legislação e Regulamentação DEPEN",              weight: 2, questions: 20, topics: [] },
       ] },
     // ── POLÍCIA LEGISLATIVA FEDERAL / CÂMARA (CEBRASPE) ─────────────────────
+    // Edital cd_26_pl — Policial Legislativo Federal — 90q P1 + 90q P2 C/E
+    // P1: Conhecimentos Gerais | P2: Conhecimentos Específicos
     { nome: "Polícia Legislativa Federal", sigla: "PLF", esfera: "FEDERAL", exam_type: "PL_FEDERAL",
       banca: "CEBRASPE", cargo_padrao: "Policial Legislativo Federal", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Constitucional", weight: 2, questions: 20, topics: [] },
-        { name: "Direito Administrativo", weight: 2, questions: 15, topics: [] },
-        { name: "Legislação da Câmara dos Deputados", weight: 2, questions: 15, topics: [] },
-        { name: "Informática", weight: 1, questions: 5, topics: [] },
-        { name: "Atualidades", weight: 1, questions: 5, topics: [] },
+        // P1 — Conhecimentos Gerais (90q)
+        { name: "Língua Portuguesa",                              weight: 3, questions: 20, topics: [] },
+        { name: "Língua Inglesa",                                 weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico e Estatística",                weight: 2, questions: 15, topics: [] },
+        { name: "Direito Constitucional",                         weight: 3, questions: 20, topics: [] },
+        { name: "Direito Administrativo",                         weight: 2, questions: 15, topics: [] },
+        { name: "Informática e Dados",                            weight: 1, questions: 10, topics: [] },
+        // P2 — Conhecimentos Específicos (90q)
+        { name: "Direito Penal e Processual Penal",               weight: 3, questions: 40, topics: [] },
+        { name: "Criminologia e Criminalística",                  weight: 2, questions: 20, topics: [] },
+        { name: "Direitos Humanos e Legislação Correlata",        weight: 2, questions: 15, topics: [] },
+        { name: "Atividade de Inteligência",                      weight: 2, questions: 15, topics: [] },
       ] },
     // ── POLÍCIA JUDICIAL CNJ (FCC/CEBRASPE) ──────────────────────────────────
     { nome: "Polícia Judicial CNJ", sigla: "PJ_CNJ", esfera: "FEDERAL", exam_type: "PJ_CNJ",
