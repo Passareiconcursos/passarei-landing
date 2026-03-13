@@ -766,31 +766,44 @@ async function migrateConcursosTables() {
         { name: "Atualidades", weight: 1, questions: 10, topics: [] },
       ] },
     // ── RECEITA FEDERAL (ESAF/CEBRASPE) ──────────────────────────────────────
+    // Edital RFB 2014 — ESAF — 140 questões — Auditor-Fiscal da RFB
+    // Gerais (70q, peso 1): LP 20, LE 10, RLM 10, Adm 10, Dir.Const 10, Dir.Adm 10
+    // Específicos (70q, peso 2): Dir.Trib 15, Auditoria 10, Contab 20, Leg.Trib 10, Com.Int 15
     { nome: "Receita Federal", sigla: "RFB", esfera: "FEDERAL", exam_type: "RECEITA_FEDERAL",
-      banca: "CEBRASPE", cargo_padrao: "Auditor-Fiscal da Receita Federal", estado: null,
+      banca: "ESAF", cargo_padrao: "Auditor-Fiscal da Receita Federal", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 10, topics: [] },
-        { name: "Inglês", weight: 1, questions: 5, topics: [] },
-        { name: "Raciocínio Lógico e Matemática Financeira", weight: 1, questions: 15, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Tributário", weight: 3, questions: 25, topics: [] },
-        { name: "Direito Aduaneiro", weight: 2, questions: 15, topics: [] },
-        { name: "Contabilidade Geral e Pública", weight: 2, questions: 15, topics: [] },
-        { name: "Administração Geral e Pública", weight: 1, questions: 10, topics: [] },
-        { name: "Tecnologia da Informação", weight: 1, questions: 10, topics: [] },
-        { name: "Auditoria Fiscal", weight: 2, questions: 15, topics: [] },
+        // Conhecimentos Gerais (peso 1)
+        { name: "Língua Portuguesa",                        weight: 3, questions: 20, topics: [] },
+        { name: "Língua Estrangeira",                       weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico",                        weight: 2, questions: 10, topics: [] },
+        { name: "Administração Geral e Pública",            weight: 2, questions: 10, topics: [] },
+        { name: "Direito Constitucional",                   weight: 2, questions: 10, topics: [] },
+        { name: "Direito Administrativo",                   weight: 2, questions: 10, topics: [] },
+        // Conhecimentos Específicos (peso 2)
+        { name: "Contabilidade Geral e Avançada",           weight: 3, questions: 20, topics: [] },
+        { name: "Direito Tributário",                       weight: 3, questions: 15, topics: [] },
+        { name: "Comércio Internacional e Leg. Aduaneira",  weight: 3, questions: 15, topics: [] },
+        { name: "Auditoria",                                weight: 2, questions: 10, topics: [] },
+        { name: "Legislação Tributária",                    weight: 2, questions: 10, topics: [] },
       ] },
-    // ── RECEITA FEDERAL — INSPETOR ────────────────────────────────────────────
-    { nome: "Receita Federal - Inspetor", sigla: "RFB_INSP", esfera: "FEDERAL", exam_type: "RECEITA_FEDERAL",
-      banca: "CEBRASPE", cargo_padrao: "Inspetor da Receita Federal", estado: null,
+    // ── RECEITA FEDERAL — ANALISTA TRIBUTÁRIO ────────────────────────────────
+    // Edital RFB 2012 — ESAF — 140 questões — Analista-Tributário da RFB
+    // Estrutura similar ao Auditor com menos Contabilidade e mais Dir. Tributário
+    { nome: "Receita Federal - Analista Tributário", sigla: "RFB_INSP", esfera: "FEDERAL", exam_type: "RECEITA_FEDERAL",
+      banca: "ESAF", cargo_padrao: "Analista-Tributário da Receita Federal", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 10, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Tributário", weight: 2, questions: 20, topics: [] },
-        { name: "Direito Aduaneiro", weight: 2, questions: 20, topics: [] },
-        { name: "Informática", weight: 1, questions: 10, topics: [] },
-        { name: "Atualidades e Conhecimentos Gerais", weight: 1, questions: 10, topics: [] },
+        // Conhecimentos Gerais (peso 1)
+        { name: "Língua Portuguesa",                        weight: 3, questions: 20, topics: [] },
+        { name: "Língua Estrangeira",                       weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico",                        weight: 2, questions: 10, topics: [] },
+        { name: "Administração Geral e Pública",            weight: 2, questions: 10, topics: [] },
+        { name: "Direito Constitucional",                   weight: 2, questions: 10, topics: [] },
+        { name: "Direito Administrativo",                   weight: 2, questions: 10, topics: [] },
+        // Conhecimentos Específicos (peso 2)
+        { name: "Direito Tributário",                       weight: 3, questions: 20, topics: [] },
+        { name: "Contabilidade Geral",                      weight: 3, questions: 20, topics: [] },
+        { name: "Auditoria",                                weight: 2, questions: 15, topics: [] },
+        { name: "Legislação Tributária",                    weight: 2, questions: 15, topics: [] },
       ] },
     // ── POLÍCIA PENAL FEDERAL / DEPEN (CEBRASPE) ────────────────────────────
     { nome: "Polícia Penal Federal", sigla: "PPF", esfera: "FEDERAL", exam_type: "PP_FEDERAL",
