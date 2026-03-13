@@ -926,17 +926,71 @@ async function migrateConcursosTables() {
         { name: "Informática / Tecnologia",                       weight: 2, questions: 15, topics: [] },
         { name: "Conhecimentos Técnicos Específicos",             weight: 3, questions: 70, topics: [] },
       ] },
-    // ── ANAC (CEBRASPE) ───────────────────────────────────────────────────────
-    { nome: "Agência Nacional de Aviação Civil", sigla: "ANAC", esfera: "FEDERAL", exam_type: "ANAC",
-      banca: "CEBRASPE", cargo_padrao: "Especialista em Regulação de Aviação Civil", estado: null,
+    // ── ANAC — Área 1: Operações de Voo (CEBRASPE) ───────────────────────────
+    // Edital ANAC — Cargo 1: Especialista em Reg. Aviação Civil — Área 1 (Operações)
+    // Básicos comuns + Específicos Área 1 | Total estimado ~150q C/E
+    { nome: "ANAC - Operações de Voo", sigla: "ANAC", esfera: "FEDERAL", exam_type: "ANAC",
+      banca: "CEBRASPE", cargo_padrao: "Especialista em Regulação de Aviação Civil - Área 1", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Inglês", weight: 1, questions: 10, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
-        { name: "Administração Pública", weight: 1, questions: 10, topics: [] },
-        { name: "Legislação Aeronáutica", weight: 3, questions: 20, topics: [] },
+        // Conhecimentos Básicos (comuns a todas as áreas)
+        { name: "Língua Inglesa",                                 weight: 2, questions: 10, topics: [] },
+        { name: "Noções de Direito Administrativo",               weight: 1, questions: 10, topics: [] },
+        { name: "Ética no Serviço Público",                       weight: 1, questions:  5, topics: [] },
+        { name: "Direitos Humanos",                               weight: 1, questions:  5, topics: [] },
+        { name: "Tecnologia da Informação",                       weight: 1, questions: 10, topics: [] },
+        { name: "Legislação do Sistema de Aviação Civil",         weight: 3, questions: 20, topics: [] },
+        // Conhecimentos Específicos Área 1 — Operações de Voo
+        { name: "Meteorologia Aeronáutica",                       weight: 2, questions: 10, topics: [] },
+        { name: "Planejamento de Voo",                            weight: 2, questions: 10, topics: [] },
+        { name: "Navegação Aérea",                                weight: 2, questions: 10, topics: [] },
+        { name: "Procedimentos Operacionais",                     weight: 2, questions: 10, topics: [] },
+        { name: "Teoria de Voo",                                  weight: 3, questions: 15, topics: [] },
+        { name: "Regras de Tráfego Aéreo",                        weight: 2, questions: 10, topics: [] },
+        { name: "Radiocomunicações Aeronáuticas",                 weight: 1, questions:  5, topics: [] },
+        { name: "Sistemas e Equipamentos de Aeronaves",           weight: 2, questions: 10, topics: [] },
+        { name: "Regulamento Brasileiro da Aviação Civil (RBAC)", weight: 3, questions: 10, topics: [] },
+      ] },
+    // ── ANAC — Área 2: Engenharia Aeronáutica (CEBRASPE) ─────────────────────
+    // Cargo 2: Especialista em Reg. Aviação Civil — Área 2 (Engenharia)
+    { nome: "ANAC - Engenharia Aeronáutica", sigla: "ANAC_A2", esfera: "FEDERAL", exam_type: "ANAC",
+      banca: "CEBRASPE", cargo_padrao: "Especialista em Regulação de Aviação Civil - Área 2", estado: null,
+      materias: [
+        // Conhecimentos Básicos (comuns)
+        { name: "Língua Inglesa",                                 weight: 2, questions: 10, topics: [] },
+        { name: "Noções de Direito Administrativo",               weight: 1, questions: 10, topics: [] },
+        { name: "Ética no Serviço Público",                       weight: 1, questions:  5, topics: [] },
+        { name: "Direitos Humanos",                               weight: 1, questions:  5, topics: [] },
+        { name: "Tecnologia da Informação",                       weight: 1, questions: 10, topics: [] },
+        { name: "Legislação do Sistema de Aviação Civil",         weight: 2, questions: 20, topics: [] },
+        // Conhecimentos Específicos Área 2 — Engenharia
+        { name: "Mecânica dos Sólidos e Resistência dos Materiais", weight: 3, questions: 15, topics: [] },
+        { name: "Aerodinâmica e Mecânica de Voo",                 weight: 3, questions: 15, topics: [] },
+        { name: "Propulsão Aeronáutica e Materiais",              weight: 2, questions: 10, topics: [] },
+        { name: "Circuitos Elétricos e Eletrônica",               weight: 2, questions: 15, topics: [] },
+        { name: "Microprocessadores e Sistemas Embarcados",       weight: 2, questions: 10, topics: [] },
+        { name: "Sistemas de Controle e Automação",               weight: 2, questions: 10, topics: [] },
+        { name: "Engenharia de Confiabilidade",                   weight: 2, questions:  5, topics: [] },
+      ] },
+    // ── ANAC — Área 3: Econômico-Regulatório (CEBRASPE) ──────────────────────
+    // Cargo 3: Especialista em Reg. Aviação Civil — Área 3 (Economia/Regulação)
+    { nome: "ANAC - Econômico-Regulatório", sigla: "ANAC_A3", esfera: "FEDERAL", exam_type: "ANAC",
+      banca: "CEBRASPE", cargo_padrao: "Especialista em Regulação de Aviação Civil - Área 3", estado: null,
+      materias: [
+        // Conhecimentos Básicos (comuns)
+        { name: "Língua Inglesa",                                 weight: 2, questions: 10, topics: [] },
+        { name: "Noções de Direito Administrativo",               weight: 1, questions: 10, topics: [] },
+        { name: "Ética no Serviço Público",                       weight: 1, questions:  5, topics: [] },
+        { name: "Direitos Humanos",                               weight: 1, questions:  5, topics: [] },
+        { name: "Tecnologia da Informação",                       weight: 1, questions: 10, topics: [] },
+        { name: "Legislação do Sistema de Aviação Civil",         weight: 2, questions: 20, topics: [] },
+        // Conhecimentos Específicos Área 3 — Econômico/Regulatório
+        { name: "Microeconomia",                                  weight: 3, questions: 15, topics: [] },
+        { name: "Estatística",                                    weight: 2, questions: 10, topics: [] },
+        { name: "Gestão Pública e Regulação",                     weight: 3, questions: 15, topics: [] },
+        { name: "Economia da Regulação",                          weight: 2, questions: 10, topics: [] },
+        { name: "Gestão da Qualidade",                            weight: 1, questions:  5, topics: [] },
+        { name: "Direito Econômico",                              weight: 2, questions: 10, topics: [] },
+        { name: "Análise de Dados e Informações",                 weight: 2, questions: 15, topics: [] },
       ] },
     // ── CPNU (CEBRASPE) ───────────────────────────────────────────────────────
     { nome: "Concurso Público Nacional Unificado", sigla: "CPNU", esfera: "FEDERAL", exam_type: "CPNU",
