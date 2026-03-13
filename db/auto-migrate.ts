@@ -858,17 +858,24 @@ async function migrateConcursosTables() {
         { name: "Informática", weight: 1, questions: 5, topics: [] },
       ] },
     // ── ABIN (CEBRASPE) ───────────────────────────────────────────────────────
+    // Edital ABIN 2018 — Cargo 1: Oficial de Inteligência — P1=60q + P2=90q C/E
+    // P1: Conhecimentos Gerais (comuns a todos os cargos) | P2: Específicos Área 1
     { nome: "Agência Brasileira de Inteligência", sigla: "ABIN", esfera: "FEDERAL", exam_type: "ABIN",
       banca: "CEBRASPE", cargo_padrao: "Oficial de Inteligência", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Inglês", weight: 1, questions: 10, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 15, topics: [] },
-        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
-        { name: "Atividade de Inteligência", weight: 3, questions: 20, topics: [] },
-        { name: "Relações Internacionais", weight: 1, questions: 10, topics: [] },
-        { name: "Atualidades", weight: 1, questions: 5, topics: [] },
+        // P1 — Conhecimentos Gerais (60q)
+        { name: "Língua Portuguesa",                              weight: 2, questions: 15, topics: [] },
+        { name: "Língua Inglesa / Espanhola",                     weight: 1, questions: 10, topics: [] },
+        { name: "Raciocínio Lógico",                              weight: 2, questions: 10, topics: [] },
+        { name: "Direito Constitucional",                         weight: 2, questions: 10, topics: [] },
+        { name: "Direito Administrativo",                         weight: 1, questions: 10, topics: [] },
+        { name: "Atividade de Inteligência e Legislação",         weight: 3, questions:  5, topics: [] },
+        // P2 — Conhecimentos Específicos Área 1 (90q)
+        { name: "História do Brasil e do Mundo",                  weight: 2, questions: 20, topics: [] },
+        { name: "Geografia do Brasil e do Mundo",                 weight: 1, questions: 15, topics: [] },
+        { name: "Política e Segurança Internacional",             weight: 3, questions: 20, topics: [] },
+        { name: "Direito Internacional Público",                  weight: 2, questions: 20, topics: [] },
+        { name: "Direito Penal",                                  weight: 2, questions: 15, topics: [] },
       ] },
     // ── ANAC (CEBRASPE) ───────────────────────────────────────────────────────
     { nome: "Agência Nacional de Aviação Civil", sigla: "ANAC", esfera: "FEDERAL", exam_type: "ANAC",
