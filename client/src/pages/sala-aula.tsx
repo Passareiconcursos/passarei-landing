@@ -234,7 +234,7 @@ const BLOCO_E = "Estados e Municípios";
 const SIGLAS_BLOCO_B = new Set([
   "ESPCEX", "IME", "ESA", "EXERCITO",
   "CN", "EN", "FUZNAVAIS", "MARINHA",
-  "ITA", "EPCAR", "EAGS", "FAB", "AERONAUTICA", "MIN_DEF", "MD", "MIN_DEFESA",
+  "ITA", "EPCAR", "EAGS", "FAB", "AERONAUTICA",
 ]);
 const SIGLAS_BLOCO_C = new Set(["ABIN", "ANAC", "CPNU"]);
 

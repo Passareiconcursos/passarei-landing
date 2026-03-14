@@ -1296,7 +1296,6 @@ const CONCURSOS_FALLBACK = [
   { sigla: "ITA",         nome: "ITA — Força Aérea",            esfera: "FEDERAL"   },
   { sigla: "EPCAR",       nome: "EPCAR — Força Aérea",          esfera: "FEDERAL"   },
   { sigla: "EAGS",        nome: "Esc. Especialistas — FAB",     esfera: "FEDERAL"   },
-  { sigla: "MIN_DEF",     nome: "Ministério da Defesa",         esfera: "FEDERAL"   },
   // Bloco C — Inteligência | Administrativo
   { sigla: "ABIN",        nome: "ABIN",                         esfera: "FEDERAL"   },
   { sigla: "ANAC",        nome: "ANAC",                         esfera: "FEDERAL"   },
@@ -1331,7 +1330,6 @@ const CARGOS_FALLBACK: Record<string, string[]> = {
   ITA:         ["Iteano"],
   EPCAR:       ["Cadete do Ar"],
   EAGS:        ["Aluno"],
-  MIN_DEF:     ["Administrativos/Geral"],
   // Bloco C — Inteligência | Administrativo
   ABIN:        ["Oficial de Inteligência", "Oficial Técnico de Inteligência", "Agente de Inteligência", "Agente Técnico de Inteligência"],
   ANAC:        ["Agente de Segurança Aeroportuária"],
@@ -1443,7 +1441,7 @@ export async function getMateriasFromDB(
 const SIGLAS_BLOCO_B_BOT = new Set([
   "ESPCEX", "IME", "ESA", "EXERCITO",
   "CN", "EN", "FUZNAVAIS", "MARINHA",
-  "ITA", "EPCAR", "EAGS", "FAB", "AERONAUTICA", "MIN_DEF", "MD", "MIN_DEFESA",
+  "ITA", "EPCAR", "EAGS", "FAB", "AERONAUTICA",
 ]);
 const SIGLAS_BLOCO_C_BOT = new Set(["ABIN", "ANAC", "CPNU"]);
 

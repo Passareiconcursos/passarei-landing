@@ -1363,17 +1363,6 @@ async function migrateConcursosTables() {
         { name: "Estatuto das Guardas Municipais", weight: 2, questions: 10, topics: [] },
         { name: "Informática", weight: 1, questions: 5, topics: [] },
       ] },
-    // ── MIN. DA DEFESA ────────────────────────────────────────────────────────
-    { nome: "Ministério da Defesa", sigla: "MIN_DEF", esfera: "FEDERAL", exam_type: "MIN_DEFESA",
-      banca: "NOVA CONCURSOS", cargo_padrao: "Técnico em Assuntos Educacionais", estado: null,
-      materias: [
-        { name: "Língua Portuguesa", weight: 2, questions: 20, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 15, topics: [] },
-        { name: "Direito Administrativo", weight: 1, questions: 15, topics: [] },
-        { name: "Atualidades e Defesa Nacional", weight: 1, questions: 10, topics: [] },
-        { name: "Informática", weight: 1, questions: 5, topics: [] },
-      ] },
   ];
 
   let seeded = 0;
@@ -1397,7 +1386,7 @@ async function migrateConcursosTables() {
 
   console.log(`  ✅ Tabelas concursos + edital_vinculos OK (${seeded} concursos pré-seeded)`);
   console.log("     Bloco A: PF/PF_ADMIN/PRF/PRF_ADMIN/PLF/PPF/RFB/GP");
-  console.log("     Bloco B: Exército(ESPCEX/ESA/IME)/Marinha(CN/EN/FUZNAVAIS)/FAB(ITA/EPCAR/EAGS)/MIN_DEF");
+  console.log("     Bloco B: Exército(ESPCEX/ESA/IME)/Marinha(CN/EN/FUZNAVAIS)/FAB(ITA/EPCAR/EAGS)");
   console.log("     Bloco C: ABIN/ANAC/CPNU");
   console.log("     Bloco D: PJ_CNJ");
   console.log("     Bloco E: PM/PC/CBM/PPE/PLE/PC_CIENT/GM/GP_municipal");
@@ -1468,15 +1457,15 @@ async function cleanupRedundantConcursos() {
     console.log(`  🗑️ Concursos redundantes removidos do banco: ${siglas}`);
   }
 
-  // 5. Remover aliases duplicados do Ministério da Defesa (manter apenas MIN_DEF)
+  // 5. Remover Ministério da Defesa e todos os seus aliases
   const delMD = await db.execute(sql`
     DELETE FROM concursos
-    WHERE sigla IN ('MD', 'MIN_DEFESA')
+    WHERE sigla IN ('MIN_DEF', 'MD', 'MIN_DEFESA')
     RETURNING sigla
   `) as any[];
   if (delMD.length > 0) {
     const siglas = delMD.map((r: any) => r.sigla).join(', ');
-    console.log(`  🗑️ Aliases duplicados de Ministério da Defesa removidos: ${siglas}`);
+    console.log(`  🗑️ Ministério da Defesa removido do banco: ${siglas}`);
   }
 }
 

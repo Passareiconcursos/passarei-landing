@@ -38,7 +38,6 @@ export const examTypeEnum = pgEnum("exam_type", [
   "EXERCITO", // Exército (ESPCEX, IME, ESA)
   "MARINHA", // Marinha (Colégio Naval, Escola Naval, Fuzileiros)
   "FAB", // Força Aérea (ITA, EPCAR, EAGS)
-  "MIN_DEFESA", // Ministério da Defesa
 
   // Federais - Outros
   "ANAC", // Agência Nacional de Aviação Civil

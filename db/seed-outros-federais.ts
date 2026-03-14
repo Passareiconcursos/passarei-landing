@@ -75,41 +75,8 @@ async function seedOutrosFederais() {
       console.log("   ⚠️ ANAC já existe");
     }
 
-    // ============ MINISTÉRIO DA DEFESA ============
-    console.log("\n4️⃣ Criando Ministério da Defesa...");
-    const mdResult = await sql`
-      INSERT INTO concursos (nome, sigla, descricao, esfera, exam_type, is_active, ordem)
-      VALUES (
-        'Ministério da Defesa',
-        'MD',
-        'Órgão do Governo Federal responsável pela política de defesa nacional',
-        'FEDERAL',
-        'MIN_DEFESA',
-        true,
-        17
-      )
-      ON CONFLICT (sigla) DO NOTHING
-      RETURNING id
-    `;
-
-    if (mdResult.length > 0) {
-      const mdId = mdResult[0].id;
-      console.log("   ✅ Ministério da Defesa criado");
-
-      await sql`
-        INSERT INTO cargos (concurso_id, nome, codigo, escolaridade, is_active, ordem)
-        VALUES
-          (${mdId}, 'Analista de Defesa', 'ANALISTA_DEFESA', 'SUPERIOR', true, 1),
-          (${mdId}, 'Técnico de Defesa', 'TECNICO_DEFESA', 'MEDIO', true, 2)
-        ON CONFLICT DO NOTHING
-      `;
-      console.log("   ✅ Cargos do Ministério da Defesa criados");
-    } else {
-      console.log("   ⚠️ Ministério da Defesa já existe");
-    }
-
     // ============ CPNU (CNU) ============
-    console.log("\n5️⃣ Criando CPNU (Concurso Nacional Unificado)...");
+    console.log("\n4️⃣ Criando CPNU (Concurso Nacional Unificado)...");
     const cpnuResult = await sql`
       INSERT INTO concursos (nome, sigla, descricao, esfera, exam_type, is_active, ordem)
       VALUES (

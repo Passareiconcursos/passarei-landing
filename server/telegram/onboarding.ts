@@ -149,7 +149,6 @@ const CARGOS: any = {
   ITA:         ["Iteano"],
   EPCAR:       ["Cadete do Ar"],
   EAGS:        ["Aluno"],
-  MIN_DEF:     ["Administrativos/Geral"],
   // Bloco C — Inteligência | Administrativo
   ABIN:        ["Oficial de Inteligência", "Oficial Técnico de Inteligência", "Agente de Inteligência", "Agente Técnico de Inteligência"],
   ANAC:        ["Agente de Segurança Aeroportuária"],
