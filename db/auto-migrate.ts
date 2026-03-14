@@ -1061,14 +1061,19 @@ async function migrateConcursosTables() {
         { name: "Matemática",        weight: 3, questions: 25, topics: [] },
       ] },
     // ── FORÇA AÉREA ───────────────────────────────────────────────────────────
+    // Edital ITA Vestibular 2026 — 1ª Fase: 60q objetivas (12q × 5 matérias)
+    // 2ª Fase: discursivas (Mat/Fís/Quím/Port) + Redação dissertativo-argumentativa
+    // Física inclui Física Moderna/Relatividade; Mat inclui Complexos/Matrizes/Cônicas
+    // Port inclui Literatura Brasileira e Portuguesa (todas as escolas)
     { nome: "Instituto Tecnológico de Aeronáutica", sigla: "ITA", esfera: "FEDERAL", exam_type: "FAB",
       banca: "ITA", cargo_padrao: "Cadete do ITA", estado: null,
       materias: [
-        { name: "Matemática", weight: 3, questions: 60, topics: [] },
-        { name: "Física", weight: 3, questions: 40, topics: [] },
-        { name: "Química", weight: 2, questions: 20, topics: [] },
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Inglês", weight: 1, questions: 15, topics: [] },
+        { name: "Matemática",                     weight: 3, questions: 12, topics: [] },
+        { name: "Física",                          weight: 3, questions: 12, topics: [] },
+        { name: "Química",                         weight: 2, questions: 12, topics: [] },
+        { name: "Língua Portuguesa / Literatura",  weight: 2, questions: 12, topics: [] },
+        { name: "Língua Inglesa",                  weight: 1, questions: 12, topics: [] },
+        { name: "Redação",                         weight: 2, questions:  1, topics: [] },
       ] },
     // Edital EPCAR — nível Ensino Fundamental, 3 provas (SEM Física/Química/Biologia)
     // Matemática: funções afim/quadrática, geo plana básica — sem Cálculo ou Trigonometria avançada
