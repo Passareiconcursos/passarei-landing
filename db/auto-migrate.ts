@@ -1080,14 +1080,27 @@ async function migrateConcursosTables() {
         { name: "Língua Portuguesa",               weight: 2, questions: 25, topics: [] },
         { name: "Língua Inglesa",                  weight: 1, questions: 15, topics: [] },
       ] },
+    // Edital EAGS — Língua Portuguesa (comum a todos) + 7 especialidades:
+    // SAD (Adm/Contab/Dir.Const/Dir.Admin/Informática), SEL (Eletricidade Básica/Industrial/ABNT/NR-10),
+    // BET (Eletricidade/Eletrônica Analógica-Digital/Telecomunicações), SEF (Enfermagem),
+    // SLB (Laboratório Clínico), SIN (Programação/SO/BD/Redes/Seg.Info), SMU (Música)
+    // "iremos oferecer as matérias no geral sem distinção de cargo interno"
     { nome: "Escola de Especialistas da Aeronáutica - Sargentos", sigla: "EAGS", esfera: "FEDERAL", exam_type: "FAB",
       banca: "EAGS", cargo_padrao: "Sargento da Aeronáutica", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 20, topics: [] },
-        { name: "Matemática", weight: 2, questions: 20, topics: [] },
-        { name: "Física", weight: 1, questions: 10, topics: [] },
-        { name: "Inglês", weight: 1, questions: 10, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
+        { name: "Língua Portuguesa",                        weight: 2, questions: 20, topics: [] },
+        { name: "Administração Geral",                      weight: 2, questions: 15, topics: [] },
+        { name: "Contabilidade Geral e Pública",            weight: 2, questions: 15, topics: [] },
+        { name: "Direito Constitucional",                   weight: 2, questions: 10, topics: [] },
+        { name: "Direito Administrativo",                   weight: 2, questions: 10, topics: [] },
+        { name: "Informática / Tecnologia da Informação",   weight: 2, questions: 15, topics: [] },
+        { name: "Eletricidade Básica e Industrial",         weight: 2, questions: 15, topics: [] },
+        { name: "Eletrônica (Analógica e Digital)",         weight: 2, questions: 15, topics: [] },
+        { name: "Telecomunicações",                         weight: 2, questions: 10, topics: [] },
+        { name: "Enfermagem",                               weight: 2, questions: 20, topics: [] },
+        { name: "Análises Clínicas e Laboratório",          weight: 2, questions: 20, topics: [] },
+        { name: "Redes de Computadores e Segurança da Info",weight: 2, questions: 10, topics: [] },
+        { name: "Teoria Musical",                           weight: 1, questions: 15, topics: [] },
       ] },
     // ── POLÍCIA MILITAR ───────────────────────────────────────────────────────
     { nome: "Polícia Militar - Oficial (CFO)", sigla: "PM_CFO", esfera: "ESTADUAL", exam_type: "PM",
