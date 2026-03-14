@@ -1145,26 +1145,39 @@ async function migrateConcursosTables() {
         { name: "Legislação Institucional PM",       weight: 1, questions: 10, topics: [] },
       ] },
     // ── CORPO DE BOMBEIROS MILITAR ────────────────────────────────────────────
-    { nome: "Corpo de Bombeiros Militar - Oficial (CFO)", sigla: "CBM_CFO", esfera: "ESTADUAL", exam_type: "CBM",
-      banca: "VUNESP", cargo_padrao: "Oficial CBM", estado: null,
-      materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Matemática", weight: 1, questions: 15, topics: [] },
-        { name: "Física", weight: 1, questions: 10, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
-        { name: "Legislação Bombeiros", weight: 2, questions: 15, topics: [] },
-        { name: "Química", weight: 1, questions: 5, topics: [] },
-      ] },
+    // CBM_SD — cruzamento ES+SC+RJ (editais SD 2023-2026)
+    // w3=universal | w2=2/3 estados | w1=específico de 1 estado
     { nome: "Corpo de Bombeiros Militar - Soldado", sigla: "CBM_SD", esfera: "ESTADUAL", exam_type: "CBM",
       banca: "VUNESP", cargo_padrao: "Soldado CBM", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Matemática", weight: 1, questions: 10, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
-        { name: "Legislação Específica CBM", weight: 2, questions: 15, topics: [] },
-        { name: "Noções de Primeiros Socorros", weight: 1, questions: 5, topics: [] },
+        { name: "Língua Portuguesa",               weight: 3, questions: 16, topics: [] },
+        { name: "Matemática",                      weight: 3, questions: 15, topics: [] },
+        { name: "Conhecimentos Gerais e Atualidades", weight: 2, questions: 10, topics: [] },
+        { name: "Física",                          weight: 2, questions: 10, topics: [] },
+        { name: "Química",                         weight: 2, questions:  7, topics: [] },
+        { name: "Biologia",                        weight: 1, questions: 10, topics: [] },
+        { name: "Legislação Institucional CBM",    weight: 1, questions:  8, topics: [] },
+        { name: "Informática",                     weight: 1, questions:  2, topics: [] },
+      ] },
+    // CBM_CFO — cruzamento ES+SC+RJ (editais CFO 2023-2026)
+    // Destaque: Port+Mat+Física+Química universais (w3) — ciências exatas dominam CBM
+    // SC CFO diferencia-se com Direito, RL, Inglês e Redação
+    { nome: "Corpo de Bombeiros Militar - Oficial (CFO)", sigla: "CBM_CFO", esfera: "ESTADUAL", exam_type: "CBM",
+      banca: "VUNESP", cargo_padrao: "Oficial CBM", estado: null,
+      materias: [
+        { name: "Língua Portuguesa",                 weight: 3, questions: 12, topics: [] },
+        { name: "Matemática",                        weight: 3, questions: 12, topics: [] },
+        { name: "Física",                            weight: 3, questions: 12, topics: [] },
+        { name: "Química",                           weight: 3, questions:  8, topics: [] },
+        { name: "Conhecimentos Gerais e Atualidades",weight: 2, questions: 15, topics: [] },
+        { name: "Biologia",                          weight: 2, questions: 13, topics: [] },
+        { name: "Direito Administrativo",            weight: 1, questions:  5, topics: [] },
+        { name: "Direito Constitucional",            weight: 1, questions:  5, topics: [] },
+        { name: "Raciocínio Lógico",                 weight: 1, questions:  4, topics: [] },
+        { name: "Administração Pública",             weight: 1, questions:  4, topics: [] },
+        { name: "Informática",                       weight: 1, questions:  4, topics: [] },
+        { name: "Língua Inglesa",                    weight: 1, questions:  4, topics: [] },
+        { name: "Redação",                           weight: 1, questions:  1, topics: [] },
       ] },
     // ── POLÍCIA CIVIL ─────────────────────────────────────────────────────────
     { nome: "Polícia Civil - Agente", sigla: "PC_AGT", esfera: "ESTADUAL", exam_type: "PC",

@@ -105,7 +105,16 @@ const NORMALIZATION_MAP: Record<string, string> = {
   "legislação aplicada à pmerj":                    "Legislação Institucional PM",
   "legislação aplicada":                            "Legislação Institucional PM",
   "noções de administração pública":                "Legislação Institucional PM",
-  "administração pública":                          "Legislação Institucional PM",
+  // NOTA: "administração pública" sem "noções" → NÃO mapear para leg.PM (CBM SC usa como matéria acadêmica)
+
+  // Legislação CBM
+  "legislação institucional":                       "Legislação Institucional CBM",
+  "legislação específica cbm":                      "Legislação Institucional CBM",
+  "legislação bombeiros":                           "Legislação Institucional CBM",
+  "legislação cbm":                                 "Legislação Institucional CBM",
+
+  // Raciocínio Analítico (CBM SC) → Raciocínio Lógico
+  "raciocínio analítico":                           "Raciocínio Lógico",
 
   // Direito Penal
   "direito penal":                                  "Direito Penal",
@@ -227,48 +236,52 @@ function mergeEditais(editais: EditalInput[]) {
 // EDITAIS — PREENCHER COM OS DADOS REAIS ANTES DE RODAR
 // ─────────────────────────────────────────────────────────────────────────────
 const EDITAIS: EditalInput[] = [
-  // ── PM-ES CFO ──────────────────────────────────────────────────────────────
-  // Conhecimentos Comuns: Port, RLM, Hist+Geo(ES), Informática, Dir.Adm+Const
+  // ── CBM CFO ES ─────────────────────────────────────────────────────────────
+  // Conhecimentos Básicos: Port, Mat, Hist, Geo, Física, Química, Biologia (igual SD ES)
   {
-    sigla: "PM ES CFO",
+    sigla: "CBM CFO ES",
     subjects: [
-      { name: "Língua Portuguesa",                           questions: 20 },
-      { name: "Raciocínio Lógico e Matemático",              questions: 20 }, // → "Matemática"
-      { name: "História do Brasil e do Espírito Santo",      questions: 15 }, // → "Conhecimentos Gerais e Atualidades"
-      { name: "Geografia Geral, Brasil e do Espírito Santo", questions: 15 }, // → "Conhecimentos Gerais e Atualidades"
-      { name: "Informática",                                 questions: 15 },
-      { name: "Direito Administrativo",                      questions: 15 }, // Noções Dir.Adm+Const — split
-      { name: "Direito Constitucional",                      questions: 15 },
+      { name: "Língua Portuguesa",                           questions: 15 },
+      { name: "Matemática",                                  questions: 15 },
+      { name: "História do Brasil e do Espírito Santo",      questions: 15 }, // → ConhGerais
+      { name: "Geografia",                                   questions: 15 }, // → ConhGerais
+      { name: "Física",                                      questions: 15 },
+      { name: "Química",                                     questions: 10 },
+      { name: "Biologia",                                    questions: 10 },
     ],
   },
-  // ── PM-SP CFO ──────────────────────────────────────────────────────────────
-  // Vestibular-style: Ciências Humanas + Linguagens + Mat+Ciências + Conhec.Específicos
+  // ── CBM CFO SC ─────────────────────────────────────────────────────────────
+  // 50q + Redação discursiva. Mat inclui Cálculo (Derivada/Integral).
   {
-    sigla: "PM SP CFO",
+    sigla: "CBM CFO SC",
     subjects: [
-      { name: "Língua Portuguesa",               questions: 20 }, // inclui Literatura Br+Port
-      { name: "Matemática",                      questions: 25 }, // nível superior (Complexos, Matrizes, Cônicas)
-      { name: "Conhecimentos Gerais",            questions: 20 }, // Hist(geral+BR)+Fil+Sociologia
-      { name: "Geografia",                       questions: 15 }, // → "Conhecimentos Gerais e Atualidades" — separado para manter peso
-      { name: "Física",                          questions: 15 },
-      { name: "Química",                         questions: 10 },
-      { name: "Biologia",                        questions: 10 },
-      { name: "Língua Inglesa",                  questions: 10 },
-      { name: "Noções de Administração Pública", questions: 10 }, // → "Legislação Institucional PM"
-      { name: "Noções Básicas de Informática",   questions: 10 }, // → "Informática"
+      { name: "Língua Portuguesa",       questions:  5 },
+      { name: "Raciocínio Analítico",    questions:  4 }, // → "Raciocínio Lógico"
+      { name: "Raciocínio Lógico",       questions:  4 },
+      { name: "Física",                  questions:  5 },
+      { name: "Matemática",              questions:  5 }, // inclui Cálculo Diferencial/Integral
+      { name: "Química",                 questions:  5 },
+      { name: "Direito Administrativo",  questions:  5 },
+      { name: "Direito Constitucional",  questions:  5 },
+      { name: "Administração Pública",   questions:  4 },
+      { name: "Informática",             questions:  4 },
+      { name: "Língua Inglesa",          questions:  4 },
+      { name: "Redação",                 questions:  1 },
     ],
   },
-  // ── PM-RJ CFO ──────────────────────────────────────────────────────────────
-  // Perfil jurídico pesado: Dir.Adm, Dir.Const, Dir.Penal, Dir.Proc.Penal, Dir.Penal Militar, Dir.Humanos
+  // ── CBM CFO RJ ─────────────────────────────────────────────────────────────
+  // Vestibular-style: Biologia+Física+Geo visíveis no edital (truncado);
+  // Port+Mat+Quím+Hist estimados por padrão típico CFO RJ
   {
-    sigla: "PM RJ CFO",
+    sigla: "CBM CFO RJ",
     subjects: [
-      { name: "Direito Administrativo",          questions: 20 },
-      { name: "Direito Constitucional",          questions: 20 },
-      { name: "Direito Penal",                   questions: 25 },
-      { name: "Direito Processual Penal",        questions: 20 },
-      { name: "Direito Penal Militar",           questions: 15 },
-      { name: "Direitos Humanos",                questions: 15 },
+      { name: "Biologia",                   questions: 15 },
+      { name: "Física",                     questions: 15 },
+      { name: "Geografia",                  questions: 15 }, // → ConhGerais
+      { name: "Língua Portuguesa",          questions: 15 }, // estimado
+      { name: "Matemática",                 questions: 15 }, // estimado
+      { name: "Química",                    questions: 10 }, // estimado
+      { name: "História do Brasil",         questions: 10 }, // estimado → ConhGerais
     ],
   },
 ];
