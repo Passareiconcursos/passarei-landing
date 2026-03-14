@@ -132,6 +132,49 @@ const NORMALIZATION_MAP: Record<string, string> = {
   "legislação cbm":                                 "Legislação Institucional CBM",
   "legislação específica cbm":                      "Legislação Institucional CBM",
 
+  // Legislação PC
+  "legislação institucional pc":                    "Legislação Institucional PC",
+  "legislação específica pc":                       "Legislação Institucional PC",
+  "legislação pc":                                  "Legislação Institucional PC",
+  "legislação policial civil":                      "Legislação Institucional PC",
+
+  // Direito Civil
+  "direito civil":                                  "Direito Civil",
+  "noções de direito civil":                        "Direito Civil",
+  "dir. civil":                                     "Direito Civil",
+
+  // Direito Empresarial / Comercial
+  "direito empresarial":                            "Direito Empresarial",
+  "direito comercial":                              "Direito Empresarial",
+  "direito empresarial e comercial":                "Direito Empresarial",
+
+  // Direito Tributário
+  "direito tributário":                             "Direito Tributário",
+  "direito tributário e financeiro":                "Direito Tributário",
+  "noções de direito tributário":                   "Direito Tributário",
+
+  // Contabilidade
+  "noções de contabilidade":                        "Contabilidade Geral e Pública",
+  "contabilidade geral":                            "Contabilidade Geral e Pública",
+  "contabilidade geral e pública":                  "Contabilidade Geral e Pública",
+  "contabilidade":                                  "Contabilidade Geral e Pública",
+
+  // Administração Geral e Pública
+  "noções de administração geral e pública":        "Administração Geral e Pública",
+  "administração geral e pública":                  "Administração Geral e Pública",
+  "noções de administração geral":                  "Administração Geral e Pública",
+
+  // Criminologia
+  "noções de criminologia":                         "Criminologia",
+  "criminologia":                                   "Criminologia",
+
+  // TI / Crimes Digitais (PC SC)
+  "tecnologia da informação, segurança cibernética e crimes digitais": "Informática",
+  "tecnologia da informação e segurança da informação": "Informática",
+
+  // Raciocínio Lógico-Matemático (PC — combinado, absorve nos moldes do padrão)
+  "raciocínio lógico-matemático":                   "Matemática",
+
   // Direitos Humanos
   "direitos humanos":                               "Direitos Humanos",
   "noções de direitos humanos":                     "Direitos Humanos",
@@ -236,52 +279,42 @@ function mergeEditais(editais: EditalInput[]) {
 // EDITAIS — PREENCHER COM OS DADOS REAIS ANTES DE RODAR
 // ─────────────────────────────────────────────────────────────────────────────
 const EDITAIS: EditalInput[] = [
-  // ── CBM CFO ES ─────────────────────────────────────────────────────────────
-  // Conhecimentos Básicos: Port, Mat, Hist, Geo, Física, Química, Biologia (igual SD ES)
+  // ── PC AGT/ESC ES ───────────────────────────────────────────────────────────
+  // Edital PCESPC/001/2022 — Agente/Escrivão Espírito Santo (Ibade, ~120q)
+  // Bloco I: Básico — Port, Info, RLM. Bloco II: Jurídico — DirConst, DirAdm, DirPenal, DirProcPenal.
+  // Bloco III: Específico — Contab, AdmGeral, DirCivil.
   {
-    sigla: "CBM CFO ES",
+    sigla: "PC AGT ES",
     subjects: [
-      { name: "Língua Portuguesa",                           questions: 15 },
-      { name: "Matemática",                                  questions: 15 },
-      { name: "História do Brasil e do Espírito Santo",      questions: 15 }, // → ConhGerais
-      { name: "Geografia",                                   questions: 15 }, // → ConhGerais
-      { name: "Física",                                      questions: 15 },
-      { name: "Química",                                     questions: 10 },
-      { name: "Biologia",                                    questions: 10 },
+      { name: "Língua Portuguesa",                              questions: 15 },
+      { name: "Informática",                                    questions: 10 },
+      { name: "Raciocínio Lógico-Matemático",                  questions: 15 }, // → Matemática
+      { name: "Noções de Contabilidade",                        questions: 10 }, // → ContabGeral
+      { name: "Noções de Administração Geral e Pública",        questions: 10 }, // → AdmGeral
+      { name: "Direito Constitucional",                         questions: 15 },
+      { name: "Direito Administrativo",                         questions: 15 },
+      { name: "Direito Penal",                                  questions: 20 },
+      { name: "Direito Processual Penal",                       questions: 10 },
+      { name: "Direito Civil",                                  questions: 10 },
     ],
   },
-  // ── CBM CFO SC ─────────────────────────────────────────────────────────────
-  // 50q + Redação discursiva. Mat inclui Cálculo (Derivada/Integral).
+  // ── PC AGT/ESC SC ───────────────────────────────────────────────────────────
+  // Edital PCSC 2023 — Agente/Escrivão Santa Catarina (FEPESE, ~85q)
+  // Conhecimentos Gerais: Port, RLM. Jurídico: DirConst, DirAdm, DirPenal, DirProcPenal.
+  // Específico: TI/CrimesDigitais, Contab, DirHumanos, LegPC.
   {
-    sigla: "CBM CFO SC",
+    sigla: "PC AGT SC",
     subjects: [
-      { name: "Língua Portuguesa",       questions:  5 },
-      { name: "Raciocínio Analítico",    questions:  4 }, // → "Raciocínio Lógico"
-      { name: "Raciocínio Lógico",       questions:  4 },
-      { name: "Física",                  questions:  5 },
-      { name: "Matemática",              questions:  5 }, // inclui Cálculo Diferencial/Integral
-      { name: "Química",                 questions:  5 },
-      { name: "Direito Administrativo",  questions:  5 },
-      { name: "Direito Constitucional",  questions:  5 },
-      { name: "Administração Pública",   questions:  4 },
-      { name: "Informática",             questions:  4 },
-      { name: "Língua Inglesa",          questions:  4 },
-      { name: "Redação",                 questions:  1 },
-    ],
-  },
-  // ── CBM CFO RJ ─────────────────────────────────────────────────────────────
-  // Vestibular-style: Biologia+Física+Geo visíveis no edital (truncado);
-  // Port+Mat+Quím+Hist estimados por padrão típico CFO RJ
-  {
-    sigla: "CBM CFO RJ",
-    subjects: [
-      { name: "Biologia",                   questions: 15 },
-      { name: "Física",                     questions: 15 },
-      { name: "Geografia",                  questions: 15 }, // → ConhGerais
-      { name: "Língua Portuguesa",          questions: 15 }, // estimado
-      { name: "Matemática",                 questions: 15 }, // estimado
-      { name: "Química",                    questions: 10 }, // estimado
-      { name: "História do Brasil",         questions: 10 }, // estimado → ConhGerais
+      { name: "Língua Portuguesa",                                              questions: 10 },
+      { name: "Raciocínio Lógico-Matemático",                                  questions: 10 }, // → Matemática
+      { name: "Direito Constitucional",                                         questions: 10 },
+      { name: "Direito Administrativo",                                         questions: 10 },
+      { name: "Direito Penal",                                                  questions: 15 },
+      { name: "Direito Processual Penal",                                       questions: 10 },
+      { name: "Direitos Humanos",                                               questions:  5 },
+      { name: "Legislação Institucional PC",                                    questions: 10 },
+      { name: "Tecnologia da Informação, Segurança Cibernética e Crimes Digitais", questions: 10 }, // → Informática
+      { name: "Noções de Contabilidade",                                        questions:  5 }, // → ContabGeral
     ],
   },
 ];
