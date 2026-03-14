@@ -1052,14 +1052,13 @@ async function migrateConcursosTables() {
         { name: "Língua Portuguesa / Redação",    weight: 2, questions: 18, topics: [] },
         { name: "Língua Inglesa",                  weight: 2, questions: 18, topics: [] },
       ] },
+    // Edital FUZNAVAIS 2025/2026 — 50q objetivas: Port(25q) + Mat(25q) — 3h — mín 10q cada
+    // Sem Inglês, Raciocínio Lógico ou Conhecimentos Gerais
     { nome: "Fuzileiros Navais - Marinha do Brasil", sigla: "FUZNAVAIS", esfera: "FEDERAL", exam_type: "MARINHA",
-      banca: "CESGRANRIO", cargo_padrao: "Recruta Fuzileiro Naval", estado: null,
+      banca: "MARINHA", cargo_padrao: "Soldado Fuzileiro Naval", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 2, questions: 20, topics: [] },
-        { name: "Matemática", weight: 2, questions: 20, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
-        { name: "Conhecimentos Gerais", weight: 1, questions: 15, topics: [] },
-        { name: "Inglês", weight: 1, questions: 5, topics: [] },
+        { name: "Língua Portuguesa", weight: 3, questions: 25, topics: [] },
+        { name: "Matemática",        weight: 3, questions: 25, topics: [] },
       ] },
     // ── FORÇA AÉREA ───────────────────────────────────────────────────────────
     { nome: "Instituto Tecnológico de Aeronáutica", sigla: "ITA", esfera: "FEDERAL", exam_type: "FAB",
