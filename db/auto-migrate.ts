@@ -1867,3 +1867,13 @@ async function migrateGlobalLogout() {
   `);
   console.log("  ✅ last_global_logout_at OK");
 }
+
+// ============================================
+// ENTRY POINT — CLI direto (npx tsx db/auto-migrate.ts)
+// ============================================
+runAutoMigrations()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("❌ [Auto-Migrate] Erro fatal:", err);
+    process.exit(1);
+  });
