@@ -1042,14 +1042,15 @@ async function migrateConcursosTables() {
         { name: "Geografia do Brasil",             weight: 1, questions: 10, topics: [] },
         { name: "Língua Inglesa",                  weight: 1, questions: 20, topics: [] },
       ] },
+    // Edital EN — Dia1: Mat(22q)+Inglês(18q) | Dia2: Física(22q)+Port(18q)+Redação
+    // Mat inclui Cálculo Diferencial e Integral; Física inclui Hidrodinâmica; SEM Química
     { nome: "Escola Naval - Marinha do Brasil", sigla: "EN", esfera: "FEDERAL", exam_type: "MARINHA",
       banca: "EN", cargo_padrao: "Guarda-Marinha", estado: null,
       materias: [
-        { name: "Matemática", weight: 3, questions: 40, topics: [] },
-        { name: "Física", weight: 2, questions: 20, topics: [] },
-        { name: "Química", weight: 1, questions: 10, topics: [] },
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Inglês", weight: 1, questions: 15, topics: [] },
+        { name: "Matemática",                      weight: 3, questions: 22, topics: [] },
+        { name: "Física",                          weight: 3, questions: 22, topics: [] },
+        { name: "Língua Portuguesa / Redação",    weight: 2, questions: 18, topics: [] },
+        { name: "Língua Inglesa",                  weight: 2, questions: 18, topics: [] },
       ] },
     { nome: "Fuzileiros Navais - Marinha do Brasil", sigla: "FUZNAVAIS", esfera: "FEDERAL", exam_type: "MARINHA",
       banca: "CESGRANRIO", cargo_padrao: "Recruta Fuzileiro Naval", estado: null,
