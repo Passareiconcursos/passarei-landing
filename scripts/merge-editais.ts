@@ -143,15 +143,23 @@ const NORMALIZATION_MAP: Record<string, string> = {
   "química":                                        "Química",
   "quimica":                                        "Química",
 
-  // História
-  "história do brasil":                             "História do Brasil",
-  "historia do brasil":                             "História do Brasil",
-  "história e geografia do brasil":                 "História e Geografia do Brasil",
+  // Biologia
+  "biologia":                                       "Biologia",
 
-  // Geografia
-  "geografia":                                      "Geografia",
-  "geografia do brasil":                            "Geografia do Brasil",
-  "noções de geografia":                            "Geografia",
+  // Língua Inglesa/Espanhola
+  "língua inglesa e língua espanhola":              "Língua Inglesa",
+  "língua inglesa/espanhola":                       "Língua Inglesa",
+  "língua inglesa / espanhola":                     "Língua Inglesa",
+
+  // Direito Penal Militar
+  "direito penal militar":                          "Direito Penal Militar",
+  "noções de direito penal militar":                "Direito Penal Militar",
+  "código penal militar":                           "Direito Penal Militar",
+
+  // História (standalone → mantém canônico Conhgerais, mapeado acima)
+  "história do brasil":                             "Conhecimentos Gerais e Atualidades",
+  "historia do brasil":                             "Conhecimentos Gerais e Atualidades",
+  "história e geografia do brasil":                 "Conhecimentos Gerais e Atualidades",
 };
 
 function normalizeSubjectName(raw: string): string {
@@ -219,41 +227,48 @@ function mergeEditais(editais: EditalInput[]) {
 // EDITAIS — PREENCHER COM OS DADOS REAIS ANTES DE RODAR
 // ─────────────────────────────────────────────────────────────────────────────
 const EDITAIS: EditalInput[] = [
-  // ── PM-ES Soldado ──────────────────────────────────────────────────────────
-  // 4 blocos (estimativa ~80q). Não tem Informática, Dir.Penal ou Adm.
+  // ── PM-ES CFO ──────────────────────────────────────────────────────────────
+  // Conhecimentos Comuns: Port, RLM, Hist+Geo(ES), Informática, Dir.Adm+Const
   {
-    sigla: "PM ES",
+    sigla: "PM ES CFO",
     subjects: [
-      { name: "Língua Portuguesa",                          questions: 20 },
-      { name: "Raciocínio Lógico e Matemático",             questions: 20 }, // → "Matemática"
-      { name: "História do Brasil e do Espírito Santo",     questions: 20 }, // → "Conhecimentos Gerais e Atualidades"
-      { name: "Geografia Geral, Brasil e do Espírito Santo",questions: 20 }, // → "Conhecimentos Gerais e Atualidades"
+      { name: "Língua Portuguesa",                           questions: 20 },
+      { name: "Raciocínio Lógico e Matemático",              questions: 20 }, // → "Matemática"
+      { name: "História do Brasil e do Espírito Santo",      questions: 15 }, // → "Conhecimentos Gerais e Atualidades"
+      { name: "Geografia Geral, Brasil e do Espírito Santo", questions: 15 }, // → "Conhecimentos Gerais e Atualidades"
+      { name: "Informática",                                 questions: 15 },
+      { name: "Direito Administrativo",                      questions: 15 }, // Noções Dir.Adm+Const — split
+      { name: "Direito Constitucional",                      questions: 15 },
     ],
   },
-  // ── PM-SP Soldado ──────────────────────────────────────────────────────────
-  // Edital oficial PM-SP (estimativa ~80q)
+  // ── PM-SP CFO ──────────────────────────────────────────────────────────────
+  // Vestibular-style: Ciências Humanas + Linguagens + Mat+Ciências + Conhec.Específicos
   {
-    sigla: "PM SP",
+    sigla: "PM SP CFO",
     subjects: [
-      { name: "Língua Portuguesa",               questions: 20 },
-      { name: "Matemática",                      questions: 20 }, // inclui RL item 13
-      { name: "Conhecimentos Gerais",            questions: 20 }, // Hist+Geo+Atualidades
-      { name: "Noções Básicas de Informática",   questions: 10 }, // → "Informática"
+      { name: "Língua Portuguesa",               questions: 20 }, // inclui Literatura Br+Port
+      { name: "Matemática",                      questions: 25 }, // nível superior (Complexos, Matrizes, Cônicas)
+      { name: "Conhecimentos Gerais",            questions: 20 }, // Hist(geral+BR)+Fil+Sociologia
+      { name: "Geografia",                       questions: 15 }, // → "Conhecimentos Gerais e Atualidades" — separado para manter peso
+      { name: "Física",                          questions: 15 },
+      { name: "Química",                         questions: 10 },
+      { name: "Biologia",                        questions: 10 },
+      { name: "Língua Inglesa",                  questions: 10 },
       { name: "Noções de Administração Pública", questions: 10 }, // → "Legislação Institucional PM"
+      { name: "Noções Básicas de Informática",   questions: 10 }, // → "Informática"
     ],
   },
-  // ── PM-RJ Soldado ──────────────────────────────────────────────────────────
-  // Edital PM-RJ (~100q). Mais completo juridicamente.
+  // ── PM-RJ CFO ──────────────────────────────────────────────────────────────
+  // Perfil jurídico pesado: Dir.Adm, Dir.Const, Dir.Penal, Dir.Proc.Penal, Dir.Penal Militar, Dir.Humanos
   {
-    sigla: "PM RJ",
+    sigla: "PM RJ CFO",
     subjects: [
-      { name: "Língua Portuguesa",               questions: 15 },
-      { name: "Matemática Básica",               questions: 15 }, // inclui RL
-      { name: "Noções de Direitos Humanos",      questions: 10 }, // → "Direitos Humanos"
-      { name: "Noções de Direito Administrativo",questions: 20 }, // → "Direito Administrativo"
-      { name: "Legislação Aplicada à PMERJ",     questions: 10 }, // → "Legislação Institucional PM"
-      { name: "Noções de Direito Penal",         questions: 20 }, // → "Direito Penal"
-      { name: "Noções de Direito Processual Penal", questions: 10 }, // → "Direito Processual Penal"
+      { name: "Direito Administrativo",          questions: 20 },
+      { name: "Direito Constitucional",          questions: 20 },
+      { name: "Direito Penal",                   questions: 25 },
+      { name: "Direito Processual Penal",        questions: 20 },
+      { name: "Direito Penal Militar",           questions: 15 },
+      { name: "Direitos Humanos",                questions: 15 },
     ],
   },
 ];
