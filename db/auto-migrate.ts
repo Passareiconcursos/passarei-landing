@@ -1071,15 +1071,14 @@ async function migrateConcursosTables() {
         { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
         { name: "Inglês", weight: 1, questions: 15, topics: [] },
       ] },
+    // Edital EPCAR — nível Ensino Fundamental, 3 provas (SEM Física/Química/Biologia)
+    // Matemática: funções afim/quadrática, geo plana básica — sem Cálculo ou Trigonometria avançada
     { nome: "Escola Preparatória de Cadetes do Ar", sigla: "EPCAR", esfera: "FEDERAL", exam_type: "FAB",
-      banca: "EPCAR", cargo_padrao: "Cadete do Ar", estado: null,
+      banca: "EPCAR", cargo_padrao: "Cadete do Ar (EPCAR)", estado: null,
       materias: [
-        { name: "Matemática", weight: 3, questions: 30, topics: [] },
-        { name: "Física", weight: 2, questions: 20, topics: [] },
-        { name: "Química", weight: 1, questions: 10, topics: [] },
-        { name: "Biologia", weight: 1, questions: 10, topics: [] },
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Inglês", weight: 1, questions: 10, topics: [] },
+        { name: "Matemática",                      weight: 3, questions: 30, topics: [] },
+        { name: "Língua Portuguesa",               weight: 2, questions: 25, topics: [] },
+        { name: "Língua Inglesa",                  weight: 1, questions: 15, topics: [] },
       ] },
     { nome: "Escola de Especialistas da Aeronáutica - Sargentos", sigla: "EAGS", esfera: "FEDERAL", exam_type: "FAB",
       banca: "EAGS", cargo_padrao: "Sargento da Aeronáutica", estado: null,
