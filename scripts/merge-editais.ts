@@ -132,6 +132,31 @@ const NORMALIZATION_MAP: Record<string, string> = {
   "legislação cbm":                                 "Legislação Institucional CBM",
   "legislação específica cbm":                      "Legislação Institucional CBM",
 
+  // Legislação PP (Polícia Penal)
+  "legislação institucional pp":                    "Legislação Institucional PP",
+  "legislação específica pp":                       "Legislação Institucional PP",
+  "legislação pp":                                  "Legislação Institucional PP",
+  "legislação institucional da polícia penal":      "Legislação Institucional PP",
+  "legislação da polícia penal":                    "Legislação Institucional PP",
+
+  // Legislação Penal Especial (LEP, Drogas, Hediondos, Abuso Autoridade, etc.)
+  "legislação penal especial":                      "Legislação Penal Especial",
+  "legislação especial":                            "Legislação Penal Especial",
+  "legislação penal e processual penal especial":   "Legislação Penal Especial",
+
+  // Legislação PL (Polícia Legislativa)
+  "legislação institucional pl":                    "Legislação Institucional PL",
+  "legislação específica pl":                       "Legislação Institucional PL",
+  "legislação pl":                                  "Legislação Institucional PL",
+
+  // Atividade de Inteligência
+  "atividade de inteligência":                      "Atividade de Inteligência",
+  "noções de inteligência":                         "Atividade de Inteligência",
+
+  // Criminologia e Criminalística (combo PLE Federal)
+  "criminologia e noções de criminalística":        "Criminologia e Criminalística",
+  "criminologia e criminalística":                  "Criminologia e Criminalística",
+
   // Legislação PC
   "legislação institucional pc":                    "Legislação Institucional PC",
   "legislação específica pc":                       "Legislação Institucional PC",
@@ -279,42 +304,43 @@ function mergeEditais(editais: EditalInput[]) {
 // EDITAIS — PREENCHER COM OS DADOS REAIS ANTES DE RODAR
 // ─────────────────────────────────────────────────────────────────────────────
 const EDITAIS: EditalInput[] = [
-  // ── PC AGT/ESC ES ───────────────────────────────────────────────────────────
-  // Edital PCESPC/001/2022 — Agente/Escrivão Espírito Santo (Ibade, ~120q)
-  // Bloco I: Básico — Port, Info, RLM. Bloco II: Jurídico — DirConst, DirAdm, DirPenal, DirProcPenal.
-  // Bloco III: Específico — Contab, AdmGeral, DirCivil.
+  // ── PLE ES ──────────────────────────────────────────────────────────────────
+  // Edital ALES/ES — Polícia Legislativa Estadual ES
+  // 40q: Port(10q) + RLM→Mat(5q) + Info(5q) + ConhGerais(5q) + Legislação(5q) + ConhEspecificos(10q)
+  // "Legislação" = legislação interna da ALES (Legislação Institucional PL)
+  // "Conhecimentos Específicos" = matérias típicas de segurança pública legislativa
   {
-    sigla: "PC AGT ES",
+    sigla: "PLE ES",
     subjects: [
-      { name: "Língua Portuguesa",                              questions: 15 },
-      { name: "Informática",                                    questions: 10 },
-      { name: "Raciocínio Lógico-Matemático",                  questions: 15 }, // → Matemática
-      { name: "Noções de Contabilidade",                        questions: 10 }, // → ContabGeral
-      { name: "Noções de Administração Geral e Pública",        questions: 10 }, // → AdmGeral
-      { name: "Direito Constitucional",                         questions: 15 },
-      { name: "Direito Administrativo",                         questions: 15 },
-      { name: "Direito Penal",                                  questions: 20 },
-      { name: "Direito Processual Penal",                       questions: 10 },
-      { name: "Direito Civil",                                  questions: 10 },
+      { name: "Língua Portuguesa",                    questions: 10 },
+      { name: "Matemática",                           questions:  5 }, // RLM → Mat
+      { name: "Informática",                          questions:  5 },
+      { name: "Conhecimentos Gerais e Atualidades",   questions:  5 },
+      { name: "Legislação Institucional PL",          questions:  5 },
+      { name: "Direito Constitucional",               questions:  5 }, // ConhEspecificos: DirConst
+      { name: "Direito Penal",                        questions:  3 }, // ConhEspecificos: DirPenal
+      { name: "Direitos Humanos",                     questions:  2 }, // ConhEspecificos: DirHumanos
     ],
   },
-  // ── PC AGT/ESC SC ───────────────────────────────────────────────────────────
-  // Edital PCSC 2023 — Agente/Escrivão Santa Catarina (FEPESE, ~85q)
-  // Conhecimentos Gerais: Port, RLM. Jurídico: DirConst, DirAdm, DirPenal, DirProcPenal.
-  // Específico: TI/CrimesDigitais, Contab, DirHumanos, LegPC.
+  // ── PLE FEDERAL (Câmara dos Deputados) ──────────────────────────────────────
+  // Policial Legislativo da Câmara dos Deputados (Cebraspe) — exame mais pesado
+  // Estimativa: Port(10q) + Inglesa(5q) + RL+Estat(10q) + DirConst+LegCâmara(15q) +
+  //             DirAdm(15q) + Info+Dados(10q) + DirPenal+ProcPenal(15q) +
+  //             Criminologia+Criminalística(10q) + DirHumanos(5q) + Inteligência(5q)
   {
-    sigla: "PC AGT SC",
+    sigla: "PLE Federal",
     subjects: [
-      { name: "Língua Portuguesa",                                              questions: 10 },
-      { name: "Raciocínio Lógico-Matemático",                                  questions: 10 }, // → Matemática
-      { name: "Direito Constitucional",                                         questions: 10 },
-      { name: "Direito Administrativo",                                         questions: 10 },
-      { name: "Direito Penal",                                                  questions: 15 },
-      { name: "Direito Processual Penal",                                       questions: 10 },
-      { name: "Direitos Humanos",                                               questions:  5 },
-      { name: "Legislação Institucional PC",                                    questions: 10 },
-      { name: "Tecnologia da Informação, Segurança Cibernética e Crimes Digitais", questions: 10 }, // → Informática
-      { name: "Noções de Contabilidade",                                        questions:  5 }, // → ContabGeral
+      { name: "Língua Portuguesa",                    questions: 10 },
+      { name: "Língua Inglesa",                       questions:  5 },
+      { name: "Raciocínio Lógico",                    questions: 10 }, // RL+Estatística → RL
+      { name: "Direito Constitucional",               questions: 15 }, // DirConst+LegCâmara
+      { name: "Direito Administrativo",               questions: 15 },
+      { name: "Informática",                          questions: 10 }, // Info+Dados
+      { name: "Direito Penal",                        questions:  8 }, // split DirPenal+ProcPenal
+      { name: "Direito Processual Penal",             questions:  7 }, // split DirPenal+ProcPenal
+      { name: "Criminologia e Criminalística",        questions: 10 },
+      { name: "Direitos Humanos",                     questions:  5 },
+      { name: "Atividade de Inteligência",            questions:  5 },
     ],
   },
 ];
