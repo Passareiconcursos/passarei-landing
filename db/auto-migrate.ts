@@ -1107,25 +1107,32 @@ async function migrateConcursosTables() {
         { name: "Teoria Musical",                           weight: 1, questions: 15, topics: [] },
       ] },
     // ── POLÍCIA MILITAR ───────────────────────────────────────────────────────
-    { nome: "Polícia Militar - Oficial (CFO)", sigla: "PM_CFO", esfera: "ESTADUAL", exam_type: "PM",
-      banca: "VUNESP", cargo_padrao: "Oficial (Cadete PM)", estado: null,
-      materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 20, topics: [] },
-        { name: "Matemática", weight: 1, questions: 15, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
-        { name: "Direito Constitucional", weight: 2, questions: 15, topics: [] },
-        { name: "Direito Administrativo", weight: 1, questions: 10, topics: [] },
-        { name: "Legislação Militar PM", weight: 2, questions: 15, topics: [] },
-      ] },
+    // PM_SD — cruzamento ES + SP + RJ (editais 2023-2026)
+    // weight 3 = universal | weight 2 = 2/3 estados | weight 1 = específico de 1 estado
     { nome: "Polícia Militar - Soldado", sigla: "PM_SD", esfera: "ESTADUAL", exam_type: "PM",
       banca: "VUNESP", cargo_padrao: "Soldado PM", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Matemática", weight: 1, questions: 10, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
-        { name: "Legislação Específica PM", weight: 2, questions: 15, topics: [] },
-        { name: "Informática", weight: 1, questions: 5, topics: [] },
+        { name: "Língua Portuguesa",               weight: 3, questions: 18, topics: [] },
+        { name: "Matemática",                      weight: 3, questions: 18, topics: [] },
+        { name: "Conhecimentos Gerais e Atualidades", weight: 2, questions: 20, topics: [] },
+        { name: "Legislação Institucional PM",     weight: 2, questions: 10, topics: [] },
+        { name: "Direito Administrativo",          weight: 1, questions: 20, topics: [] },
+        { name: "Direito Penal",                   weight: 1, questions: 20, topics: [] },
+        { name: "Informática",                     weight: 1, questions: 10, topics: [] },
+        { name: "Direitos Humanos",                weight: 1, questions: 10, topics: [] },
+        { name: "Direito Processual Penal",        weight: 1, questions: 10, topics: [] },
+      ] },
+    // PM_CFO — placeholder pendente de editais (CFO é nível superior, mais Direito)
+    { nome: "Polícia Militar - Oficial (CFO)", sigla: "PM_CFO", esfera: "ESTADUAL", exam_type: "PM",
+      banca: "VUNESP", cargo_padrao: "Oficial (Cadete PM)", estado: null,
+      materias: [
+        { name: "Língua Portuguesa",               weight: 3, questions: 20, topics: [] },
+        { name: "Matemática",                      weight: 2, questions: 15, topics: [] },
+        { name: "Direito Constitucional",          weight: 3, questions: 20, topics: [] },
+        { name: "Direito Administrativo",          weight: 3, questions: 15, topics: [] },
+        { name: "Direito Penal",                   weight: 2, questions: 15, topics: [] },
+        { name: "Legislação Institucional PM",     weight: 2, questions: 10, topics: [] },
+        { name: "Conhecimentos Gerais e Atualidades", weight: 1, questions: 10, topics: [] },
       ] },
     // ── CORPO DE BOMBEIROS MILITAR ────────────────────────────────────────────
     { nome: "Corpo de Bombeiros Militar - Oficial (CFO)", sigla: "CBM_CFO", esfera: "ESTADUAL", exam_type: "CBM",

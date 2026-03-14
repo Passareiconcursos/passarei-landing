@@ -29,13 +29,16 @@ const NORMALIZATION_MAP: Record<string, string> = {
   "língua portuguesa / redação":                    "Língua Portuguesa",
   "português e redação":                            "Língua Portuguesa",
 
-  // Matemática
+  // Matemática (absorve RL quando combinados, pois é como a maioria dos editais trata)
   "matemática":                                     "Matemática",
   "matematica":                                     "Matemática",
+  "matemática básica":                              "Matemática",
   "matemática e raciocínio lógico":                 "Matemática",
-  "raciocínio lógico e matemática":                 "Raciocínio Lógico e Matemática",
+  "raciocínio lógico e matemático":                 "Matemática",
+  "raciocínio lógico e matemática":                 "Matemática",
+  "matemática e lógica":                            "Matemática",
 
-  // Raciocínio Lógico
+  // Raciocínio Lógico (standalone)
   "raciocínio lógico":                              "Raciocínio Lógico",
   "raciocinio logico":                              "Raciocínio Lógico",
   "lógica":                                         "Raciocínio Lógico",
@@ -66,7 +69,9 @@ const NORMALIZATION_MAP: Record<string, string> = {
   // Informática
   "informática":                                    "Informática",
   "noções de informática":                          "Informática",
+  "noções básicas de informática":                  "Informática",
   "tecnologia da informação":                       "Informática",
+  "tecnologia da informação (ti)":                  "Informática",
   "informatica":                                    "Informática",
 
   // Inglês
@@ -74,11 +79,21 @@ const NORMALIZATION_MAP: Record<string, string> = {
   "inglês":                                         "Língua Inglesa",
   "ingles":                                         "Língua Inglesa",
 
-  // Conhecimentos Gerais / Atualidades
+  // Conhecimentos Gerais / Atualidades / Hist+Geo combinados
   "conhecimentos gerais":                           "Conhecimentos Gerais e Atualidades",
   "atualidades":                                    "Conhecimentos Gerais e Atualidades",
   "conhecimentos gerais e atualidades":             "Conhecimentos Gerais e Atualidades",
   "atualidades e conhecimentos gerais":             "Conhecimentos Gerais e Atualidades",
+  // ES separa hist e geo — normaliza para o canônico unificado (mesmo conteúdo)
+  "história do brasil e do espírito santo":         "Conhecimentos Gerais e Atualidades",
+  "geografia geral, brasil e do espírito santo":    "Conhecimentos Gerais e Atualidades",
+  "história e geografia do brasil":                 "Conhecimentos Gerais e Atualidades",
+  "história geral e do brasil":                     "Conhecimentos Gerais e Atualidades",
+  "história do brasil":                             "Conhecimentos Gerais e Atualidades",
+  "história":                                       "Conhecimentos Gerais e Atualidades",
+  "geografia":                                      "Conhecimentos Gerais e Atualidades",
+  "geografia do brasil":                            "Conhecimentos Gerais e Atualidades",
+  "historia e geografia":                           "Conhecimentos Gerais e Atualidades",
 
   // Legislação PM
   "legislação militar":                             "Legislação Institucional PM",
@@ -87,6 +102,21 @@ const NORMALIZATION_MAP: Record<string, string> = {
   "legislação policial militar":                    "Legislação Institucional PM",
   "estatuto da pm":                                 "Legislação Institucional PM",
   "regulamentos militares":                         "Legislação Institucional PM",
+  "legislação aplicada à pmerj":                    "Legislação Institucional PM",
+  "legislação aplicada":                            "Legislação Institucional PM",
+  "noções de administração pública":                "Legislação Institucional PM",
+  "administração pública":                          "Legislação Institucional PM",
+
+  // Direito Penal
+  "direito penal":                                  "Direito Penal",
+  "noções de direito penal":                        "Direito Penal",
+  "dir. penal":                                     "Direito Penal",
+
+  // Direito Processual Penal
+  "direito processual penal":                       "Direito Processual Penal",
+  "noções de direito processual penal":             "Direito Processual Penal",
+  "dir. processual penal":                          "Direito Processual Penal",
+  "processo penal":                                 "Direito Processual Penal",
 
   // Legislação CBM
   "legislação bombeiros":                           "Legislação Institucional CBM",
@@ -189,25 +219,43 @@ function mergeEditais(editais: EditalInput[]) {
 // EDITAIS — PREENCHER COM OS DADOS REAIS ANTES DE RODAR
 // ─────────────────────────────────────────────────────────────────────────────
 const EDITAIS: EditalInput[] = [
-  // Exemplo PM_CFO — substituir pelos dados reais
+  // ── PM-ES Soldado ──────────────────────────────────────────────────────────
+  // 4 blocos (estimativa ~80q). Não tem Informática, Dir.Penal ou Adm.
+  {
+    sigla: "PM ES",
+    subjects: [
+      { name: "Língua Portuguesa",                          questions: 20 },
+      { name: "Raciocínio Lógico e Matemático",             questions: 20 }, // → "Matemática"
+      { name: "História do Brasil e do Espírito Santo",     questions: 20 }, // → "Conhecimentos Gerais e Atualidades"
+      { name: "Geografia Geral, Brasil e do Espírito Santo",questions: 20 }, // → "Conhecimentos Gerais e Atualidades"
+    ],
+  },
+  // ── PM-SP Soldado ──────────────────────────────────────────────────────────
+  // Edital oficial PM-SP (estimativa ~80q)
   {
     sigla: "PM SP",
     subjects: [
-      { name: "Língua Portuguesa",      questions: 20 },
-      { name: "Matemática",             questions: 15 },
-      { name: "Raciocínio Lógico",      questions: 10 },
-      { name: "Direito Constitucional", questions: 15 },
-      { name: "Direito Administrativo", questions: 10 },
-      { name: "Legislação PM",          questions: 10 },
+      { name: "Língua Portuguesa",               questions: 20 },
+      { name: "Matemática",                      questions: 20 }, // inclui RL item 13
+      { name: "Conhecimentos Gerais",            questions: 20 }, // Hist+Geo+Atualidades
+      { name: "Noções Básicas de Informática",   questions: 10 }, // → "Informática"
+      { name: "Noções de Administração Pública", questions: 10 }, // → "Legislação Institucional PM"
     ],
   },
-  // {
-  //   sigla: "PM RJ",
-  //   subjects: [
-  //     { name: "Língua Portuguesa",      questions: 20 },
-  //     ...
-  //   ],
-  // },
+  // ── PM-RJ Soldado ──────────────────────────────────────────────────────────
+  // Edital PM-RJ (~100q). Mais completo juridicamente.
+  {
+    sigla: "PM RJ",
+    subjects: [
+      { name: "Língua Portuguesa",               questions: 15 },
+      { name: "Matemática Básica",               questions: 15 }, // inclui RL
+      { name: "Noções de Direitos Humanos",      questions: 10 }, // → "Direitos Humanos"
+      { name: "Noções de Direito Administrativo",questions: 20 }, // → "Direito Administrativo"
+      { name: "Legislação Aplicada à PMERJ",     questions: 10 }, // → "Legislação Institucional PM"
+      { name: "Noções de Direito Penal",         questions: 20 }, // → "Direito Penal"
+      { name: "Noções de Direito Processual Penal", questions: 10 }, // → "Direito Processual Penal"
+    ],
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
