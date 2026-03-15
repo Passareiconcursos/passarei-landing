@@ -46,6 +46,7 @@ export async function runAutoMigrations() {
   await run("redacaoTemplates",     migrateRedacaoTemplates);
   await run("passwordResetCodes",   migratePasswordResetCodes);
   await run("globalLogout",         migrateGlobalLogout);
+  await run("mnemonicsTable",        migrateMnemonicsTable);
 
   console.log("✅ [Auto-Migrate] Banco de dados OK!\n");
 }
@@ -1905,6 +1906,26 @@ async function migrateGlobalLogout() {
     ALTER TABLE "User" ADD COLUMN IF NOT EXISTS last_global_logout_at TIMESTAMP
   `);
   console.log("  ✅ last_global_logout_at OK");
+}
+
+// ============================================
+// MNEMONICS TABLE — tabela standalone de mnemônicos estratégicos
+// ============================================
+async function migrateMnemonicsTable() {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS mnemonics (
+      id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+      subject_id  TEXT,
+      title       TEXT        NOT NULL UNIQUE,
+      phrase      TEXT        NOT NULL,
+      meaning     TEXT        NOT NULL,
+      category    TEXT        NOT NULL DEFAULT 'GERAL',
+      difficulty  TEXT        NOT NULL DEFAULT 'MEDIO',
+      is_active   BOOLEAN     NOT NULL DEFAULT true,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+  console.log("  ✅ mnemonics OK");
 }
 
 // ============================================
