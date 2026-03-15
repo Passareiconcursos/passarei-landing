@@ -1935,10 +1935,15 @@ async function migrateMnemonicsTable() {
 
 // ============================================
 // ENTRY POINT — CLI direto (npx tsx db/auto-migrate.ts)
+// Guarda: só executa se este arquivo for o script principal,
+// NÃO quando importado como módulo pelo server/index.ts
 // ============================================
-runAutoMigrations()
+const isMain = process.argv[1]?.includes("auto-migrate");
+if (isMain) {
+  runAutoMigrations()
   .then(() => process.exit(0))
   .catch((err) => {
     console.error("❌ [Auto-Migrate] Erro fatal:", err);
     process.exit(1);
   });
+}
