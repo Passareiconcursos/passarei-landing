@@ -59,11 +59,11 @@ async function main() {
     const subjectId = subjectRows[0].id;
     const subjectName = subjectRows[0].name;
 
-    // Atualiza o mnemonic
+    // Atualiza o mnemonic (busca por phrase, pois titleContains é a sigla/frase)
     const result = await sql`
       UPDATE mnemonics
       SET subject_id = ${subjectId}
-      WHERE title ILIKE ${"%" + fix.titleContains + "%"}
+      WHERE phrase ILIKE ${"%" + fix.titleContains + "%"}
         AND (subject_id IS NULL OR subject_id != ${subjectId})
       RETURNING title
     `;
