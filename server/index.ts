@@ -58,32 +58,19 @@ app.use((req, res, next) => {
   await runAutoMigrations();
 
   // Inicializa o servidor e as rotas base
-  console.log("🔧 [Startup] registerRoutes...");
   const server = await registerRoutes(app);
-  console.log("🔧 [Startup] registerAIRoutes...");
   registerAIRoutes(app);
-  console.log("🔧 [Startup] registerSupabaseRoutes...");
   registerSupabaseRoutes(app);
-  console.log("🔧 [Startup] registerEditalRoutes...");
   registerEditalRoutes(app);
-  console.log("🔧 [Startup] registerMiniChatRoutes...");
   registerMiniChatRoutes(app);
-  console.log("🔧 [Startup] registerEssayRoutes...");
   registerEssayRoutes(app);
-  console.log("🔧 [Startup] registerSimuladoRoutes...");
   registerSimuladoRoutes(app);
-  console.log("🔧 [Startup] registerConcursosRoutes...");
   registerConcursosRoutes(app);
-  console.log("🔧 [Startup] registerPromoRoutes...");
   registerPromoRoutes(app);
-  console.log("🔧 [Startup] registerSalaAuthRoutes...");
   registerSalaAuthRoutes(app);
-  console.log("🔧 [Startup] registerSalaRoutes...");
   registerSalaRoutes(app);
-  console.log("🔧 [Startup] payment routes...");
   app.use("/api/payment", paymentRoutes);
   app.use("/api/admin/financial", refundRoutes);
-  console.log("🔧 [Startup] todas as rotas registradas");
 
   // Test routes: só em desenvolvimento (não expor em produção)
   if (!process.env.RAILWAY_ENVIRONMENT) {
