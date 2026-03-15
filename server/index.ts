@@ -153,4 +153,7 @@ Sitemap: https://www.passarei.com.br/sitemap.xml`);
       server.keepAliveTimeout = 95_000; // deve ser maior que timeout
     },
   );
-})();
+})().catch((err) => {
+  console.error("❌ [FATAL] Erro crítico no startup do servidor:", err);
+  process.exit(1);
+});
