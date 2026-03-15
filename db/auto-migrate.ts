@@ -756,14 +756,17 @@ async function migrateConcursosTables() {
         { name: "Legislação Especial",            weight: 2, questions:  6, topics: [] },
       ] },
     // ── AGENTE ADMIN PF — NÍVEL MÉDIO ────────────────────────────────────────
+    // Edital PF (Cebraspe) — Agente Administrativo Nível Médio
+    // P1 objetiva: LP + RL + Ética (incl. Lei 8.112, Lei 8.429, Lei 12.813) + Info
+    // P2 discursiva: Atualidades (apenas redação — peso baixo)
     { nome: "Polícia Federal - Agente Administrativo", sigla: "PF_ADMIN", esfera: "FEDERAL", exam_type: "PF",
       banca: "CEBRASPE", cargo_padrao: "Agente Administrativo (Nível Médio)", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 2, questions: 20, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 15, topics: [] },
-        { name: "Noções de Direito Administrativo", weight: 1, questions: 15, topics: [] },
-        { name: "Informática", weight: 2, questions: 20, topics: [] },
-        { name: "Atualidades", weight: 1, questions: 10, topics: [] },
+        { name: "Língua Portuguesa",        weight: 3, questions: 20, topics: [] },
+        { name: "Raciocínio Lógico",        weight: 3, questions: 15, topics: [] },
+        { name: "Noções de Informática",    weight: 3, questions: 20, topics: [] },
+        { name: "Ética no Serviço Público", weight: 3, questions: 15, topics: [] }, // Lei 8.112, Lei 8.429, Lei 12.813
+        { name: "Atualidades",              weight: 1, questions:  5, topics: [] }, // discursiva apenas
       ] },
     // ── RECEITA FEDERAL (ESAF/CEBRASPE) ──────────────────────────────────────
     // Edital RFB 2014 — ESAF — 140 questões — Auditor-Fiscal da RFB
@@ -916,15 +919,24 @@ async function migrateConcursosTables() {
         { name: "Atualidades e Geopolítica",                      weight: 1, questions: 20, topics: [] },
       ] },
     // ── ABIN — Agente Técnico de Inteligência (CEBRASPE) ─────────────────────
-    // TODO: aguardando edital específico — placeholder baseado na estrutura do Agente
+    // Edital ABIN 2018 — Cargo 4: Agente Técnico de Inteligência — perfil jurídico (Área 2 OTI)
+    // P1 (básicos comuns): LP + RL + Dir.Const + Dir.Adm + Ativ.Inteligência
+    // P2 (específicos): Dir.Const + Dir.Adm + Dir.Civil + Dir.Proc.Civil + Dir.Com + Dir.Fin + Dir.Pen/DPP + Dir.Prev
     { nome: "ABIN - Agente Técnico de Inteligência", sigla: "ABIN_ATI", esfera: "FEDERAL", exam_type: "ABIN",
       banca: "CEBRASPE", cargo_padrao: "Agente Técnico de Inteligência", estado: null,
       materias: [
-        { name: "Língua Portuguesa",                              weight: 2, questions: 15, topics: [] },
-        { name: "Raciocínio Lógico",                              weight: 2, questions: 10, topics: [] },
-        { name: "Atividade de Inteligência e Legislação",         weight: 3, questions: 10, topics: [] },
-        { name: "Informática / Tecnologia",                       weight: 2, questions: 15, topics: [] },
-        { name: "Conhecimentos Técnicos Específicos",             weight: 3, questions: 70, topics: [] },
+        { name: "Língua Portuguesa",                      weight: 2, questions: 15, topics: [] },
+        { name: "Raciocínio Lógico",                      weight: 2, questions: 10, topics: [] },
+        { name: "Atividade de Inteligência e Legislação", weight: 3, questions:  5, topics: [] },
+        { name: "Direito Constitucional",                 weight: 3, questions: 15, topics: [] }, // P1 + P2
+        { name: "Direito Administrativo",                 weight: 3, questions: 15, topics: [] }, // P1 + P2
+        { name: "Direito Civil",                          weight: 2, questions: 15, topics: [] },
+        { name: "Direito Penal",                          weight: 2, questions: 10, topics: [] },
+        { name: "Direito Processual Penal",               weight: 2, questions:  8, topics: [] },
+        { name: "Direito Processual Civil",               weight: 1, questions: 10, topics: [] },
+        { name: "Direito Comercial",                      weight: 1, questions: 10, topics: [] },
+        { name: "Direito Financeiro",                     weight: 1, questions:  8, topics: [] },
+        { name: "Direito Previdenciário",                 weight: 1, questions:  6, topics: [] },
       ] },
     // ── ANAC — Área 1: Operações de Voo (CEBRASPE) ───────────────────────────
     // Edital ANAC — Cargo 1: Especialista em Reg. Aviação Civil — Área 1 (Operações)
@@ -1197,16 +1209,22 @@ async function migrateConcursosTables() {
         { name: "Legislação Institucional PC",      weight: 1, questions: 10, topics: [] },
         { name: "Direitos Humanos",                 weight: 1, questions:  5, topics: [] },
       ] },
+    // PC_PERITO — Edital PC-SP (VUNESP) — Perito Criminal
+    // 11 matérias: ciências exatas/forenses dominam; Noções de Direito inclui 11 leis específicas
     { nome: "Polícia Civil - Perito Criminal", sigla: "PC_PERITO", esfera: "ESTADUAL", exam_type: "PC",
       banca: "VUNESP", cargo_padrao: "Perito Criminal", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 10, topics: [] },
-        { name: "Ciências Forenses", weight: 3, questions: 30, topics: [] },
-        { name: "Química", weight: 2, questions: 15, topics: [] },
-        { name: "Biologia", weight: 2, questions: 10, topics: [] },
-        { name: "Física", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Processual Penal", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Penal", weight: 1, questions: 5, topics: [] },
+        { name: "Criminalística",                     weight: 3, questions: 18, topics: [] }, // local crime, manchas, balística, cadeia custódia
+        { name: "Medicina Legal",                     weight: 3, questions: 15, topics: [] }, // tanatologia, traumatologia, toxicologia, psiquiatria
+        { name: "Biologia",                           weight: 3, questions: 15, topics: [] }, // genética forense, PCR, DNA, eletroforese
+        { name: "Química",                            weight: 3, questions: 12, topics: [] }, // orgânica, inorgânica, físico-química, eletroquímica
+        { name: "Física",                             weight: 2, questions: 12, topics: [] }, // mecânica, óptica, eletricidade, termodinâmica
+        { name: "Noções de Direito",                  weight: 2, questions: 20, topics: [] }, // CF, DH, Dir Penal, DPP, Dir Adm + 11 leis especiais
+        { name: "Língua Portuguesa",                  weight: 2, questions: 12, topics: [] },
+        { name: "Matemática e Raciocínio Lógico",     weight: 2, questions: 15, topics: [] }, // combinatória, probabilidade, geo analítica, matrizes
+        { name: "Noções de Criminologia",             weight: 2, questions:  8, topics: [] },
+        { name: "Contabilidade",                      weight: 1, questions: 10, topics: [] }, // contabilidade geral + matemática financeira
+        { name: "Informática",                        weight: 1, questions: 10, topics: [] },
       ] },
     { nome: "Polícia Civil - Papiloscopista", sigla: "PC_PAPILO", esfera: "ESTADUAL", exam_type: "PC",
       banca: "VUNESP", cargo_padrao: "Papiloscopista", estado: null,
@@ -1303,15 +1321,21 @@ async function migrateConcursosTables() {
         { name: "Psicologia Aplicada",               weight: 1, questions:  5, topics: [] },
       ] },
     // ── POLÍCIA CIENTÍFICA ESTADUAL ───────────────────────────────────────────
+    // PC_CIENT — derivado de PC_PERITO SP — Polícia Científica (instituição separada da PC em alguns estados)
+    // Sem Contabilidade (específico SP/PC); mantém mesmo perfil pericial forense
     { nome: "Polícia Científica Estadual - Perito", sigla: "PC_CIENT", esfera: "ESTADUAL", exam_type: "PC_CIENTIFICA",
       banca: "VUNESP", cargo_padrao: "Perito Criminal Estadual", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 10, topics: [] },
-        { name: "Ciências Forenses", weight: 3, questions: 30, topics: [] },
-        { name: "Química", weight: 2, questions: 15, topics: [] },
-        { name: "Biologia", weight: 2, questions: 15, topics: [] },
-        { name: "Física", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Processual Penal", weight: 1, questions: 10, topics: [] },
+        { name: "Criminalística",                 weight: 3, questions: 18, topics: [] },
+        { name: "Medicina Legal",                 weight: 3, questions: 15, topics: [] },
+        { name: "Biologia",                       weight: 3, questions: 15, topics: [] },
+        { name: "Química",                        weight: 3, questions: 12, topics: [] },
+        { name: "Física",                         weight: 2, questions: 12, topics: [] },
+        { name: "Noções de Direito",              weight: 2, questions: 18, topics: [] }, // Dir Penal + DPP + CF + leis forenses
+        { name: "Língua Portuguesa",              weight: 2, questions: 12, topics: [] },
+        { name: "Matemática e Raciocínio Lógico", weight: 2, questions: 15, topics: [] },
+        { name: "Noções de Criminologia",         weight: 2, questions:  8, topics: [] },
+        { name: "Informática",                    weight: 1, questions: 10, topics: [] },
       ] },
     // ── POLÍCIA LEGISLATIVA ESTADUAL ──────────────────────────────────────────
     // PLE — cruzamento ES (ALES 2024, 40q) + Federal Câmara (Cebraspe)
