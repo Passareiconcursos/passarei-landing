@@ -20,7 +20,7 @@ import { registerSalaRoutes } from "./sala-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startTelegramBot } from "./telegram/bot";
 import { startEmailScheduler } from "./email/email-scheduler";
-import { runAutoMigrations } from "../db/auto-migrate";
+import { runAutoMigrations, seedConcursosData } from "../db/auto-migrate";
 
 const app = express();
 app.use(express.json());
@@ -162,6 +162,10 @@ Sitemap: https://www.passarei.com.br/sitemap.xml`);
       // Timeout aumentado para suportar chamadas de IA (redação ~30-60s)
       server.timeout = 90_000;         // 90s por requisição
       server.keepAliveTimeout = 95_000; // deve ser maior que timeout
+      // Seed de concursos em background — não bloqueia o startup
+      seedConcursosData().catch((e) =>
+        console.error("⚠️ [seedConcursos] Erro no seed em background:", e?.message ?? e)
+      );
     },
   );
 })().catch((err) => {

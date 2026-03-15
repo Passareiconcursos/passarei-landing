@@ -634,7 +634,12 @@ async function migrateConcursosTables() {
     )
   `);
 
-  // 4. Pre-seed completo: todos os concursos do PDF "EDITAIS CONCURSOS"
+  console.log("  ✅ Tabelas concursos + edital_vinculos OK (seed adiado para pós-startup)");
+}
+
+// Exportado separadamente — chamado APÓS server.listen() para não bloquear o startup
+export async function seedConcursosData() {
+  // Pre-seed completo: todos os concursos do PDF "EDITAIS CONCURSOS"
   // Dados baseados nos últimos editais reais (CEBRASPE/VUNESP/FCC patterns)
   const concursosData: Array<{
     nome: string; sigla: string; esfera: string; exam_type: string;
@@ -1424,7 +1429,7 @@ async function migrateConcursosTables() {
     seeded++;
   }
 
-  console.log(`  ✅ Tabelas concursos + edital_vinculos OK (${seeded} concursos pré-seeded)`);
+  console.log(`  ✅ Concursos seed OK (${seeded} upserts)`);
   console.log("     Bloco A: PF/PF_ADMIN/PRF/PRF_ADMIN/PLF/PPF/RFB/GP");
   console.log("     Bloco B: Exército(ESPCEX/ESA/IME)/Marinha(CN/EN/FUZNAVAIS)/FAB(ITA/EPCAR/EAGS)");
   console.log("     Bloco C: ABIN/ANAC/CPNU");
