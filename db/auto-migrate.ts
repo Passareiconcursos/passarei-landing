@@ -1226,15 +1226,21 @@ async function migrateConcursosTables() {
         { name: "Contabilidade",                      weight: 1, questions: 10, topics: [] }, // contabilidade geral + matemática financeira
         { name: "Informática",                        weight: 1, questions: 10, topics: [] },
       ] },
+    // PC_PAPILO — Edital PC-SP (VUNESP) — Papiloscopista
+    // Core: Noções de Identificação (papiloscopia, datiloscopia, AFIS, Vucetich, necropapiloscopia)
+    // Noções de Direito muito amplas: CF + DH + Dir Penal + DPP + 14 leis especiais + Dir Adm
     { nome: "Polícia Civil - Papiloscopista", sigla: "PC_PAPILO", esfera: "ESTADUAL", exam_type: "PC",
       banca: "VUNESP", cargo_padrao: "Papiloscopista", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Papiloscopia", weight: 3, questions: 25, topics: [] },
-        { name: "Direito Penal", weight: 1, questions: 15, topics: [] },
-        { name: "Direito Processual Penal", weight: 1, questions: 15, topics: [] },
-        { name: "Criminalística", weight: 2, questions: 10, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
+        { name: "Noções de Identificação",         weight: 3, questions: 25, topics: [] }, // datiloscopia, Vucetich, AFIS, impressões papilares
+        { name: "Noções de Direito",               weight: 3, questions: 25, topics: [] }, // CF + DH + Dir Penal + DPP + 14 leis + Dir Adm
+        { name: "Noções de Biologia",              weight: 2, questions: 15, topics: [] }, // citologia, genética (ABO, Rh, doenças), embriologia
+        { name: "Medicina e Odontologia Legal",    weight: 2, questions: 12, topics: [] }, // anatomia crânio-facial, identificação, tanatologia
+        { name: "Noções de Criminologia",          weight: 2, questions:  5, topics: [] },
+        { name: "Língua Portuguesa",               weight: 2, questions: 12, topics: [] },
+        { name: "Noções de Informática",           weight: 1, questions:  8, topics: [] },
+        { name: "Noções de Lógica",                weight: 1, questions:  5, topics: [] }, // proposições, tabelas-verdade, diagramas
+        { name: "Atualidades",                     weight: 1, questions:  5, topics: [] },
       ] },
     // PC_INV — mesma base ES+SC de PC_AGT + Criminologia (específica do cargo investigador)
     { nome: "Polícia Civil - Investigador", sigla: "PC_INV", esfera: "ESTADUAL", exam_type: "PC",
