@@ -850,15 +850,20 @@ async function migrateConcursosTables() {
         { name: "Atividade de Inteligência",                      weight: 2, questions: 15, topics: [] },
       ] },
     // ── POLÍCIA JUDICIAL CNJ (FCC/CEBRASPE) ──────────────────────────────────
+    // Derivado do padrão TRT/STJ/TST — Analista Judiciário Área Policial
+    // w3 = universal no Judiciário Federal | w2 = frequente | w1 = complementar
     { nome: "Polícia Judicial CNJ", sigla: "PJ_CNJ", esfera: "FEDERAL", exam_type: "PJ_CNJ",
       banca: "FCC", cargo_padrao: "Analista Judiciário - Área Policial", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Constitucional", weight: 2, questions: 20, topics: [] },
-        { name: "Direito Administrativo", weight: 2, questions: 15, topics: [] },
-        { name: "Legislação Específica CNJ", weight: 2, questions: 15, topics: [] },
-        { name: "Informática", weight: 1, questions: 5, topics: [] },
+        { name: "Língua Portuguesa",          weight: 3, questions: 15, topics: [] },
+        { name: "Direito Constitucional",     weight: 3, questions: 20, topics: [] },
+        { name: "Direito Administrativo",     weight: 3, questions: 15, topics: [] },
+        { name: "Raciocínio Lógico",          weight: 2, questions: 10, topics: [] },
+        { name: "Legislação Específica CNJ",  weight: 2, questions: 15, topics: [] }, // Regimento Interno CNJ + legislação do judiciário
+        { name: "Direito Penal",              weight: 2, questions: 10, topics: [] },
+        { name: "Direito Processual Penal",   weight: 2, questions: 10, topics: [] },
+        { name: "Direitos Humanos",           weight: 1, questions:  5, topics: [] },
+        { name: "Informática",                weight: 1, questions:  5, topics: [] },
       ] },
     // ── ABIN (CEBRASPE) ───────────────────────────────────────────────────────
     // Edital ABIN 2018 — Cargo 1: Oficial de Inteligência — P1=60q + P2=90q C/E
