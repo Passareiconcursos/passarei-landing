@@ -1334,34 +1334,38 @@ async function migrateConcursosTables() {
         { name: "Atividade de Inteligência",         weight: 1, questions:  5, topics: [] },
       ] },
     // ── GUARDA PORTUÁRIA ──────────────────────────────────────────────────────
-    // GP — Edital Porto do Pará 2023 (único edital completo; Santos truncado)
-    // Estrutura: ConhGerais (Port+RL) + LegEspecífica (DirConst+DirPenal+DirProcPenal+legislações)
-    //            + ISPS Code + Combate Incêndio/1ºSocorros + DirHumanos + Segurança/Rádio
+    // GP — cruzamento Pará (EMAP 2023) + Santos (CODESP 2024)
     { nome: "Guarda Portuária", sigla: "GP", esfera: "ESTADUAL", exam_type: "GP",
       banca: "CEBRASPE", cargo_padrao: "Guarda Portuário", estado: null,
       materias: [
-        { name: "Língua Portuguesa",                 weight: 3, questions: 15, topics: [] },
-        { name: "Legislação Portuária",              weight: 3, questions: 15, topics: [] }, // Lei dos Portos + ISPS Code
-        { name: "Direito Penal",                     weight: 2, questions: 10, topics: [] },
-        { name: "Raciocínio Lógico",                 weight: 2, questions: 10, topics: [] },
-        { name: "Direitos Humanos",                  weight: 2, questions:  8, topics: [] },
-        { name: "Segurança Operacional",             weight: 2, questions:  8, topics: [] }, // Combate Incêndio + Primeiros Socorros + NR-29
-        { name: "Direito Constitucional",            weight: 2, questions: 10, topics: [] },
-        { name: "Legislação Geral",                  weight: 1, questions: 10, topics: [] }, // ECA + Desarmamento + Idoso + CrimesAmbientais
-        { name: "Noções de Segurança e Vigilância",  weight: 1, questions:  5, topics: [] },
-        { name: "Ética no Serviço Público",          weight: 1, questions:  5, topics: [] },
+        { name: "Língua Portuguesa",                weight: 3, questions: 15, topics: [] },
+        { name: "Legislação Portuária",             weight: 3, questions: 15, topics: [] },
+        { name: "Raciocínio Lógico",                weight: 3, questions:  8, topics: [] },
+        { name: "Direitos Humanos",                 weight: 3, questions:  8, topics: [] },
+        { name: "Segurança Operacional",            weight: 3, questions:  7, topics: [] },
+        { name: "Noções de Segurança e Vigilância", weight: 3, questions:  5, topics: [] },
+        { name: "Direito Constitucional",           weight: 1, questions: 10, topics: [] },
+        { name: "Direito Penal",                    weight: 1, questions: 10, topics: [] },
+        { name: "Informática",                      weight: 1, questions: 10, topics: [] },
+        { name: "Legislação Geral",                 weight: 1, questions:  8, topics: [] },
+        { name: "Ética no Serviço Público",         weight: 1, questions:  5, topics: [] },
+        { name: "Matemática",                       weight: 1, questions:  5, topics: [] },
+        { name: "Língua Inglesa",                   weight: 1, questions:  5, topics: [] },
+        { name: "Legislação Específica Porto",      weight: 1, questions:  5, topics: [] },
       ] },
     // ── GUARDA MUNICIPAL ──────────────────────────────────────────────────────
+    // GM — cruzamento Vitória ES + SP (VUNESP 2025) + Goiânia GO
     { nome: "Guarda Municipal", sigla: "GM", esfera: "MUNICIPAL", exam_type: "GM",
       banca: "VUNESP", cargo_padrao: "Guarda Municipal", estado: null,
       materias: [
-        { name: "Língua Portuguesa", weight: 1, questions: 15, topics: [] },
-        { name: "Matemática", weight: 1, questions: 10, topics: [] },
-        { name: "Raciocínio Lógico", weight: 1, questions: 10, topics: [] },
-        { name: "Direito Constitucional", weight: 1, questions: 10, topics: [] },
-        { name: "Legislação Municipal", weight: 2, questions: 10, topics: [] },
-        { name: "Estatuto das Guardas Municipais", weight: 2, questions: 10, topics: [] },
-        { name: "Informática", weight: 1, questions: 5, topics: [] },
+        { name: "Língua Portuguesa",                  weight: 3, questions: 15, topics: [] },
+        { name: "Direito Constitucional",             weight: 3, questions: 12, topics: [] },
+        { name: "Legislação Específica GM",           weight: 3, questions: 10, topics: [] },
+        { name: "Direito Penal",                      weight: 2, questions: 14, topics: [] },
+        { name: "Conhecimentos Gerais e Atualidades", weight: 2, questions: 13, topics: [] },
+        { name: "Matemática",                         weight: 2, questions: 11, topics: [] },
+        { name: "Informática",                        weight: 2, questions: 10, topics: [] },
+        { name: "Legislação Geral",                   weight: 2, questions: 10, topics: [] },
       ] },
   ];
 
